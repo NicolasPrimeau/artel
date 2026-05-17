@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.15.3] — 2026-05-17
+
+### UI
+
+- 3 new theme pairs to complete the 4×4 grid (16 total): Ayu, Flexoki, Oxocarbon.
+- Ayu: near-black navy dark with amber/gold accent; clean white light with orange.
+- Flexoki: warm ink-black dark with red accent; parchment light — analog paper aesthetic.
+- Oxocarbon: IBM Carbon neutral dark with teal-cyan; pure white light with IBM blue.
+
 ## [0.15.2] — 2026-05-17
 
 ### UI
