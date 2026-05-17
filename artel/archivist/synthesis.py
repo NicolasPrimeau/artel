@@ -505,7 +505,7 @@ async def run_synthesis(client: ArtelClient) -> None:
                     "- Promote entries that are stable, high-signal, and likely to remain true.\n"
                     "- Prune entries that are superseded, duplicated, or low-signal. If confidence is already at floor, they will be deleted. Otherwise they are flagged for decay.\n"
                     "- Split entries that cover multiple unrelated topics into focused entries. Each part must be self-contained. Minimum 2 parts.\n"
-                    "- Extract a segment from one entry and fold it into another when partial content belongs with a different entry. Set remaining_content to empty string to delete the source after extraction.\n"
+                    "- Extract a segment from one entry and fold it into another when partial content belongs with a different entry. Set remaining_content to empty string to delete the source after extraction. from and into must be different IDs.\n"
                     "- Use tag/adjust_confidence to surface connections or correct signal strength.\n"
                     "- Create tasks ONLY for work requiring an external agent — never for memory operations.\n"
                     "- When in doubt about an operation, omit it. Conservatism is correct.\n"
