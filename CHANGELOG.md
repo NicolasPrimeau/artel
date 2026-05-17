@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.15.0] — 2026-05-17
+
+### mDNS peer discovery
+
+Artel instances on the same LAN now find each other automatically. No URL entry required.
+
+- Instances advertise via `_artel._tcp.local.` mDNS on startup (requires `MDNS_ENABLED=true`, the default).
+- `GET /mesh/discovered` returns unlinked peers currently visible on the LAN.
+- `POST /mesh/link-discovered` performs a mutual token handshake with a discovered peer — both sides subscribe to each other's feed in one click.
+- `POST /mesh/handshake` (unauthenticated, RFC 1918 IPs only) accepts the initiator's token and returns one in exchange.
+- Self-linking is blocked at the route level; combined with the mDNS instance_id filter and feed-level origin check, there are three independent guards.
+- Dashboard Mesh tab shows discovered peers with a green dot and a one-click Link button.
+
+### Mesh — auto-poll on link and sync-now
+
+Feed replication no longer waits for the 30-minute scheduler after a link is created.
+
+- `POST /mesh/peers/{id}/sync` immediately polls a peer's feed outside the normal schedule.
+- Linking a peer (via `link_peer`, `link_discovered`, or `accept_handshake`) fires a background feed poll so memory arrives within seconds.
+- Sync button added to each peer card in the dashboard.
+
+### Mesh tab polish
+
+- Peers render as cards (blue accent) with URL, scope, last-synced time, sync and detach actions.
+- Discovered-on-LAN peers appear at the top with a green accent card.
+- Token cards show the full feed URL inline with a copy button.
+- Manual link form collapsed under a `<details>` toggle — out of the way when not needed.
+- Fixed: `req()` called `r.json()` on 204 No Content responses, throwing a JSON parse error in the browser.
+
+### README
+
+Trimmed by 85 lines: merged Onboarding + Self-hosting into Getting started, replaced the What-agents-can-do section with a bullet list in the intro, folded the Usage snippet into Memory, collapsed "Why the mesh converges" into a `<details>` block, replaced the MCP tool list wall with a one-liner.
+
 ## [0.13.0] — 2026-05-17
 
 ### Mesh tokens
