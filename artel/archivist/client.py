@@ -158,6 +158,10 @@ class ArtelClient:
         r = await self._request("POST", f"/tasks/{task_id}/comments", json={"body": body})
         return r.json()
 
+    async def close_task_as_duplicate(self, task_id: str, reason: str) -> None:
+        await self._request("POST", f"/tasks/{task_id}/claim")
+        await self._request("POST", f"/tasks/{task_id}/fail", json={"body": reason})
+
     async def send_message(self, to: str, subject: str, body: str) -> dict:
         r = await self._request(
             "POST",

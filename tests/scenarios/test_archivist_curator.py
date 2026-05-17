@@ -105,6 +105,12 @@ class _ScenarioArchivistClient:
         r.raise_for_status()
         return r.json()
 
+    async def close_task_as_duplicate(self, task_id: str, reason: str) -> None:
+        r = await self._http.post(f"/tasks/{task_id}/claim")
+        r.raise_for_status()
+        r = await self._http.post(f"/tasks/{task_id}/fail", json={"body": reason})
+        r.raise_for_status()
+
     async def list_task_comments(self, task_id: str) -> list[dict]:
         r = await self._http.get(f"/tasks/{task_id}/comments")
         r.raise_for_status()
@@ -637,8 +643,9 @@ async def test_triage_llm_duplicate_flag(arch_scenario):
 
     comments = await arch_client.list_task_comments(task["id"])
     archivist_comments = [c for c in comments if c["agent_id"] == ARCHIVIST_ID]
-    assert len(archivist_comments) == 1
-    assert "duplicate" in archivist_comments[0]["body"].lower()
+    assert any("duplicate" in c["body"].lower() for c in archivist_comments)
+    r = await arch_http.get(f"/tasks/{task['id']}")
+    assert r.json()["status"] == "failed"
 
 
 async def test_triage_llm_already_done_flag(arch_scenario):

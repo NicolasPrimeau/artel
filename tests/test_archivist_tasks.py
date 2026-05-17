@@ -16,6 +16,7 @@ def _make_client(
     client.patch_memory = AsyncMock(return_value={})
     client.list_tasks = AsyncMock(return_value=tasks or [])
     client.add_task_comment = AsyncMock(return_value={"id": "comment-id"})
+    client.close_task_as_duplicate = AsyncMock()
     client.log = AsyncMock()
     return client
 
@@ -262,9 +263,9 @@ class TestRunTaskTriageLLMMode:
         ):
             await run_task_triage(client)
 
-        client.add_task_comment.assert_called_once()
-        body = client.add_task_comment.call_args.args[1]
-        assert "duplicate" in body.lower()
+        client.close_task_as_duplicate.assert_called_once()
+        reason = client.close_task_as_duplicate.call_args.args[1]
+        assert "duplicate" in reason.lower()
 
     async def test_flags_already_done_task(self):
         task = _make_task()
@@ -304,7 +305,8 @@ class TestRunTaskTriageLLMMode:
         ):
             await run_task_triage(client)
 
-        assert client.add_task_comment.call_count == 3
+        assert client.add_task_comment.call_count == 2
+        client.close_task_as_duplicate.assert_called_once()
 
     async def test_no_related_memory_skips_llm(self):
         task = _make_task()

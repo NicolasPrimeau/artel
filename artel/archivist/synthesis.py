@@ -448,6 +448,7 @@ async def run_synthesis(client: ArtelClient) -> None:
         return
 
     recently_completed = []
+    open_tasks: list[dict] = []
     try:
         all_tasks = await client.list_tasks(status="completed", limit=20)
         cutoff = datetime.now(UTC) - timedelta(hours=24)
@@ -458,6 +459,10 @@ async def run_synthesis(client: ArtelClient) -> None:
         ]
     except Exception as e:
         log.warning("could not fetch recent tasks for synthesis: %s", e)
+    try:
+        open_tasks = await client.list_tasks(status="open", limit=50)
+    except Exception as e:
+        log.warning("could not fetch open tasks for synthesis: %s", e)
 
     memory_block = "\n\n".join(
         f"[{e['id']}] agent={e['agent_id']} type={e['type']} conf={e.get('confidence', 1.0)} tags={e.get('tags', [])}\n{e['content']}"
@@ -472,6 +477,9 @@ async def run_synthesis(client: ArtelClient) -> None:
             for t in recently_completed
         ]
         task_block = "\n\nCompleted tasks (last 24h):\n" + "\n".join(task_lines)
+    if open_tasks:
+        open_lines = [f'- "{t["title"]}"' for t in open_tasks]
+        task_block += "\n\nAlready-open tasks (do NOT create duplicates):\n" + "\n".join(open_lines)
 
     preamble = _build_directive_preamble(directives)
     if conflict_warning:
@@ -662,13 +670,13 @@ async def _triage_task(task: dict, client: ArtelClient) -> None:
 
     if duplicate_of and isinstance(duplicate_of, str) and duplicate_of.strip():
         try:
-            await client.add_task_comment(
+            await client.close_task_as_duplicate(
                 task["id"],
-                f"[archivist] This task may duplicate existing work: {duplicate_of.strip()}. Review before starting.",
+                f"[archivist] Closed as duplicate of: {duplicate_of.strip()}",
             )
-            log.info("archivist flagged possible duplicate for task %s", task["id"][:8])
+            log.info("archivist closed duplicate task %s", task["id"][:8])
         except Exception as e:
-            log.warning("could not add duplicate comment to task %s: %s", task["id"], e)
+            log.warning("could not close duplicate task %s: %s", task["id"], e)
 
     if already_done:
         try:
