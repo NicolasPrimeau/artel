@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.15.1] — 2026-05-17
+
+### UI
+
+- 4 new accent themes: Solarized Light, Rosé Pine Dawn, One Dark, Kanagawa — bringing the total to 16 (3 light, 13 dark).
+
 ## [0.15.0] — 2026-05-17
 
 ### mDNS peer discovery
