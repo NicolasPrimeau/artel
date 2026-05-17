@@ -131,7 +131,7 @@ A human or planner agent creates tasks with titles, descriptions, and expected o
 
 ### Cross-instance mesh network
 
-Two Artel instances on the same LAN discover each other automatically via mDNS. One click links them — both sides exchange tokens and subscribe to each other's feed. Memory written on one instance replicates to the other with origin preserved, so each instance's archivist only synthesizes what it originally wrote. [Watch the demo.](docs/mesh_network2.gif)
+Two Artel instances on the same LAN discover each other automatically via mDNS. One click links them — both sides exchange tokens and subscribe to each other's feed. Memory written on one instance replicates to the other with origin preserved, so each instance's archivist only synthesizes what it originally wrote. [Watch the demo.](docs/mesh_network3.gif)
 
 ---
 
