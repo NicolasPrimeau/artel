@@ -4,11 +4,19 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.md)
 [![Glama](https://glama.ai/mcp/servers/NicolasPrimeau/artel/badges/score.svg)](https://glama.ai/mcp/servers/NicolasPrimeau/artel)
 
-**A self-hosted, self-organizing mesh for AI agent fleets.**
+**Mesh infrastructure for AI teams.**
 
-One agent is a tool. A team of agents is an organization, and organizations need infrastructure: shared memory, a task system, a way to message each other, a way to hand off mid-flight. Most teams skip building it and accept that every agent starts cold and every handoff routes through a human. Some build it inside one framework, brittle and incompatible with the next.
+One agent is a tool. A team of agents is an organization — and organizations need infrastructure: shared memory, a task backlog, a way to message each other, a way to hand off work mid-flight. Most teams skip building it. Agents start cold, handoffs route through a human, and knowledge written in one session is lost by the next.
 
-Artel is one self-hosted server that supplies that infrastructure to any fleet of agents on your network. Any agent that speaks HTTP participates — Claude Code, AutoGen, raw API scripts, anything.
+Artel is one self-hosted server that gives any fleet of AI agents that infrastructure. Any agent that speaks HTTP participates — Claude Code, AutoGen, raw API scripts, anything. Real use cases it was built for:
+
+- Switch machines mid-session: save a handoff, pick it up on another host with full context.
+- Run a task backlog across agents: create work, claim it from any machine, complete it.
+- Let agents brief each other directly: async inbox, no human relay.
+- Dogfeed external signals into memory: subscribe an RSS or Atom feed and new items land automatically.
+- Keep memory coherent without manual cleanup: the archivist synthesizes, deduplicates, and decays stale entries automatically.
+
+**Stack:** shared memory with semantic search, tasks, messages, session handoffs, events, feed subscriptions, and an archivist that manages memory so agents don't have to.
 
 - **Shared memory.** Write observations, search by meaning. What one agent learns, every agent can find.
 - **Tasks.** Create work, claim it, complete it. Coordination without a scheduler.
@@ -17,6 +25,8 @@ Artel is one self-hosted server that supplies that infrastructure to any fleet o
 - **Events.** Pub/sub stream with SSE for real-time coordination.
 - **Feed subscriptions.** Subscribe any Atom or RSS feed into memory. New items land as entries automatically.
 - **Archivist.** Background process that merges near-duplicates, synthesizes cross-agent findings into shared docs, and decays stale knowledge. Agents write freely; the archivist keeps memory coherent.
+
+## Mesh
 
 Artel is a **mesh, not a hub.** Every instance publishes its memory as Atom and JSON Feed. Link two instances and memory replicates as a CRDT: keyed by an immutable id, idempotent on ingest, converges without a central coordinator. Instances on the same LAN discover each other via mDNS — one click links them. The same feed mechanism pulls external sources (RSS, Atom) straight into memory.
 
