@@ -116,6 +116,9 @@ async def link_peer(body: PeerLinkCreate, agent_id: str = OwnerDep):
     base = body.peer_url.rstrip("/")
     if not base.startswith(("http://", "https://")):
         raise HTTPException(status_code=422, detail="peer_url must be http(s)")
+    own = (settings.public_url or "").rstrip("/")
+    if own and base == own:
+        raise HTTPException(status_code=422, detail="cannot link to self")
 
     db = get_db()
     feed_id = new_id()
@@ -285,6 +288,9 @@ async def link_discovered(body: LinkDiscoveredRequest, agent_id: str = OwnerDep)
     peer_url = peer["url"].rstrip("/")
     if not peer_url.startswith(("http://", "https://")):
         raise HTTPException(status_code=422, detail="discovered peer URL is not http(s)")
+    own = (settings.public_url or "").rstrip("/")
+    if own and peer_url == own:
+        raise HTTPException(status_code=422, detail="cannot link to self")
 
     db = get_db()
     already = db.execute("SELECT 1 FROM peer_links WHERE peer_url=?", (peer_url,)).fetchone()
