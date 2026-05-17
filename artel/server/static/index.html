@@ -1164,7 +1164,7 @@ async function adminReq(method,path,body){
   if(window._agent_role!=='owner')throw new Error('read-only: log in as owner to make changes');
   const r=await fetch(path,{method,headers:hdrs(),body:body?JSON.stringify(body):undefined});
   if(!r.ok)throw new Error(await parseErr(r));
-  return method==='DELETE'?null:r.json();
+  return (method==='DELETE'||r.status===204)?null:r.json();
 }
 
 function activeProject(){return $('h-project').value||null}
@@ -1174,7 +1174,7 @@ async function req(method,path,body){
   if(window._agent_role==='viewer'&&method!=='GET')throw new Error('read-only: log in as owner to make changes');
   const r=await fetch(path,{method,headers:hdrs(),body:body?JSON.stringify(body):undefined});
   if(!r.ok)throw new Error(await parseErr(r));
-  return method==='DELETE'?null:r.json();
+  return (method==='DELETE'||r.status===204)?null:r.json();
 }
 
 function flash(id){const el=$(id);el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2000)}

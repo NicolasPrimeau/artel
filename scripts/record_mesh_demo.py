@@ -107,9 +107,8 @@ def _record(tmp: Path, db_a: str, db_b: str):
     key_b = _ui_key(db_b)
     print(f"artel-ui key A: {key_a[:8]}…  B: {key_b[:8]}…")
 
-    # Wait for mDNS to propagate between instances before opening the UI
     print("waiting for mDNS propagation …")
-    time.sleep(5)
+    time.sleep(6)
 
     video_dir = tmp / "video"
     video_dir.mkdir()
@@ -118,7 +117,7 @@ def _record(tmp: Path, db_a: str, db_b: str):
         browser = pw.chromium.launch(
             executable_path=str(CHROMIUM),
             args=["--no-sandbox", "--disable-dev-shm-usage"],
-            slow_mo=80,
+            slow_mo=120,
         )
         ctx = browser.new_context(
             viewport={"width": 1280, "height": 800},
@@ -126,90 +125,125 @@ def _record(tmp: Path, db_a: str, db_b: str):
             record_video_size={"width": 1280, "height": 800},
         )
 
-        def login(page, port):
+        def annotate(page, text):
+            """Inject a floating caption banner at the bottom of the page."""
+            escaped = text.replace("'", "\\'")
+            page.evaluate(f"""(() => {{
+                let b = document.getElementById('__demo_banner');
+                if (!b) {{
+                    b = document.createElement('div');
+                    b.id = '__demo_banner';
+                    b.style.cssText = `
+                        position: fixed; bottom: 0; left: 0; right: 0; z-index: 99999;
+                        background: rgba(0,0,0,0.82); color: #fff;
+                        font: 600 15px/1 "SF Mono", monospace;
+                        padding: 12px 20px; letter-spacing: .02em;
+                        border-top: 2px solid #4a9eff;
+                    `;
+                    document.body.appendChild(b);
+                }}
+                b.textContent = '{escaped}';
+            }})()""")
+
+        def login(page, port, label):
+            annotate(page, f"instance {label}  ·  logging in …")
             page.goto(f"http://127.0.0.1:{port}/ui/login")
             page.wait_for_load_state("networkidle")
+            time.sleep(0.8)
             page.locator("input[type=password]").fill(UI_PW)
+            time.sleep(0.5)
             page.locator("button[type=submit]").click()
             page.wait_for_url("**/ui", timeout=8000)
             page.wait_for_load_state("networkidle")
-            time.sleep(0.6)
+            time.sleep(1.0)
 
         def click_tab(page, label):
             page.locator(f"button.nav-btn:has-text('{label}')").click()
-            time.sleep(1.0)
+            time.sleep(1.2)
 
-        # ── Instance A: discover B via mDNS and link with one click ──────────
+        # ── Instance A ───────────────────────────────────────────────────────
         page_a = ctx.new_page()
-        print("logging into A …")
-        login(page_a, PORT_A)
-        time.sleep(0.5)
+        login(page_a, PORT_A, "A  (port 8101)")
 
+        annotate(page_a, "instance A  ·  opening Mesh tab")
         click_tab(page_a, "Mesh")
         page_a.wait_for_selector("#mesh-token-section", timeout=6000)
-        time.sleep(1.5)
+        time.sleep(2.0)
 
-        # mDNS-discovered peers appear in #mesh-discovered-section.
-        # Wait up to 10 s for the green "discovered on LAN" dot to appear.
+        # Poll until B appears in the discovered section (mDNS may take a moment)
         print("waiting for B to appear in A's discovered list …")
+        annotate(page_a, "instance A  ·  waiting for instance B to appear via mDNS …")
         discovered_link = page_a.locator("#mesh-discovered-section button:has-text('link')")
         for _ in range(50):
             if discovered_link.count():
                 break
-            time.sleep(0.2)
+            time.sleep(0.3)
             page_a.reload()
             page_a.wait_for_load_state("networkidle")
-            # re-navigate to Mesh tab after reload
             page_a.locator("button.nav-btn:has-text('Mesh')").click()
             page_a.wait_for_selector("#mesh-token-section", timeout=4000)
-            time.sleep(0.5)
+            time.sleep(0.6)
         print(
-            f"discovered section: {page_a.locator('#mesh-discovered-section').inner_html()[:120]}"
+            f"discovered section: {page_a.locator('#mesh-discovered-section').inner_html()[:140]}"
         )
 
-        # Click "link" — handshake happens server-side, no URL or token to type
-        print("clicking link on A …")
+        annotate(page_a, "instance A  ·  instance B discovered on LAN — no URL needed")
+        time.sleep(3.0)
+
+        # One-click link via mDNS handshake
+        annotate(page_a, "instance A  ·  clicking Link — mutual handshake happens automatically")
+        time.sleep(1.5)
         page_a.on("dialog", lambda d: d.accept(""))
         discovered_link.first.click()
-        time.sleep(3.0)
+        time.sleep(3.5)
+        annotate(
+            page_a, "instance A  ·  linked!  both instances now subscribe to each other's feed"
+        )
         print("linked!")
+        time.sleep(3.0)
 
-        # ── Instance B: show Mesh tab (now has A as linked peer) ─────────────
+        # ── Instance B: show its Mesh tab (A now appears as linked peer) ──────
         page_b = ctx.new_page()
-        print("logging into B …")
-        login(page_b, PORT_B)
-        time.sleep(0.5)
+        login(page_b, PORT_B, "B  (port 8102)")
 
+        annotate(page_b, "instance B  ·  Mesh tab — A is already linked (handshake was mutual)")
         click_tab(page_b, "Mesh")
         page_b.wait_for_selector("#mesh-list", timeout=6000)
-        time.sleep(2.0)
+        time.sleep(3.5)
 
         # ── Instance A: write a memory entry ─────────────────────────────────
         print("writing memory on A …")
         page_a.bring_to_front()
+        annotate(page_a, "instance A  ·  writing a memory entry")
         click_tab(page_a, "Memory")
-        time.sleep(0.5)
+        time.sleep(1.0)
 
         content = page_a.locator("#new-content").first
         if content.count():
             content.fill("Rate limiter deployed — p99 latency down 40%")
-            time.sleep(0.5)
-            page_a.locator("button:has-text('save')").first.click()
             time.sleep(1.5)
+            page_a.locator("button:has-text('save')").first.click()
+            time.sleep(2.0)
+        annotate(page_a, "instance A  ·  memory saved")
         print("memory written on A")
+        time.sleep(2.0)
 
-        # ── Instance A: Mesh tab → click Sync on the B peer link ─────────────
+        # ── Instance A: Mesh tab → sync ───────────────────────────────────────
+        annotate(page_a, "instance A  ·  Mesh tab → Sync — pushes feed to instance B now")
         click_tab(page_a, "Mesh")
-        time.sleep(1.0)
+        time.sleep(1.5)
         sync_btn = page_a.locator("button:has-text('sync')").first
         sync_btn.click()
-        time.sleep(2.5)
+        time.sleep(3.0)
+        annotate(page_a, "instance A  ·  sync complete — B has ingested the entry")
         print("synced A→B feed")
+        time.sleep(2.0)
 
-        # ── Instance B: Memory tab — show the replicated entry ────────────────
+        # ── Instance B: Memory tab shows the replicated entry ─────────────────
         page_b.bring_to_front()
+        annotate(page_b, "instance B  ·  Memory tab — entry from A is already here")
         click_tab(page_b, "Memory")
-        time.sleep(2.5)
+        time.sleep(4.0)
         print("showing B memory tab with replicated entry")
 
         ctx.close()
