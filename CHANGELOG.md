@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.15.2] — 2026-05-17
+
+### UI
+
+- Dark/light mode toggle in the appearance panel — switch any theme between its dark and light variant.
+- Every theme now has both variants: 13 pairs covering all 26 combinations (Gruvbox, Everforest, Dracula, Catppuccin, Rosé Pine, Nord, Tokyo Night, Solarized, Hacker, Monokai, Cobalt, One, Kanagawa).
+- New light variants added: Everforest Light, Dracula Light, Catppuccin Latte, Nord Light, Tokyo Night Light (Tokyo Day), Hacker Light, Monokai Light, Cobalt Light, One Light, Kanagawa Lotus.
+- Theme swatches now show two dots side by side (dark + light) so both variants are visible at a glance.
+
 ## [0.15.1] — 2026-05-17
 
 ### UI
