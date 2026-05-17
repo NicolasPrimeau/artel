@@ -698,16 +698,16 @@ pre{
   --purple:#d699b6;--p-bg:rgba(214,153,182,.1);--p-bord:rgba(214,153,182,.35);
   --dot:rgba(167,192,128,.05);--header-bg:rgba(13,17,18,.97);--modal-bg:rgba(13,17,18,.88);
 }
-[data-theme="catppuccin"]{
-  --bg:#1e1e2e;--s1:#181825;--s2:#313244;--s3:#45475a;
-  --b1:#45475a;--b2:#585b70;
-  --t1:#cdd6f4;--t2:#bac2de;--t3:#a6adc8;--t4:#7f849c;
-  --accent:#cba6f7;--a-bg:rgba(203,166,247,.1);--a-bord:rgba(203,166,247,.35);
-  --green:#a6e3a1;--g-bg:rgba(166,227,161,.1);--g-bord:rgba(166,227,161,.35);
-  --red:#f38ba8;--r-bg:rgba(243,139,168,.1);--r-bord:rgba(243,139,168,.35);
-  --orange:#fab387;--o-bg:rgba(250,179,135,.1);--o-bord:rgba(250,179,135,.35);
-  --purple:#cba6f7;--p-bg:rgba(203,166,247,.1);--p-bord:rgba(203,166,247,.35);
-  --dot:rgba(203,166,247,.04);--header-bg:rgba(10,10,20,.97);--modal-bg:rgba(10,10,20,.88);
+[data-theme="mellow"]{
+  --bg:#1e1e1e;--s1:#191919;--s2:#242424;--s3:#2e2e2e;
+  --b1:#3a3a3a;--b2:#505050;
+  --t1:#c9c9c9;--t2:#aaaaaa;--t3:#787878;--t4:#555555;
+  --accent:#7c9b8a;--a-bg:rgba(124,155,138,.1);--a-bord:rgba(124,155,138,.35);
+  --green:#7c9b8a;--g-bg:rgba(124,155,138,.1);--g-bord:rgba(124,155,138,.35);
+  --red:#b87878;--r-bg:rgba(184,120,120,.1);--r-bord:rgba(184,120,120,.35);
+  --orange:#b89a78;--o-bg:rgba(184,154,120,.1);--o-bord:rgba(184,154,120,.35);
+  --purple:#8a7c9b;--p-bg:rgba(138,124,155,.1);--p-bord:rgba(138,124,155,.35);
+  --dot:rgba(124,155,138,.04);--header-bg:rgba(10,10,10,.97);--modal-bg:rgba(10,10,10,.88);
 }
 [data-theme="rose-pine"]{
   --bg:#191724;--s1:#1f1d2e;--s2:#26233a;--s3:#2a2837;
@@ -820,16 +820,16 @@ pre{
   --purple:#6d28d9;--p-bg:rgba(109,40,217,.12);--p-bord:rgba(109,40,217,.4);
   --dot:rgba(109,40,217,.05);--header-bg:rgba(238,238,238,.97);--modal-bg:rgba(40,42,54,.75);
 }
-[data-theme="catppuccin-latte"]{
-  --bg:#eff1f5;--s1:#e6e9ef;--s2:#dce0e8;--s3:#ccd0da;
-  --b1:rgba(76,79,105,.15);--b2:rgba(76,79,105,.25);
-  --t1:#4c4f69;--t2:#5c5f77;--t3:#6c6f85;--t4:#8c8fa1;
-  --accent:#8839ef;--a-bg:rgba(136,57,239,.1);--a-bord:rgba(136,57,239,.35);
-  --green:#40a02b;--g-bg:rgba(64,160,43,.12);--g-bord:rgba(64,160,43,.4);
-  --red:#d20f39;--r-bg:rgba(210,15,57,.12);--r-bord:rgba(210,15,57,.4);
-  --orange:#fe640b;--o-bg:rgba(254,100,11,.12);--o-bord:rgba(254,100,11,.4);
-  --purple:#8839ef;--p-bg:rgba(136,57,239,.12);--p-bord:rgba(136,57,239,.4);
-  --dot:rgba(136,57,239,.05);--header-bg:rgba(230,233,239,.97);--modal-bg:rgba(76,79,105,.75);
+[data-theme="mellow-light"]{
+  --bg:#f5f5f0;--s1:#eeeeea;--s2:#e5e5e0;--s3:#d8d8d3;
+  --b1:rgba(42,42,42,.15);--b2:rgba(42,42,42,.25);
+  --t1:#2a2a2a;--t2:#444444;--t3:#666666;--t4:#888888;
+  --accent:#4a7060;--a-bg:rgba(74,112,96,.12);--a-bord:rgba(74,112,96,.4);
+  --green:#4a7060;--g-bg:rgba(74,112,96,.12);--g-bord:rgba(74,112,96,.4);
+  --red:#8c5050;--r-bg:rgba(140,80,80,.12);--r-bord:rgba(140,80,80,.4);
+  --orange:#7a6040;--o-bg:rgba(122,96,64,.12);--o-bord:rgba(122,96,64,.4);
+  --purple:#5a5070;--p-bg:rgba(90,80,112,.12);--p-bord:rgba(90,80,112,.4);
+  --dot:rgba(74,112,96,.06);--header-bg:rgba(238,238,234,.97);--modal-bg:rgba(42,42,42,.75);
 }
 [data-theme="nord-light"]{
   --bg:#eceff4;--s1:#e5e9f0;--s2:#d8dee9;--s3:#c8d0df;
@@ -1472,7 +1472,7 @@ const _THEMES=[
   {id:'gruvbox',     label:'Gruvbox',     dark:'',               light:'gruvbox-light',    bd:'#1d2021',ad:'#d79921',bl:'#f9f5d7',al:'#b57614'},
   {id:'everforest',  label:'Everforest',  dark:'everforest',     light:'everforest-light', bd:'#272e33',ad:'#a7c080',bl:'#fff9ef',al:'#8da101'},
   {id:'dracula',     label:'Dracula',     dark:'dracula',        light:'dracula-light',    bd:'#282a36',ad:'#bd93f9',bl:'#f8f8f2',al:'#6d28d9'},
-  {id:'catppuccin',  label:'Catppuccin',  dark:'catppuccin',     light:'catppuccin-latte', bd:'#1e1e2e',ad:'#cba6f7',bl:'#eff1f5',al:'#8839ef'},
+  {id:'mellow',      label:'Mellow',      dark:'mellow',         light:'mellow-light',     bd:'#1e1e1e',ad:'#7c9b8a',bl:'#f5f5f0',al:'#4a7060'},
   {id:'rose-pine',   label:'Rosé Pine',   dark:'rose-pine',      light:'rose-pine-dawn',   bd:'#191724',ad:'#c4a7e7',bl:'#faf4ed',al:'#d7827e'},
   {id:'nord',        label:'Nord',        dark:'nord',           light:'nord-light',       bd:'#2e3440',ad:'#88c0d0',bl:'#eceff4',al:'#5e81ac'},
   {id:'tokyo-night', label:'Tokyo Night', dark:'tokyo-night',    light:'tokyo-night-light',bd:'#1a1b26',ad:'#7aa2f7',bl:'#e1e2e7',al:'#2e7de9'},

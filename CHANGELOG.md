@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.15.4] — 2026-05-17
+
+### UI
+
+- Replaced Catppuccin with **Mellow** — a fully desaturated, near-monochrome theme with a muted sage accent. Dark: warm grey on near-black. Light: warm off-white. Completely distinct from every other theme in the palette.
+
 ## [0.15.3] — 2026-05-17
 
 ### UI
