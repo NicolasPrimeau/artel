@@ -23,7 +23,7 @@ from pathlib import Path
 REPO = Path(__file__).parent.parent
 FFMPEG = Path("/tmp/ffmpeg-7.0.2-amd64-static/ffmpeg")
 CHROMIUM = Path.home() / ".cache/ms-playwright/chromium-1224/chrome-linux64/chrome"
-OUT_GIF = REPO / "docs/mesh_network3.gif"
+OUT_GIF = REPO / "docs/mesh_network4.gif"
 
 PORT_A, PORT_B = 8101, 8102
 UI_PW = "artel-demo-2026"
@@ -219,30 +219,28 @@ def _record(tmp: Path, db_a: str, db_b: str):
         time.sleep(1.0)
 
         page_a.locator("#mc").fill("Rate limiter deployed — p99 latency down 40%")
-        time.sleep(1.5)
+        time.sleep(1.2)
         page_a.locator("button:has-text('write')").click()
+        page_a.wait_for_selector(".card", timeout=6000)
         time.sleep(2.0)
         annotate(page_a, "instance A  ·  memory saved")
         print("memory written on A")
-        time.sleep(2.0)
+        time.sleep(1.5)
 
-        # ── Instance B: Mesh tab → sync (B subscribes to A's feed) ──────────
-        # B's peer link points to A's feed, so syncing on B pulls A's memories into B.
+        # ── Instance B: Mesh tab → sync → Memory tab ─────────────────────────
         page_b.bring_to_front()
-        annotate(page_b, "instance B  ·  Mesh tab → Sync — pulling A's feed into B now")
+        annotate(page_b, "instance B  ·  Mesh tab — syncing A's feed")
         click_tab(page_b, "Mesh")
         page_b.wait_for_selector("#mesh-list", timeout=6000)
         time.sleep(1.5)
         sync_btn = page_b.locator("button:has-text('sync')").first
         sync_btn.click()
-        time.sleep(3.0)
-        annotate(page_b, "instance B  ·  sync complete — A's memory has been replicated")
+        time.sleep(2.5)
         print("synced A→B feed")
-        time.sleep(2.0)
 
-        # ── Instance B: Memory tab shows the replicated entry ─────────────────
-        annotate(page_b, "instance B  ·  Memory tab — entry from A is now here")
+        annotate(page_b, "instance B  ·  Memory tab — A's entry is now here")
         click_tab(page_b, "Memory")
+        page_b.wait_for_selector(".card", timeout=6000)
         time.sleep(4.0)
         print("showing B memory tab with replicated entry")
 
