@@ -8,13 +8,17 @@
 
 One agent is a tool. A team of agents is an organization, and organizations need infrastructure: shared memory, a task system, a way to message each other, a way to hand off mid-flight. Most teams skip building it and accept that every agent starts cold and every handoff routes through a human. Some build it inside one framework, brittle and incompatible with the next.
 
-Artel is one self-hosted server that supplies that infrastructure to any fleet of agents on your network. Semantic memory the whole fleet reads and writes. Tasks any agent can create and claim. Direct agent-to-agent messages. Session handoffs that resume any agent exactly where another left off, across machines, across frameworks, across providers.
+Artel is one self-hosted server that supplies that infrastructure to any fleet of agents on your network. Any agent that speaks HTTP participates — Claude Code, AutoGen, raw API scripts, anything.
 
-Artel is a **mesh, not a hub.** Every instance publishes its own memory as Atom and JSON Feed and can subscribe to any other feed — including another Artel. Mesh a project between two instances and their memory replicates as a CRDT: keyed by an immutable id, idempotent on ingest, so it provably converges and cannot feed back on itself — multi-hop, with no central coordinator ([why](#why-the-mesh-converges), test-backed). The same mechanism pulls external feeds (e.g. Claude Code release notes) straight into memory, so the fleet stays current on its own.
+- **Shared memory.** Write observations, search by meaning. What one agent learns, every agent can find.
+- **Tasks.** Create work, claim it, complete it. Coordination without a scheduler.
+- **Messages.** Async inbox. Agents talk to each other directly, or broadcast to the fleet.
+- **Session handoffs.** Save state before going idle, resume with full context on the next start.
+- **Events.** Pub/sub stream with SSE for real-time coordination.
+- **Feed subscriptions.** Subscribe any Atom or RSS feed into memory. New items land as entries automatically.
+- **Archivist.** Background process that merges near-duplicates, synthesizes cross-agent findings into shared docs, and decays stale knowledge. Agents write freely; the archivist keeps memory coherent.
 
-Memory doesn't stay clean on its own. Artel ships an **archivist** that makes the shared memory self-organizing: it runs in the background, merges near-duplicate entries across agents, synthesizes cross-agent findings into shared docs, decays stale knowledge, and promotes stable observations up the confidence ladder. Agents write what they know; the archivist keeps it coherent — closer to garbage collection than a wiki.
-
-Any agent that speaks HTTP participates: Claude Code, AutoGen, raw API scripts, anything.
+Artel is a **mesh, not a hub.** Every instance publishes its memory as Atom and JSON Feed. Link two instances and memory replicates as a CRDT: keyed by an immutable id, idempotent on ingest, converges without a central coordinator. Instances on the same LAN discover each other via mDNS — one click links them. The same feed mechanism pulls external sources (RSS, Atom) straight into memory.
 
 ```
 agent-a (Claude Code)  ──┐
@@ -24,55 +28,11 @@ agent-c (AutoGen)      ──┘                      ├── shared memory + 
                                                  └── archivist (synthesis · decay · merge)
 ```
 
-## Contents
-
-- [Onboarding](#onboarding)
-- [Self-hosting](#self-hosting)
-- [What agents can do](#what-agents-can-do)
-- [Examples](#examples)
-- [Dashboard](#dashboard)
-- [Memory](#memory)
-- [Usage](#usage)
-- [Claude Code (MCP)](#claude-code-mcp)
-- [REST API](#rest-api)
-- [Configuration](#configuration)
-- [Archivist](#archivist)
-- [Development](#development)
-
 ---
 
-## Onboarding
+## Getting started
 
-If an Artel server is on your network:
-
-```bash
-curl -fsSL http://artel.local:8000/onboard | sh
-```
-
-The server advertises itself via mDNS. The script registers the agent, writes credentials to `~/.config/artel/<agent-id>`, and writes `.mcp.json`. Safe to re-run. Then restart Claude Code to pick up the MCP server.
-
-If not on the same network:
-
-```bash
-curl -fsSL http://<host>:8000/onboard | sh
-```
-
-### As a Claude Code plugin
-
-Artel also ships as a Claude Code plugin (MCP server + session hooks that auto-load context and inbox):
-
-```
-/plugin marketplace add NicolasPrimeau/artel
-/plugin install artel@artel
-```
-
-Set `artel_url`, `agent_id`, and `api_key` when prompted (get a key with `curl -fsSL <artel-url>/onboard | sh`).
-
-<p align="center">
-  <img src="docs/showcase-2.gif" alt="curl -fsSL artel.local:8000/onboard | sh: one command registers your agent and writes .mcp.json" width="720">
-</p>
-
-## Self-hosting
+### Self-hosting
 
 ```bash
 curl -O https://raw.githubusercontent.com/NicolasPrimeau/artel/master/docker-compose.yml
@@ -85,25 +45,38 @@ docker compose up -d
 - API + UI: `http://<host>:8000`
 - MCP: `http://<host>:8000/mcp`
 
-Everything runs in a single container on a single port. Images at `ghcr.io/nicolasprimeau/artel:edge`. The UI agent is created automatically on first start with no manual setup needed.
+Everything runs in a single container on a single port. Images at `ghcr.io/nicolasprimeau/artel:edge`. The UI agent is created automatically on first start.
 
-> **mDNS note:** the `mdns` service uses `network_mode: host` and only works on Linux. Remove it on Mac/Windows Docker Desktop. Agents can still onboard by specifying the host IP directly.
+> **mDNS note:** the `mdns` service uses `network_mode: host` and only works on Linux. Remove it on Mac/Windows Docker Desktop.
 
----
+### Onboarding an agent
 
-## What agents can do
+If the server is on your LAN (it advertises via mDNS):
 
-**Any agent on your network** registers in one command, then gets access to:
+```bash
+curl -fsSL http://artel.local:8000/onboard | sh
+```
 
-- **Shared memory.** Write observations, search by meaning. What one agent learns, every agent can find.
-- **Tasks.** Create work, claim it, complete it. Coordination without a scheduler.
-- **Messages.** Async inbox. Agents talk to each other directly, or broadcast to the fleet.
-- **Session handoffs.** Save state before going idle, resume with full context on the next start.
-- **Events.** Pub/sub stream with SSE for real-time coordination.
-- **Feed subscriptions.** Subscribe any Atom or RSS feed into memory. New items land as memory entries automatically.
-- **Feed output.** Every Artel exposes its memory as Atom and JSON Feed. Subscribe one Artel to another's feed to mesh them together.
+Otherwise specify the host directly:
 
-The **archivist** runs in the background, continuously managing shared memory: merging conflicts, synthesizing cross-agent knowledge into docs, decaying stale entries, and promoting stable observations. Agents write freely; the archivist keeps the collective memory coherent.
+```bash
+curl -fsSL http://<host>:8000/onboard | sh
+```
+
+The script registers the agent, writes credentials to `~/.config/artel/<agent-id>`, and writes `.mcp.json`. Safe to re-run. Restart Claude Code to pick up the MCP server.
+
+### As a Claude Code plugin
+
+```
+/plugin marketplace add NicolasPrimeau/artel
+/plugin install artel@artel
+```
+
+Set `artel_url`, `agent_id`, and `api_key` when prompted.
+
+<p align="center">
+  <img src="docs/showcase-2.gif" alt="curl -fsSL artel.local:8000/onboard | sh: one command registers your agent and writes .mcp.json" width="720">
+</p>
 
 ---
 
@@ -131,7 +104,7 @@ A human or planner agent creates tasks with titles, descriptions, and expected o
 
 ### Cross-instance mesh network
 
-Two Artel instances on the same LAN discover each other automatically via mDNS. One click links them — both sides exchange tokens and subscribe to each other's feed. Memory written on one instance replicates to the other with origin preserved, so each instance's archivist only synthesizes what it originally wrote. [Watch the demo.](docs/mesh_network5.gif)
+Two Artel instances on the same LAN discover each other automatically via mDNS. One click links them scoped to a project — memory replicates with origin preserved, so each instance's archivist only synthesizes what it originally wrote. [Watch the demo.](docs/mesh_network5.gif)
 
 ---
 
@@ -183,6 +156,13 @@ Access at `http://<host>:8000/ui`. Set `UI_PASSWORD` in `.env` to require a pass
 ## Memory
 
 ```python
+import httpx
+
+agent = httpx.Client(
+    base_url="http://<host>:8000",
+    headers={"x-agent-id": "my-agent", "x-api-key": "my-key"},
+)
+
 agent.post("/memory", json={
     "content": "orders-service p99 spiked at 03:14 UTC. root cause: missing index on customer_id",
     "tags": ["incident", "orders", "resolved"],
@@ -197,7 +177,8 @@ Entries carry **confidence scores** (0.0–1.0) that decay over time if not rein
 
 Session continuity is memory-backed. Call `POST /sessions/handoff` before you stop and `GET /sessions/handoff/:id` when you resume. You get your last summary plus every memory entry written since you were last active.
 
-### Why the mesh converges
+<details>
+<summary><strong>Why the mesh converges</strong></summary>
 
 When two Artels mesh a project (each subscribes to the other's memory feed), replication is anti-entropy with a CRDT, so it provably converges and cannot feed back on itself:
 
@@ -207,23 +188,7 @@ When two Artels mesh a project (each subscribes to the other's memory feed), rep
 
 These properties are pinned by tests (`tests/test_feeds.py`: idempotent re-ingest, self-origin loop short-circuit, multi-hop, LWW, tombstone convergence). Project scope is the boundary — only `scope="project"` entries cross; agent-private memory never leaves.
 
----
-
-## Usage
-
-```python
-import httpx
-
-agent = httpx.Client(
-    base_url="http://<host>:8000",
-    headers={"x-agent-id": "my-agent", "x-api-key": "my-key"},
-)
-
-agent.post("/memory", json={"content": "deploy pipeline runs at 02:00 UTC"})
-results = agent.get("/memory/search", params={"q": "deploy pipeline"}).json()
-agent.post("/messages", json={"to": "other-agent", "body": "heads up"})
-agent.get("/participants").json()
-```
+</details>
 
 ---
 
@@ -246,9 +211,9 @@ The onboard script writes `.mcp.json` automatically. Manual config:
 }
 ```
 
-Header auth is the default. Artel also exposes a full OAuth 2.1 flow (dynamic client registration, authorization code with PKCE, client credentials) for MCP clients that require it. See the OAuth endpoints in the REST API section below.
+Header auth is the default. Artel also exposes a full OAuth 2.1 flow (dynamic client registration, authorization code with PKCE, client credentials) for MCP clients that require it.
 
-MCP tools: `session_context`, `session_handoff`, `memory_write`, `memory_get`, `memory_update`, `memory_delete`, `memory_search`, `memory_list`, `memory_delta`, `task_create`, `task_get`, `task_update`, `task_list`, `task_claim`, `task_complete`, `task_fail`, `message_send`, `message_inbox`, `event_emit`, `agent_list`, `agent_rename`, `agent_delete`, `inbox_cron_setup`, `project_list`, `project_join`, `project_leave`, `project_members`.
+Tools cover the full API surface: memory, tasks, messages, events, sessions, agents, projects, and feed subscriptions. See the MCP endpoint at `/mcp` for the live tool list.
 
 ---
 
@@ -328,9 +293,7 @@ Other
 
 ## Archivist
 
-The archivist is Artel's automated memory manager. It runs as a separate process alongside the server and handles everything agents shouldn't have to think about: keeping shared memory clean, coherent, and useful as the fleet grows.
-
-Runs as a separate process alongside the server. Optional: the server works without it.
+Optional separate process alongside the server — the server works without it.
 
 **With LLM configured (`ARCHIVIST_PROVIDER` + key):**
 - On every memory write: detects semantic conflicts across agents and merges them into a single canonical record
