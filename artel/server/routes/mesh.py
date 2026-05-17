@@ -1,3 +1,4 @@
+import asyncio
 import json
 import secrets
 import sqlite3
@@ -146,6 +147,9 @@ async def link_peer(body: PeerLinkCreate, agent_id: str = OwnerDep):
            LEFT JOIN feed_subscriptions f ON f.id = p.feed_id WHERE p.id=?""",
         (link_id,),
     ).fetchone()
+    feed_row = db.execute("SELECT * FROM feed_subscriptions WHERE id=?", (feed_id,)).fetchone()
+    if feed_row:
+        asyncio.create_task(_poll_feed(dict(feed_row)))
     return _row_to_link(row)
 
 
@@ -248,7 +252,7 @@ async def accept_handshake(body: HandshakeRequest, request: Request):
         raise HTTPException(status_code=409, detail="already linked")
 
     system_agent = settings.ui_agent_id
-    _create_peer_link(db, system_agent, base, body.initiator_token, body.project)
+    _, feed_id = _create_peer_link(db, system_agent, base, body.initiator_token, body.project)
 
     token_id = new_id()
     token = secrets.token_urlsafe(32)
@@ -257,6 +261,9 @@ async def accept_handshake(body: HandshakeRequest, request: Request):
             "INSERT INTO mesh_tokens (id, token, label, project, created_by) VALUES (?,?,?,?,?)",
             (token_id, token, f"handshake:{base}", body.project, system_agent),
         )
+    feed_row = db.execute("SELECT * FROM feed_subscriptions WHERE id=?", (feed_id,)).fetchone()
+    if feed_row:
+        asyncio.create_task(_poll_feed(dict(feed_row)))
     return HandshakeResponse(token=token)
 
 
@@ -317,4 +324,7 @@ async def link_discovered(body: LinkDiscoveredRequest, agent_id: str = OwnerDep)
         "SELECT p.*, f.last_fetched_at FROM peer_links p LEFT JOIN feed_subscriptions f ON f.id=p.feed_id WHERE p.id=?",
         (link_id,),
     ).fetchone()
+    feed_row = db.execute("SELECT * FROM feed_subscriptions WHERE id=?", (feed_id,)).fetchone()
+    if feed_row:
+        asyncio.create_task(_poll_feed(dict(feed_row)))
     return _row_to_link(row)

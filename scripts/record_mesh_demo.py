@@ -23,7 +23,7 @@ from pathlib import Path
 REPO = Path(__file__).parent.parent
 FFMPEG = Path("/tmp/ffmpeg-7.0.2-amd64-static/ffmpeg")
 CHROMIUM = Path.home() / ".cache/ms-playwright/chromium-1224/chrome-linux64/chrome"
-OUT_GIF = REPO / "docs/mesh_network4.gif"
+OUT_GIF = REPO / "docs/mesh_network5.gif"
 
 PORT_A, PORT_B = 8101, 8102
 UI_PW = "artel-demo-2026"
@@ -64,7 +64,8 @@ def _api(port: int, method: str, path: str, data=None, *, agent_id="", api_key="
         headers["x-registration-key"] = reg_key
     req = urllib.request.Request(url, data=body, headers=headers, method=method)
     with urllib.request.urlopen(req) as r:
-        return json.loads(r.read())
+        raw = r.read()
+        return json.loads(raw) if raw else None
 
 
 UI_AGENT_ID = "demo-ui"
@@ -100,12 +101,50 @@ def _start(port: int, db_path: str, reg_key: str) -> subprocess.Popen:
 # ── recording ─────────────────────────────────────────────────────────────────
 
 
+DEMO_PROJECT = "ops"
+OTHER_PROJECT = "infra"
+
+
+def _seed_b(key_b: str) -> None:
+    """Give instance B memories in two projects before the demo starts."""
+    for proj in (DEMO_PROJECT, OTHER_PROJECT):
+        _api(PORT_B, "POST", f"/projects/{proj}/join", agent_id=UI_AGENT_ID, api_key=key_b)
+
+    memories = [
+        (DEMO_PROJECT, "Rate limiter deployed — p99 latency down 40%", ["perf", "deploy"]),
+        (DEMO_PROJECT, "orders-service autoscaler tuned: min=2 max=10", ["ops", "k8s"]),
+        (OTHER_PROJECT, "Terraform state migrated to S3 backend", ["infra", "terraform"]),
+        (OTHER_PROJECT, "VPC peering established between prod and staging", ["infra", "network"]),
+    ]
+    for proj, content, tags in memories:
+        _api(
+            PORT_B,
+            "POST",
+            "/memory",
+            {
+                "content": content,
+                "project": proj,
+                "scope": "project",
+                "type": "memory",
+                "tags": tags,
+                "confidence": 1.0,
+                "parents": [],
+            },
+            agent_id=UI_AGENT_ID,
+            api_key=key_b,
+        )
+
+    print(f"seeded B: {len(memories)} memories across {DEMO_PROJECT!r} and {OTHER_PROJECT!r}")
+
+
 def _record(tmp: Path, db_a: str, db_b: str):
     from playwright.sync_api import sync_playwright
 
     key_a = _ui_key(db_a)
     key_b = _ui_key(db_b)
     print(f"artel-ui key A: {key_a[:8]}…  B: {key_b[:8]}…")
+
+    _seed_b(key_b)
 
     print("waiting for mDNS propagation …")
     time.sleep(6)
@@ -161,18 +200,23 @@ def _record(tmp: Path, db_a: str, db_b: str):
             page.locator(f"button.nav-btn:has-text('{label}')").click()
             time.sleep(1.2)
 
-        # ── Instance A ───────────────────────────────────────────────────────
+        # ── Instance A: Memory tab — starts empty ────────────────────────────
         page_a = ctx.new_page()
         login(page_a, PORT_A, "A  (port 8101)")
 
-        annotate(page_a, "instance A  ·  opening Mesh tab")
+        annotate(page_a, "instance A  ·  Memory tab — empty, no entries yet")
+        click_tab(page_a, "Memory")
+        page_a.wait_for_load_state("networkidle")
+        time.sleep(3.0)
+
+        # ── Instance A: Mesh tab — discover B, link for ops project only ─────
+        annotate(page_a, "instance A  ·  Mesh tab")
         click_tab(page_a, "Mesh")
         page_a.wait_for_selector("#mesh-token-section", timeout=6000)
-        time.sleep(2.0)
+        time.sleep(1.5)
 
-        # Poll until B appears in the discovered section (mDNS may take a moment)
         print("waiting for B to appear in A's discovered list …")
-        annotate(page_a, "instance A  ·  waiting for instance B to appear via mDNS …")
+        annotate(page_a, "instance A  ·  instance B appears via mDNS — no URL needed")
         discovered_link = page_a.locator("#mesh-discovered-section button:has-text('link')")
         for _ in range(50):
             if discovered_link.count():
@@ -183,66 +227,24 @@ def _record(tmp: Path, db_a: str, db_b: str):
             page_a.locator("button.nav-btn:has-text('Mesh')").click()
             page_a.wait_for_selector("#mesh-token-section", timeout=4000)
             time.sleep(0.6)
-        print(
-            f"discovered section: {page_a.locator('#mesh-discovered-section').inner_html()[:140]}"
-        )
 
-        annotate(page_a, "instance A  ·  instance B discovered on LAN — no URL needed")
-        time.sleep(3.0)
-
-        # One-click link via mDNS handshake
-        annotate(page_a, "instance A  ·  clicking Link — mutual handshake happens automatically")
-        time.sleep(1.5)
-        page_a.on("dialog", lambda d: d.accept(""))
-        discovered_link.first.click()
-        time.sleep(3.5)
-        annotate(
-            page_a, "instance A  ·  linked!  both instances now subscribe to each other's feed"
-        )
-        print("linked!")
-        time.sleep(3.0)
-
-        # ── Instance B: show its Mesh tab (A now appears as linked peer) ──────
-        page_b = ctx.new_page()
-        login(page_b, PORT_B, "B  (port 8102)")
-
-        annotate(page_b, "instance B  ·  Mesh tab — A is already linked (handshake was mutual)")
-        click_tab(page_b, "Mesh")
-        page_b.wait_for_selector("#mesh-list", timeout=6000)
-        time.sleep(3.5)
-
-        # ── Instance A: write a memory entry ─────────────────────────────────
-        print("writing memory on A …")
-        page_a.bring_to_front()
-        annotate(page_a, "instance A  ·  writing a memory entry")
-        click_tab(page_a, "Memory")
-        time.sleep(1.0)
-
-        page_a.locator("#mc").fill("Rate limiter deployed — p99 latency down 40%")
-        time.sleep(1.2)
-        page_a.locator("button:has-text('write')").click()
-        page_a.wait_for_selector(".card", timeout=6000)
-        time.sleep(2.0)
-        annotate(page_a, "instance A  ·  memory saved")
-        print("memory written on A")
-        time.sleep(1.5)
-
-        # ── Instance B: Mesh tab → sync → Memory tab ─────────────────────────
-        page_b.bring_to_front()
-        annotate(page_b, "instance B  ·  Mesh tab — syncing A's feed")
-        click_tab(page_b, "Mesh")
-        page_b.wait_for_selector("#mesh-list", timeout=6000)
-        time.sleep(1.5)
-        sync_btn = page_b.locator("button:has-text('sync')").first
-        sync_btn.click()
         time.sleep(2.5)
-        print("synced A→B feed")
 
-        annotate(page_b, "instance B  ·  Memory tab — A's entry is now here")
-        click_tab(page_b, "Memory")
-        page_b.wait_for_selector(".card", timeout=6000)
+        # Dialog: project prompt → accept DEMO_PROJECT so only ops memory syncs
+        page_a.on("dialog", lambda d: d.accept(DEMO_PROJECT))
+        annotate(page_a, f"instance A  ·  linking B, scoped to project '{DEMO_PROJECT}' only")
+        time.sleep(1.5)
+        discovered_link.first.click()
+        # auto-poll fires server-side; wait for it to complete
         time.sleep(4.0)
-        print("showing B memory tab with replicated entry")
+        print("linked + auto-polled")
+
+        # ── Instance A: Memory tab — ops memories arrived automatically ───────
+        annotate(page_a, f"instance A  ·  Memory tab — '{DEMO_PROJECT}' memories from B are here")
+        click_tab(page_a, "Memory")
+        page_a.wait_for_selector(".card", timeout=8000)
+        time.sleep(4.5)
+        print("showing A memory tab with replicated ops entries")
 
         ctx.close()
         browser.close()
