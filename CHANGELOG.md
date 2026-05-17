@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.15.5] — 2026-05-17
+
+### UI
+
+- Replaced One (Dark/Light) with **Volcano** — bold lava orange-red on near-black charcoal dark; deep terracotta red on warm cream light. Only red-dominant theme in the palette.
+
 ## [0.15.4] — 2026-05-17
 
 ### UI

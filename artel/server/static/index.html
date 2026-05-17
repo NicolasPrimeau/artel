@@ -776,16 +776,16 @@ pre{
   --purple:#907aa9;--p-bg:rgba(144,122,169,.12);--p-bord:rgba(144,122,169,.4);
   --dot:rgba(215,130,126,.06);--header-bg:rgba(242,233,225,.97);--modal-bg:rgba(87,82,121,.75);
 }
-[data-theme="one-dark"]{
-  --bg:#282c34;--s1:#21252b;--s2:#2c313c;--s3:#353b45;
-  --b1:#3a3f4b;--b2:#4b5263;
-  --t1:#abb2bf;--t2:#9da5b4;--t3:#636d83;--t4:#4b5263;
-  --accent:#61afef;--a-bg:rgba(97,175,239,.1);--a-bord:rgba(97,175,239,.35);
-  --green:#98c379;--g-bg:rgba(152,195,121,.1);--g-bord:rgba(152,195,121,.35);
-  --red:#e06c75;--r-bg:rgba(224,108,117,.1);--r-bord:rgba(224,108,117,.35);
-  --orange:#d19a66;--o-bg:rgba(209,154,102,.1);--o-bord:rgba(209,154,102,.35);
-  --purple:#c678dd;--p-bg:rgba(198,120,221,.1);--p-bord:rgba(198,120,221,.35);
-  --dot:rgba(97,175,239,.04);--header-bg:rgba(15,18,22,.97);--modal-bg:rgba(15,18,22,.88);
+[data-theme="volcano"]{
+  --bg:#1a1210;--s1:#221510;--s2:#2e1c12;--s3:#3d2418;
+  --b1:#4f2e18;--b2:#6b3e22;
+  --t1:#f0c8a0;--t2:#d4a878;--t3:#a87850;--t4:#7a5030;
+  --accent:#e8541a;--a-bg:rgba(232,84,26,.1);--a-bord:rgba(232,84,26,.35);
+  --green:#7a9b50;--g-bg:rgba(122,155,80,.1);--g-bord:rgba(122,155,80,.35);
+  --red:#e83a1a;--r-bg:rgba(232,58,26,.1);--r-bord:rgba(232,58,26,.35);
+  --orange:#e8841a;--o-bg:rgba(232,132,26,.1);--o-bord:rgba(232,132,26,.35);
+  --purple:#9a5070;--p-bg:rgba(154,80,112,.1);--p-bord:rgba(154,80,112,.35);
+  --dot:rgba(232,84,26,.05);--header-bg:rgba(8,4,2,.97);--modal-bg:rgba(8,4,2,.9);
 }
 [data-theme="kanagawa"]{
   --bg:#1f1f28;--s1:#16161d;--s2:#2a2a37;--s3:#363646;
@@ -886,16 +886,16 @@ pre{
   --purple:#6a1b9a;--p-bg:rgba(106,27,154,.12);--p-bord:rgba(106,27,154,.4);
   --dot:rgba(21,101,192,.06);--header-bg:rgba(217,236,248,.97);--modal-bg:rgba(14,32,48,.75);
 }
-[data-theme="one-light"]{
-  --bg:#fafafa;--s1:#f0f0f0;--s2:#e5e5e5;--s3:#d9d9d9;
-  --b1:rgba(56,58,66,.15);--b2:rgba(56,58,66,.25);
-  --t1:#383a42;--t2:#494b53;--t3:#696c77;--t4:#a0a1a7;
-  --accent:#4078f2;--a-bg:rgba(64,120,242,.12);--a-bord:rgba(64,120,242,.4);
-  --green:#50a14f;--g-bg:rgba(80,161,79,.12);--g-bord:rgba(80,161,79,.4);
-  --red:#e45649;--r-bg:rgba(228,86,73,.12);--r-bord:rgba(228,86,73,.4);
-  --orange:#c18401;--o-bg:rgba(193,132,1,.12);--o-bord:rgba(193,132,1,.4);
-  --purple:#a626a4;--p-bg:rgba(166,38,164,.12);--p-bord:rgba(166,38,164,.4);
-  --dot:rgba(64,120,242,.05);--header-bg:rgba(240,240,240,.97);--modal-bg:rgba(56,58,66,.75);
+[data-theme="volcano-light"]{
+  --bg:#fdf0e8;--s1:#f5e0cc;--s2:#ead0b4;--s3:#dfbf9c;
+  --b1:rgba(42,20,8,.15);--b2:rgba(42,20,8,.25);
+  --t1:#2a1408;--t2:#4a2818;--t3:#7a4828;--t4:#a07050;
+  --accent:#c04010;--a-bg:rgba(192,64,16,.12);--a-bord:rgba(192,64,16,.4);
+  --green:#3a6a28;--g-bg:rgba(58,106,40,.12);--g-bord:rgba(58,106,40,.4);
+  --red:#c04010;--r-bg:rgba(192,64,16,.12);--r-bord:rgba(192,64,16,.4);
+  --orange:#b05a10;--o-bg:rgba(176,90,16,.12);--o-bord:rgba(176,90,16,.4);
+  --purple:#7a3858;--p-bg:rgba(122,56,88,.12);--p-bord:rgba(122,56,88,.4);
+  --dot:rgba(192,64,16,.06);--header-bg:rgba(245,224,204,.97);--modal-bg:rgba(42,20,8,.75);
 }
 [data-theme="kanagawa-lotus"]{
   --bg:#f2ecbc;--s1:#e5dcb0;--s2:#d8ceab;--s3:#c9bfa0;
@@ -1480,7 +1480,7 @@ const _THEMES=[
   {id:'hacker',      label:'Hacker',      dark:'hacker',         light:'hacker-light',     bd:'#0d0d0d',ad:'#00ff41',bl:'#f0fff0',al:'#007700'},
   {id:'monokai',     label:'Monokai',     dark:'monokai',        light:'monokai-light',    bd:'#272822',ad:'#fd971f',bl:'#fafaf8',al:'#e6821e'},
   {id:'cobalt',      label:'Cobalt',      dark:'cobalt',         light:'cobalt-light',     bd:'#193549',ad:'#ffc600',bl:'#e8f4fd',al:'#1565c0'},
-  {id:'one',         label:'One',         dark:'one-dark',       light:'one-light',        bd:'#282c34',ad:'#61afef',bl:'#fafafa',al:'#4078f2'},
+  {id:'volcano',     label:'Volcano',     dark:'volcano',        light:'volcano-light',    bd:'#1a1210',ad:'#e8541a',bl:'#fdf0e8',al:'#c04010'},
   {id:'kanagawa',    label:'Kanagawa',    dark:'kanagawa',       light:'kanagawa-lotus',   bd:'#1f1f28',ad:'#7e9cd8',bl:'#f2ecbc',al:'#4d699b'},
   {id:'ayu',         label:'Ayu',         dark:'ayu',            light:'ayu-light',        bd:'#0a0e14',ad:'#ffb454',bl:'#fafafa', al:'#ff9940'},
   {id:'flexoki',     label:'Flexoki',     dark:'flexoki',        light:'flexoki-light',    bd:'#100f0f',ad:'#d14d41',bl:'#fffcf0',al:'#d14d41'},
