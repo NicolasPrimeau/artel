@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, Request
 from ...store.db import get_db
 from ..auth import OwnerDep, ReaderDep
 from ..config import settings
+from ..feed_poller import _poll_feed
 from ..mdns import _local_ip, get_discovered, is_private_ip, remove_discovered
 from ..models import (
     DiscoveredPeer,
@@ -168,6 +169,18 @@ async def unlink_peer(link_id: str, agent_id: str = OwnerDep):
     with db:
         db.execute("DELETE FROM feed_subscriptions WHERE id=?", (row["feed_id"],))
         db.execute("DELETE FROM peer_links WHERE id=?", (link_id,))
+
+
+@router.post("/peers/{link_id}/sync", status_code=204, summary="Immediately poll a peer's feed")
+async def sync_peer(link_id: str, agent_id: str = OwnerDep):
+    db = get_db()
+    row = db.execute(
+        "SELECT f.* FROM peer_links p JOIN feed_subscriptions f ON f.id = p.feed_id WHERE p.id=?",
+        (link_id,),
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="not found")
+    await _poll_feed(dict(row))
 
 
 # ── mDNS discovery & handshake ────────────────────────────────────────────────

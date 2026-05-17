@@ -84,7 +84,7 @@ def _start(port: int, db_path: str, reg_key: str) -> subprocess.Popen:
         "PORT": str(port),
         "REGISTRATION_KEY": reg_key,
         "UI_PASSWORD": UI_PW,
-        "MDNS_ENABLED": "false",
+        "MDNS_ENABLED": "true",
         "PUBLIC_URL": f"http://127.0.0.1:{port}",
         "UI_AGENT_ID": UI_AGENT_ID,
     }
@@ -107,16 +107,9 @@ def _record(tmp: Path, db_a: str, db_b: str):
     key_b = _ui_key(db_b)
     print(f"artel-ui key A: {key_a[:8]}…  B: {key_b[:8]}…")
 
-    # Pre-create a token on B so A can subscribe to B's feed
-    tok_b = _api(
-        PORT_B,
-        "POST",
-        "/mesh/tokens",
-        {"label": "for-A", "project": None},
-        agent_id=UI_AGENT_ID,
-        api_key=key_b,
-    )
-    print(f"pre-created token on B: {tok_b['token'][:12]}…")
+    # Wait for mDNS to propagate between instances before opening the UI
+    print("waiting for mDNS propagation …")
+    time.sleep(5)
 
     video_dir = tmp / "video"
     video_dir.mkdir()
@@ -146,91 +139,78 @@ def _record(tmp: Path, db_a: str, db_b: str):
             page.locator(f"button.nav-btn:has-text('{label}')").click()
             time.sleep(1.0)
 
-        # ── Instance A ────────────────────────────────────────────────────────
+        # ── Instance A: discover B via mDNS and link with one click ──────────
         page_a = ctx.new_page()
         print("logging into A …")
         login(page_a, PORT_A)
-        time.sleep(0.6)
+        time.sleep(0.5)
 
         click_tab(page_a, "Mesh")
         page_a.wait_for_selector("#mesh-token-section", timeout=6000)
         time.sleep(1.5)
 
-        # Generate a token on A (the "my mesh token" panel on the left)
-        print("generating token on A …")
-        print("page title:", page_a.title())
-        print("page url:", page_a.url)
-        print("mesh-token-section html:", page_a.locator("#mesh-token-section").inner_html())
-        page_a.on("dialog", lambda d: d.accept(""))
-        gen = page_a.locator("button:has-text('generate token')").first
-        gen.click()
-
-        # Two prompts fire (label, project); handler accepts both with "".
-        # After POST /mesh/tokens + loadMesh(), the token appears in
-        # #mesh-token-section code (inline element with the raw token string).
-        token_el = page_a.locator("#mesh-token-section code")
-        token_el.wait_for(state="visible", timeout=12000)
-        for _ in range(30):
-            token_a = token_el.first.inner_text().strip()
-            if token_a:
+        # mDNS-discovered peers appear in #mesh-discovered-section.
+        # Wait up to 10 s for the green "discovered on LAN" dot to appear.
+        print("waiting for B to appear in A's discovered list …")
+        discovered_link = page_a.locator("#mesh-discovered-section button:has-text('link')")
+        for _ in range(50):
+            if discovered_link.count():
                 break
             time.sleep(0.2)
-        print(f"token A: {token_a[:14]}…")
-        time.sleep(1.0)
+            page_a.reload()
+            page_a.wait_for_load_state("networkidle")
+            # re-navigate to Mesh tab after reload
+            page_a.locator("button.nav-btn:has-text('Mesh')").click()
+            page_a.wait_for_selector("#mesh-token-section", timeout=4000)
+            time.sleep(0.5)
+        print(
+            f"discovered section: {page_a.locator('#mesh-discovered-section').inner_html()[:120]}"
+        )
 
-        # Scroll to show the "linked peers" panel and fill in peer B's details
-        page_a.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-        time.sleep(0.6)
-        page_a.locator("#mesh-url").fill(f"http://127.0.0.1:{PORT_B}")
-        time.sleep(0.5)
-        page_a.locator("#mesh-token").fill(tok_b["token"])
-        time.sleep(0.5)
-        page_a.locator("button:has-text('link peer')").first.click()
-        time.sleep(2.0)
+        # Click "link" — handshake happens server-side, no URL or token to type
+        print("clicking link on A …")
+        page_a.on("dialog", lambda d: d.accept(""))
+        discovered_link.first.click()
+        time.sleep(3.0)
+        print("linked!")
 
-        # ── Instance B ────────────────────────────────────────────────────────
+        # ── Instance B: show Mesh tab (now has A as linked peer) ─────────────
         page_b = ctx.new_page()
         print("logging into B …")
         login(page_b, PORT_B)
         time.sleep(0.5)
 
         click_tab(page_b, "Mesh")
-        page_b.wait_for_selector("#mesh-token-section", timeout=6000)
-        time.sleep(1.2)
-
-        # Link B → A using A's generated token
-        page_b.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-        time.sleep(0.5)
-        page_b.locator("#mesh-url").fill(f"http://127.0.0.1:{PORT_A}")
-        time.sleep(0.4)
-        page_b.locator("#mesh-token").fill(token_a)
-        time.sleep(0.4)
-        page_b.locator("button:has-text('link peer')").first.click()
+        page_b.wait_for_selector("#mesh-list", timeout=6000)
         time.sleep(2.0)
 
-        # Show B's peer list (now has A)
-        page_b.evaluate("window.scrollTo(0, 0)")
-        time.sleep(1.5)
-
-        # ── Back to A: write a memory entry ─────────────────────────────────
+        # ── Instance A: write a memory entry ─────────────────────────────────
         print("writing memory on A …")
         page_a.bring_to_front()
         click_tab(page_a, "Memory")
+        time.sleep(0.5)
 
-        # Find and fill the new-memory textarea/input
         content = page_a.locator("#new-content").first
         if content.count():
             content.fill("Rate limiter deployed — p99 latency down 40%")
-            time.sleep(0.4)
+            time.sleep(0.5)
             page_a.locator("button:has-text('save')").first.click()
-            time.sleep(1.2)
+            time.sleep(1.5)
+        print("memory written on A")
 
-        time.sleep(1.0)
-
-        # ── Back to A Mesh tab to show both peers ────────────────────────────
+        # ── Instance A: Mesh tab → click Sync on the B peer link ─────────────
         click_tab(page_a, "Mesh")
-        page_a.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+        time.sleep(1.0)
+        sync_btn = page_a.locator("button:has-text('sync')").first
+        sync_btn.click()
         time.sleep(2.5)
+        print("synced A→B feed")
+
+        # ── Instance B: Memory tab — show the replicated entry ────────────────
+        page_b.bring_to_front()
+        click_tab(page_b, "Memory")
+        time.sleep(2.5)
+        print("showing B memory tab with replicated entry")
 
         ctx.close()
         browser.close()
