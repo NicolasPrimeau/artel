@@ -1262,3 +1262,84 @@ async def feed_unsubscribe(feed_id: str) -> str:
     except _HTTPX_ERRORS as e:
         return _err(e)
     return f"unsubscribed [{feed_id}]"
+
+
+@mcp.prompt()
+def start_session() -> str:
+    """Begin a work session on the Artel mesh. Loads your prior handoff and
+    unread agent messages so you resume exactly where you (or another agent)
+    left off, with no re-explaining."""
+    return (
+        "Start this session: call session_context() to load your last handoff "
+        "and everything that changed in shared memory while you were gone, then "
+        "message_inbox() to read messages from other agents. Summarize what was "
+        "in progress and what to do next before taking any action."
+    )
+
+
+@mcp.prompt()
+def end_session(summary: str = "", next_steps: str = "") -> str:
+    """Close a work session by persisting state for the next session or agent.
+    Use this last so context is never lost across resets or machine switches.
+
+    Args:
+        summary: What you accomplished this session.
+        next_steps: What to do next, in priority order.
+    """
+    return (
+        "End this session: call session_handoff() with a thorough summary"
+        + (f" ('{summary}')" if summary else "")
+        + " of decisions made, blockers hit, and context that would otherwise be "
+        "lost, plus ordered next steps"
+        + (f" ('{next_steps}')" if next_steps else "")
+        + " and the IDs of any tasks still claimed."
+    )
+
+
+@mcp.prompt()
+def triage_backlog(project: str = "") -> str:
+    """Pull work from the shared task backlog: review open tasks, then claim
+    one before starting so two agents never duplicate effort.
+
+    Args:
+        project: Restrict to a project. Omit for all projects.
+    """
+    return (
+        "Triage the backlog: call task_list(status='open'"
+        + (f", project='{project}'" if project else "")
+        + "), pick the highest-value unclaimed task, task_claim() it, and "
+        "complete or fail it when done — never leave a task in limbo."
+    )
+
+
+@mcp.prompt()
+def capture_finding(topic: str = "") -> str:
+    """Persist a decision, bug, or discovery to shared memory so the whole
+    fleet — and future you — benefits instead of relearning it.
+
+    Args:
+        topic: What the finding is about.
+    """
+    return (
+        "Before writing, memory_search("
+        + (f"'{topic}'" if topic else "the topic")
+        + ") to avoid duplicating an existing entry. Then memory_write() the "
+        "decision/bug/fact with tags so it is findable, and message_send() any "
+        "agent who is blocked on it."
+    )
+
+
+@mcp.prompt()
+def audit_memory(topic: str = "") -> str:
+    """Check what the fleet already knows before starting non-trivial work,
+    avoiding duplicated effort across agents and sessions.
+
+    Args:
+        topic: Subject to search shared memory for.
+    """
+    return (
+        "Call memory_search("
+        + (f"'{topic}'" if topic else "your task topic")
+        + ") and review prior decisions and findings before acting. If another "
+        "agent already did this work, build on it instead of repeating it."
+    )

@@ -211,9 +211,50 @@ async def oauth_protected_resource():
     return JSONResponse(content=json.loads(_protected_resource_body()))
 
 
+_READONLY_TOOLS = {
+    "session_context",
+    "memory_search",
+    "memory_list",
+    "memory_get",
+    "memory_delta",
+    "project_list",
+    "project_members",
+    "agent_list",
+    "message_inbox",
+    "task_list",
+    "task_get",
+    "feed_list",
+}
+_DESTRUCTIVE_TOOLS = {
+    "memory_delete",
+    "agent_delete",
+    "task_fail",
+    "project_leave",
+    "feed_unsubscribe",
+}
+_IDEMPOTENT_TOOLS = {
+    "memory_update",
+    "task_update",
+    "task_unclaim",
+    "agent_rename",
+    "inbox_cron_setup",
+}
+
+
+def _tool_annotations(name: str) -> dict:
+    read_only = name in _READONLY_TOOLS
+    return {
+        "readOnlyHint": read_only,
+        "destructiveHint": name in _DESTRUCTIVE_TOOLS,
+        "idempotentHint": read_only or name in _IDEMPOTENT_TOOLS or name in _DESTRUCTIVE_TOOLS,
+        "openWorldHint": False,
+    }
+
+
 @app.get("/.well-known/mcp/server-card.json", include_in_schema=False)
 async def mcp_server_card():
     tools = await mcp_server.list_tools()
+    prompts = await mcp_server.list_prompts()
     return JSONResponse(
         content={
             "serverInfo": {"name": "artel", "version": app.version},
@@ -231,11 +272,26 @@ async def mcp_server_card():
                     "name": t.name,
                     "description": t.description or "",
                     "inputSchema": t.inputSchema,
+                    "annotations": _tool_annotations(t.name),
                 }
                 for t in tools
             ],
             "resources": [],
-            "prompts": [],
+            "prompts": [
+                {
+                    "name": p.name,
+                    "description": p.description or "",
+                    "arguments": [
+                        {
+                            "name": a.name,
+                            "description": a.description or "",
+                            "required": bool(a.required),
+                        }
+                        for a in (p.arguments or [])
+                    ],
+                }
+                for p in prompts
+            ],
         }
     )
 
