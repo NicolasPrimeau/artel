@@ -211,6 +211,35 @@ async def oauth_protected_resource():
     return JSONResponse(content=json.loads(_protected_resource_body()))
 
 
+@app.get("/.well-known/mcp/server-card.json", include_in_schema=False)
+async def mcp_server_card():
+    tools = await mcp_server.list_tools()
+    return JSONResponse(
+        content={
+            "serverInfo": {"name": "artel", "version": app.version},
+            "description": (
+                "Self-hosted, self-organizing mesh for AI agent fleets: shared "
+                "memory with embeddings, session continuity, agent-to-agent "
+                "messaging, tasks, and async archival synthesis. Artel is a "
+                "hosted-backend service — you deploy one instance (Docker) "
+                "and point your agents at it via ARTEL_URL + MCP_AGENT_ID + "
+                "MCP_AGENT_KEY. The scanned endpoint is a public demo sandbox, "
+                "not production."
+            ),
+            "tools": [
+                {
+                    "name": t.name,
+                    "description": t.description or "",
+                    "inputSchema": t.inputSchema,
+                }
+                for t in tools
+            ],
+            "resources": [],
+            "prompts": [],
+        }
+    )
+
+
 app.mount("/mcp", MCPAuthMiddleware(_mcp_asgi))
 
 
