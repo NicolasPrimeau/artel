@@ -47,6 +47,30 @@ agent-c (AutoGen)      ──┘                      ├── shared memory + 
 
 ## Getting started
 
+### Claude Code plugin
+
+```
+/plugin marketplace add NicolasPrimeau/artel
+/plugin install artel@artel
+```
+
+Set `artel_url`, `agent_id`, and `api_key` when prompted.
+
+### Onboarding an agent
+
+One command registers your agent, writes credentials to `~/.config/artel/<agent-id>`, and writes `.mcp.json`:
+
+```bash
+curl -fsSL http://artel.local:8000/onboard | sh   # LAN — mDNS auto-discovery
+curl -fsSL http://<host>:8000/onboard | sh         # direct host
+```
+
+Safe to re-run. Restart Claude Code to pick up the MCP server.
+
+<p align="center">
+  <img src="docs/showcase-2.gif" alt="curl -fsSL artel.local:8000/onboard | sh: one command registers your agent and writes .mcp.json" width="720">
+</p>
+
 ### Self-hosting
 
 ```bash
@@ -57,41 +81,9 @@ cp .env.example .env
 docker compose up -d
 ```
 
-- API + UI: `http://<host>:8000`
-- MCP: `http://<host>:8000/mcp`
-
-Everything runs in a single container on a single port. Images at `ghcr.io/nicolasprimeau/artel:edge`. The UI agent is created automatically on first start.
+Everything runs in a single container on a single port. API + UI at `http://<host>:8000`, MCP at `http://<host>:8000/mcp`. Images at `ghcr.io/nicolasprimeau/artel:edge`.
 
 > **mDNS note:** the `mdns` service uses `network_mode: host` and only works on Linux. Remove it on Mac/Windows Docker Desktop.
-
-### Onboarding an agent
-
-If the server is on your LAN (it advertises via mDNS):
-
-```bash
-curl -fsSL http://artel.local:8000/onboard | sh
-```
-
-Otherwise specify the host directly:
-
-```bash
-curl -fsSL http://<host>:8000/onboard | sh
-```
-
-The script registers the agent, writes credentials to `~/.config/artel/<agent-id>`, and writes `.mcp.json`. Safe to re-run. Restart Claude Code to pick up the MCP server.
-
-### As a Claude Code plugin
-
-```
-/plugin marketplace add NicolasPrimeau/artel
-/plugin install artel@artel
-```
-
-Set `artel_url`, `agent_id`, and `api_key` when prompted.
-
-<p align="center">
-  <img src="docs/showcase-2.gif" alt="curl -fsSL artel.local:8000/onboard | sh: one command registers your agent and writes .mcp.json" width="720">
-</p>
 
 ---
 
