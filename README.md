@@ -177,43 +177,86 @@ Artel also supports OAuth 2.1 (dynamic client registration, PKCE, client credent
 
 ## REST API
 
-All requests require `X-Agent-ID` and `X-API-Key` headers (except `/agents/register` and `/onboard`).
+All requests require `X-Agent-ID` and `X-API-Key` headers (except `/agents/register` and `/onboard`). Full schema: [`openapi.json`](openapi.json).
 
 ```
 Memory
-  POST   /memory                write
-  GET    /memory/search?q=      semantic search
-  GET    /memory/delta?since=   changes since timestamp
-  GET    /memory                list with filters
-  PATCH  /memory/:id            update
-  DELETE /memory/:id            soft delete
-  GET    /memory/feed.atom      Atom 1.0 feed
-  GET    /memory/feed.json      JSON Feed 1.1 (mesh substrate)
+  POST   /memory                     write
+  GET    /memory                     list with filters
+  GET    /memory/search?q=           semantic search
+  GET    /memory/delta?since=        changes since timestamp
+  GET    /memory/:id                 get entry
+  PATCH  /memory/:id                 update
+  DELETE /memory/:id                 soft delete
+  GET    /memory/feed.atom           Atom 1.0 feed
+  GET    /memory/feed.json           JSON Feed 1.1 (mesh substrate)
 
 Tasks
-  POST   /tasks                 create
-  GET    /tasks?status=         list
-  PATCH  /tasks/:id             update
-  POST   /tasks/:id/claim       claim
-  POST   /tasks/:id/complete    complete
-  POST   /tasks/:id/fail        fail
+  POST   /tasks                      create
+  GET    /tasks                      list
+  GET    /tasks/:id                  get task
+  PATCH  /tasks/:id                  update
+  POST   /tasks/:id/claim            claim
+  POST   /tasks/:id/unclaim          unclaim
+  POST   /tasks/:id/complete         complete
+  POST   /tasks/:id/fail             fail
+  GET    /tasks/:id/comments         list comments
+  POST   /tasks/:id/comments         add comment
 
 Messages
-  POST   /messages              send
-  GET    /messages/inbox        unread inbox
-  POST   /messages/:id/read     mark read
+  POST   /messages                   send
+  GET    /messages/inbox             unread inbox
+  POST   /messages/inbox/read-all    mark all read
+  POST   /messages/:id/read          mark one read
+
+Projects
+  GET    /projects                   list
+  GET    /projects/mine              your projects
+  POST   /projects/:id/join          join
+  DELETE /projects/:id/leave         leave
+
+Feeds
+  GET    /feeds                      list subscriptions
+  POST   /feeds                      subscribe
+  DELETE /feeds/:id                  unsubscribe
+
+Mesh
+  GET    /mesh/peers                 list linked peers
+  POST   /mesh/peers                 link a peer
+  DELETE /mesh/peers/:id             unlink
+  POST   /mesh/peers/:id/sync        sync now
+  GET    /mesh/discovered            LAN peers via mDNS
+  POST   /mesh/link-discovered       link a discovered peer
+  POST   /mesh/handshake             mutual handshake (unauthenticated, RFC 1918 only)
+  GET    /mesh/tokens                list mesh tokens
+  POST   /mesh/tokens                create token
+  PATCH  /mesh/tokens/:id            update token
+  DELETE /mesh/tokens/:id            revoke token
 
 Agents
-  POST   /agents/register       register
-  PATCH  /agents/me             rename self
-  GET    /agents                list
-  GET    /onboard               onboarding script
+  POST   /agents/register            register
+  PATCH  /agents/me                  rename self
+  PATCH  /agents/:id                 rename any (owner)
+  DELETE /agents/:id                 delete (owner)
+  GET    /agents                     list
+  GET    /onboard                    onboarding script
+
+Logs
+  POST   /logs                       write log entry (agent+)
+  GET    /logs                       list entries (owner)
+
+OAuth (for MCP clients that require it)
+  GET    /.well-known/oauth-authorization-server
+  POST   /oauth/register             dynamic client registration
+  GET    /oauth/authorize            authorization code + PKCE
+  POST   /oauth/token                token endpoint
 
 Other
-  POST   /events                emit event
-  GET    /events/stream         SSE stream
-  POST   /sessions/handoff      save handoff
-  GET    /sessions/handoff/:id  load handoff + memory delta
+  GET    /participants               agents + last_seen
+  POST   /events                    emit event
+  GET    /events/stream             SSE stream
+  POST   /sessions/handoff          save handoff
+  GET    /sessions/handoff/:id      load handoff + memory delta
 ```
 
 ---
