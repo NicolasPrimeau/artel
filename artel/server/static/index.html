@@ -1357,7 +1357,9 @@ pre{
 <script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-const hdrs=()=>({'content-type':'application/json','x-agent-id':window._aid,'x-api-key':window._akey});
+const hdrs=()=>window._akey
+  ?{'content-type':'application/json','x-agent-id':window._aid,'x-api-key':window._akey}
+  :{'content-type':'application/json','x-ui-session':'1'};
 let _sseAbort=null, _agents=[], _projects=[], _myProjects=new Set(), _editTaskId=null, _taskData={};
 
 // ── Toast system ──────────────────────────────────────────────────────
@@ -1390,7 +1392,7 @@ async function parseErr(r){
 }
 async function adminReq(method,path,body){
   if(window._agent_role!=='owner')throw new Error('read-only: log in as owner to make changes');
-  const r=await fetch(path,{method,headers:hdrs(),body:body?JSON.stringify(body):undefined});
+  const r=await fetch(path,{method,headers:hdrs(),credentials:'same-origin',body:body?JSON.stringify(body):undefined});
   if(!r.ok)throw new Error(await parseErr(r));
   return (method==='DELETE'||r.status===204)?null:r.json();
 }
@@ -1400,7 +1402,7 @@ function activeAgent(){return $('h-agent-sel').value||null}
 
 async function req(method,path,body){
   if(window._agent_role==='viewer'&&method!=='GET')throw new Error('read-only: log in as owner to make changes');
-  const r=await fetch(path,{method,headers:hdrs(),body:body?JSON.stringify(body):undefined});
+  const r=await fetch(path,{method,headers:hdrs(),credentials:'same-origin',body:body?JSON.stringify(body):undefined});
   if(!r.ok)throw new Error(await parseErr(r));
   return (method==='DELETE'||r.status===204)?null:r.json();
 }
@@ -1908,7 +1910,7 @@ function startSSE(){
   const url='/events/stream'+(agent?'?agent='+encodeURIComponent(agent):'');
   (async()=>{
     try{
-      const r=await fetch(url,{headers:hdrs(),signal:_sseAbort.signal});
+      const r=await fetch(url,{headers:hdrs(),credentials:'same-origin',signal:_sseAbort.signal});
       if(!r.ok){setSseStatus(false,'error '+r.status);return;}
       setSseStatus(true,'connected');
       $('ev-log').innerHTML='';

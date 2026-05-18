@@ -1,3 +1,4 @@
+import time
 from datetime import UTC, datetime
 from typing import NamedTuple
 
@@ -7,10 +8,31 @@ from ..store.db import get_db
 from .config import settings
 from .presence import update_seen
 
+_SESSION_TTL = 86400.0
+
 
 class FeedAuth(NamedTuple):
     agent_id: str
     mesh_project: str | None
+
+
+def verify_ui_session(token: str) -> bool:
+    if not settings.ui_password:
+        return True
+    if not token:
+        return False
+    db = get_db()
+    row = db.execute("SELECT last_seen_at FROM ui_sessions WHERE token=?", (token,)).fetchone()
+    if not row:
+        return False
+    now = time.time()
+    if now - row["last_seen_at"] > _SESSION_TTL:
+        with db:
+            db.execute("DELETE FROM ui_sessions WHERE token=?", (token,))
+        return False
+    with db:
+        db.execute("UPDATE ui_sessions SET last_seen_at=? WHERE token=?", (now, token))
+    return True
 
 
 def _verify_agent(agent_id: str, api_key: str) -> bool:
@@ -28,7 +50,15 @@ async def require_agent(
     request: Request,
     x_agent_id: str = Header(default=""),
     x_api_key: str = Header(default=""),
+    x_ui_session: str = Header(default=""),
 ) -> str:
+    if x_ui_session:
+        if not verify_ui_session(request.cookies.get("session", "")):
+            raise HTTPException(status_code=401, detail="invalid or expired session")
+        aid = settings.ui_agent_id
+        update_seen(aid, datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"))
+        return aid
+
     auth = request.headers.get("authorization", "")
     if auth.startswith("Bearer "):
         try:

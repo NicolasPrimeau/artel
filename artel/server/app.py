@@ -17,6 +17,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 from ..mcp.server import mcp as mcp_server
 from ..store.db import get_db, instance_id
+from .auth import _SESSION_TTL, verify_ui_session
 from .config import settings
 from .feed_poller import run_poller
 from .jwt_utils import verify_token
@@ -40,7 +41,6 @@ from mcp.server.fastmcp import FastMCP as _FastMCP  # noqa: E402
 _mcp_asgi = _FastMCP.streamable_http_app(mcp_server)
 
 _UI = Path(__file__).parent / "static" / "index.html"
-_SESSION_TTL = 86400.0
 
 _LOGIN = """\
 <!DOCTYPE html>
@@ -243,23 +243,7 @@ def _gc_ui_sessions() -> None:
 
 
 def _authed(request: Request) -> bool:
-    if not settings.ui_password:
-        return True
-    token = request.cookies.get("session", "")
-    if not token:
-        return False
-    db = get_db()
-    row = db.execute("SELECT last_seen_at FROM ui_sessions WHERE token=?", (token,)).fetchone()
-    if not row:
-        return False
-    now = time.time()
-    if now - row["last_seen_at"] > _SESSION_TTL:
-        with db:
-            db.execute("DELETE FROM ui_sessions WHERE token=?", (token,))
-        return False
-    with db:
-        db.execute("UPDATE ui_sessions SET last_seen_at=? WHERE token=?", (now, token))
-    return True
+    return verify_ui_session(request.cookies.get("session", ""))
 
 
 _NO_STORE = {"Cache-Control": "no-store, no-cache, must-revalidate", "Pragma": "no-cache"}
@@ -307,10 +291,8 @@ async def ui(request: Request):
     db = get_db()
     if _authed(request):
         aid = settings.ui_agent_id
-        akey = settings.ui_agent_key()
-        agent_row = db.execute("SELECT api_key, role FROM agents WHERE id=?", (aid,)).fetchone()
-        if not akey and agent_row:
-            akey = agent_row["api_key"]
+        akey = ""
+        agent_row = db.execute("SELECT role FROM agents WHERE id=?", (aid,)).fetchone()
         agent_role = agent_row["role"] if agent_row else "owner"
         regkey = settings.registration_key
     else:
