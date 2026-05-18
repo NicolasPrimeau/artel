@@ -49,10 +49,27 @@ a `agents` table lookup. Either match authenticates.
 3. **Query pair** — only on feed routes via `require_agent_feed`:
    `?agent_id=&api_key=`. This exists so RSS/Atom readers that cannot set
    custom headers can still authenticate. Treat these URLs as bearer secrets.
+4. **UI session cookie** — `require_agent` checks this *first*: if the
+   `X-Ui-Session` header is present it authenticates via the `session` cookie
+   against the `ui_sessions` table (`verify_ui_session`) and, on success,
+   resolves to `Settings.ui_agent_id` (the owner identity). No API key is
+   involved. This is what the dashboard uses; the owner page no longer embeds
+   a long-lived key (`window._akey=""`). Because access is bound to the live
+   `ui_sessions` row, **logout deletes the row and immediately revokes API
+   access**, even for a captured/cached page or replayed cookie.
+
+   The `X-Ui-Session` custom header gates this path for CSRF: a cross-site
+   page cannot set custom headers without a CORS preflight (none is granted),
+   and the cookie is `SameSite=Lax`, so a forged cross-site request can neither
+   ride the cookie on state-changing calls nor add the header. Stateless, no
+   schema migration. `verify_ui_session("")` returns `True` when
+   `Settings.ui_password` is unset (open instance = open owner UI), matching
+   the pre-redesign behavior.
 
 Any successful authentication calls `presence.update_seen(agent_id, ...)` and
-returns the resolved `agent_id`. Any failure raises `401 invalid credentials`.
-A bad/expired JWT never falls through to header auth — it 401s.
+returns the resolved `agent_id`. Any failure raises `401 invalid credentials`
+(or `401 invalid or expired session` for the UI-session path). A bad/expired
+JWT never falls through to header auth — it 401s.
 
 ## Roles (RBAC)
 
@@ -108,5 +125,10 @@ this project` on mismatch.
 - Role is DB-only. An owner whose access is via a static key still resolves to
   `agent` for `require_role`; grant owner/archivist by inserting/marking an
   `agents` row.
+- Dashboard owner auth is session-bound, not key-bound (the redesign): the
+  page carries no credential, so the owner key cannot leak via a cached page,
+  devtools, or proxy, and logout is a true revocation. Programmatic owner
+  access (scripts, MCP) still uses the static/JWT key paths unchanged — only
+  the browser UI moved to the cookie+`X-Ui-Session` path.
 </content>
 </invoke>
