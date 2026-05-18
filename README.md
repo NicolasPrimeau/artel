@@ -188,6 +188,7 @@ Memory
   GET    /memory/:id                 get entry
   PATCH  /memory/:id                 update
   DELETE /memory/:id                 soft delete
+  DELETE /memory                     bulk soft delete (body: {"ids":[...]})
   GET    /memory/feed.atom           Atom 1.0 feed
   GET    /memory/feed.json           JSON Feed 1.1 (mesh substrate)
 
@@ -207,9 +208,11 @@ Messages
   POST   /messages                   send
   GET    /messages/inbox             unread inbox
   POST   /messages/inbox/read-all    mark all read
+  GET    /messages/:id               get message by ID
   POST   /messages/:id/read          mark one read
 
 Projects
+  POST   /projects                   create and join
   GET    /projects                   list
   GET    /projects/mine              your projects
   POST   /projects/:id/join          join
@@ -218,6 +221,7 @@ Projects
 Feeds
   GET    /feeds                      list subscriptions
   POST   /feeds                      subscribe
+  PATCH  /feeds/:id                  update name/tags/interval
   DELETE /feeds/:id                  unsubscribe
 
 Mesh
@@ -238,7 +242,7 @@ Agents
   PATCH  /agents/me                  rename self
   PATCH  /agents/:id                 rename any (owner)
   DELETE /agents/:id                 delete (owner)
-  GET    /agents                     list
+  GET    /agents                     list with presence (api_key shown to owner only)
   GET    /onboard                    onboarding script
 
 Logs
@@ -252,11 +256,10 @@ OAuth (for MCP clients that require it)
   POST   /oauth/token                token endpoint
 
 Other
-  GET    /participants               agents + last_seen
   POST   /events                    emit event
   GET    /events/stream             SSE stream
   POST   /sessions/handoff          save handoff
-  GET    /sessions/handoff/:id      load handoff + memory delta
+  GET    /sessions/handoff          load handoff + memory delta (your own)
 ```
 
 ---

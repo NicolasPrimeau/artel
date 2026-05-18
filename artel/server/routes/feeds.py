@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 
 from ...store.db import get_db
 from ..auth import ActorDep, ReaderDep, _memberships, is_owner
-from ..models import FeedCreate, FeedEntry, new_id
+from ..models import FeedCreate, FeedEntry, FeedPatch, new_id
 
 router = APIRouter(prefix="/feeds", tags=["feeds"])
 
@@ -67,6 +67,34 @@ async def list_feeds(agent_id: str = ReaderDep):
             allowed,
         ).fetchall()
     return [_row_to_entry(r) for r in rows]
+
+
+@router.patch("/{feed_id}", response_model=FeedEntry, summary="Update feed subscription settings")
+async def update_feed(feed_id: str, body: FeedPatch, agent_id: str = ActorDep):
+    db = get_db()
+    row = db.execute("SELECT * FROM feed_subscriptions WHERE id=?", (feed_id,)).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="feed not found")
+    if row["agent_id"] != agent_id and not is_owner(agent_id):
+        raise HTTPException(status_code=403, detail="not your subscription")
+    updates: dict = {}
+    if body.name is not None:
+        updates["name"] = body.name
+    if body.tags is not None:
+        updates["tags"] = json.dumps(body.tags)
+    if body.interval_min is not None:
+        updates["interval_min"] = body.interval_min
+    if body.max_per_poll is not None:
+        updates["max_per_poll"] = body.max_per_poll
+    if updates:
+        set_parts = [f"{k}=?" for k in updates]
+        with db:
+            db.execute(
+                f"UPDATE feed_subscriptions SET {', '.join(set_parts)} WHERE id=?",
+                [*updates.values(), feed_id],
+            )
+    row = db.execute("SELECT * FROM feed_subscriptions WHERE id=?", (feed_id,)).fetchone()
+    return _row_to_entry(row)
 
 
 @router.delete("/{feed_id}", status_code=204, summary="Unsubscribe from a feed")

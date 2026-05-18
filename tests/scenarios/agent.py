@@ -95,7 +95,7 @@ class AgentHandle:
         return r.json()
 
     async def load_handoff(self) -> dict:
-        r = await self._http.get(f"/sessions/handoff/{self.id}")
+        r = await self._http.get("/sessions/handoff")
         r.raise_for_status()
         return r.json()
 
@@ -118,7 +118,7 @@ class AgentHandle:
         return r.json()
 
     async def participants(self) -> list[dict]:
-        r = await self._http.get("/participants")
+        r = await self._http.get("/agents")
         r.raise_for_status()
         return r.json()
 

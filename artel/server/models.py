@@ -160,6 +160,8 @@ class AgentCreated(BaseModel):
     project: str | None = None
     created_at: str
     role: str = "agent"
+    last_seen: str | None = None
+    active_task_id: str | None = None
     mcp_config: dict | None = None
 
 
@@ -191,6 +193,21 @@ class FeedEntry(BaseModel):
     max_per_poll: int
     last_fetched_at: str | None
     created_at: str
+
+
+class FeedPatch(BaseModel):
+    name: str | None = None
+    tags: list[str] | None = None
+    interval_min: int | None = Field(default=None, ge=1, le=1440)
+    max_per_poll: int | None = Field(default=None, ge=1, le=100)
+
+
+class BulkMemoryDelete(BaseModel):
+    ids: list[str]
+
+
+class ProjectCreate(BaseModel):
+    name: str
 
 
 class MeshTokenCreate(BaseModel):

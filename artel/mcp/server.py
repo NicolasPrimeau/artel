@@ -336,16 +336,16 @@ async def session_context(agent_id: str | None = None) -> str:
     Args:
         agent_id: Whose context to load. Omit to load your own.
     """
-    target = agent_id or _agent_id.get(settings.mcp_agent_id)
     c = _http()
     try:
-        r = await c.get(f"/sessions/handoff/{target}")
+        r = await c.get("/sessions/handoff")
         r.raise_for_status()
     except _HTTPX_ERRORS as e:
         return _err(e)
     data = r.json()
 
-    parts: list[str] = [f"agent: {target}"]
+    own_id = agent_id or _agent_id.get(settings.mcp_agent_id)
+    parts: list[str] = [f"agent: {own_id}"]
     h = data.get("last_handoff")
     if h:
         parts.append(f"## Last session ({h['created_at'][:16]})\n{h['summary']}")
@@ -742,7 +742,7 @@ async def agent_list() -> str:
     """
     c = _http()
     try:
-        r = await c.get("/participants")
+        r = await c.get("/agents")
         r.raise_for_status()
     except _HTTPX_ERRORS as e:
         return _err(e)

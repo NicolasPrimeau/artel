@@ -4,7 +4,7 @@ import sqlite3
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 
 from ...store.db import get_db
-from ..auth import ActorDep, OwnerDep, ReaderDep, require_registration_key
+from ..auth import ActorDep, OwnerDep, ReaderDep, is_owner, require_registration_key
 from ..config import settings
 from ..models import AgentCreated, AgentRegister, AgentRename, AgentSelfRegister
 from ..presence import update_seen
@@ -220,15 +220,47 @@ async def delete_agent(agent_id: str):
 @router.get(
     "",
     response_model=list[AgentCreated],
-    summary="List all agents (owner only)",
-    dependencies=[OwnerDep],
+    summary="List all agents with presence data",
 )
-async def list_agents():
+async def list_agents(agent_id: str = ReaderDep):
     db = get_db()
+    owner = is_owner(agent_id)
+
+    last_seen: dict[str, str | None] = {aid: None for aid in settings.api_keys().values()}
+    for row in db.execute("SELECT id, last_seen_at FROM agents").fetchall():
+        last_seen[row["id"]] = row["last_seen_at"]
+    for row in db.execute(
+        "SELECT agent_id, MAX(created_at) AS ts FROM events GROUP BY agent_id"
+    ).fetchall():
+        if row["agent_id"] in last_seen:
+            prev = last_seen[row["agent_id"]]
+            last_seen[row["agent_id"]] = max(row["ts"], prev) if prev else row["ts"]
+
+    active_tasks: dict[str, str | None] = {}
+    for row in db.execute("SELECT assigned_to, id FROM tasks WHERE status='claimed'").fetchall():
+        active_tasks[row["assigned_to"]] = row["id"]
+
     rows = db.execute("SELECT * FROM agents ORDER BY created_at").fetchall()
-    dynamic = [_row_to_agent(r) for r in rows]
+    dynamic = [
+        AgentCreated(
+            agent_id=r["id"],
+            api_key=r["api_key"] if owner else "",
+            project=r["project"],
+            created_at=r["created_at"],
+            role=r["role"] if "role" in r.keys() else "agent",
+            last_seen=last_seen.get(r["id"]),
+            active_task_id=active_tasks.get(r["id"]),
+        )
+        for r in rows
+    ]
     static = [
-        AgentCreated(agent_id=aid, api_key=key, created_at="static")
+        AgentCreated(
+            agent_id=aid,
+            api_key=key if owner else "",
+            created_at="static",
+            last_seen=last_seen.get(aid),
+            active_task_id=active_tasks.get(aid),
+        )
         for key, aid in settings.api_keys().items()
     ]
     return static + dynamic

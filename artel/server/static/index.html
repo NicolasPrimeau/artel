@@ -1570,7 +1570,7 @@ async function loadProjectsHeader(){
 
 async function loadAgentsGlobal(){
   try{
-    _agents=await req('GET','/participants');
+    _agents=await req('GET','/agents');
     const dl=$('agent-list-dl'),sa=$('sess-agent'),ha=$('h-agent-sel');
     dl.innerHTML='';
     sa.innerHTML='<option value="">select agent…</option>';
@@ -1943,7 +1943,7 @@ async function loadAgents(){
   loading('alist',4);
   try{
     const [participants,projects]=await Promise.all([
-      req('GET','/participants'),
+      req('GET','/agents'),
       req('GET','/projects').catch(()=>[]),
     ]);
     const agentProjects={};

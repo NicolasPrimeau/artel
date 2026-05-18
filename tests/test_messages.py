@@ -72,6 +72,31 @@ async def test_mark_read_wrong_agent_forbidden(client):
     assert r2.status_code == 403
 
 
+async def test_get_message_by_id(client):
+    r = await client.post("/messages", json={"to": AGENT2, "body": "fetchable"}, headers=HEADERS)
+    mid = r.json()["id"]
+
+    r2 = await client.get(f"/messages/{mid}", headers=HEADERS2)
+    assert r2.status_code == 200
+    assert r2.json()["body"] == "fetchable"
+
+
+async def test_get_message_sender_can_fetch(client):
+    r = await client.post("/messages", json={"to": AGENT2, "body": "sent"}, headers=HEADERS)
+    mid = r.json()["id"]
+
+    r2 = await client.get(f"/messages/{mid}", headers=HEADERS)
+    assert r2.status_code == 200
+
+
+async def test_get_message_wrong_agent_forbidden(client):
+    r = await client.post("/messages", json={"to": AGENT2, "body": "private"}, headers=HEADERS)
+    mid = r.json()["id"]
+
+    r2 = await client.get(f"/messages/{mid}", headers={"x-agent-id": "other", "x-api-key": "nope"})
+    assert r2.status_code == 401
+
+
 async def test_message_event_written_to_db(client):
     await client.post("/messages", json={"to": AGENT2, "body": "event check"}, headers=HEADERS)
 

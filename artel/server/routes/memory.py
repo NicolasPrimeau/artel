@@ -19,7 +19,7 @@ from ..auth import (
 )
 from ..broadcast import broadcast
 from ..config import settings
-from ..models import EventEntry, MemoryEntry, MemoryPatch, MemoryWrite, new_id
+from ..models import BulkMemoryDelete, EventEntry, MemoryEntry, MemoryPatch, MemoryWrite, new_id
 
 _ATOM_NS = "http://www.w3.org/2005/Atom"
 ET.register_namespace("", _ATOM_NS)
@@ -511,6 +511,29 @@ async def patch_memory(
 
     row = db.execute("SELECT * FROM memory WHERE id=?", (entry_id,)).fetchone()
     return _row_to_entry(row)
+
+
+@router.delete("", status_code=204, summary="Bulk soft-delete memory entries")
+async def bulk_delete_memory(body: BulkMemoryDelete, agent_id: str = ActorDep):
+    db = get_db()
+    now = "strftime('%Y-%m-%dT%H:%M:%fZ','now')"
+    for raw_id in body.ids:
+        try:
+            entry_id = _resolve_entry(raw_id)
+        except Exception:
+            continue
+        row = db.execute(
+            "SELECT agent_id FROM memory WHERE id=? AND deleted_at IS NULL", (entry_id,)
+        ).fetchone()
+        if not row:
+            continue
+        if row["agent_id"] != agent_id and not can_curate_memory(agent_id):
+            continue
+        db.execute(
+            f"UPDATE memory SET deleted_at={now} WHERE id=?",
+            (entry_id,),
+        )
+    db.commit()
 
 
 @router.delete("/{entry_id}", status_code=204, summary="Soft-delete a memory entry (owner only)")

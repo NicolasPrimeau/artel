@@ -100,3 +100,18 @@ async def test_project_list_includes_members(client):
     projects = {p["name"]: p for p in r.json()}
     assert "alpha" in projects
     assert TEST_AGENT in projects["alpha"]["agents"]
+
+
+async def test_create_project(client):
+    r = await client.post("/projects", json={"name": "my-new-project"}, headers=HEADERS)
+    assert r.status_code == 204
+
+    r2 = await client.get("/projects/mine", headers=HEADERS)
+    ids = [p["project_id"] for p in r2.json()]
+    assert "my-new-project" in ids
+
+
+async def test_create_project_idempotent(client):
+    await client.post("/projects", json={"name": "dup-project"}, headers=HEADERS)
+    r = await client.post("/projects", json={"name": "dup-project"}, headers=HEADERS)
+    assert r.status_code == 204

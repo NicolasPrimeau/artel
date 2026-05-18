@@ -14,7 +14,7 @@ async def test_viewer_is_read_only(scenario):
 
     assert (await viewer._http.get("/memory")).status_code == 200
     assert (await viewer._http.get("/tasks")).status_code == 200
-    assert (await viewer._http.get("/participants")).status_code == 200
+    assert (await viewer._http.get("/agents")).status_code == 200
 
     assert (await viewer._http.post("/memory", json={"content": "x"})).status_code == 403
     assert (await viewer._http.post("/tasks", json={"title": "x"})).status_code == 403
@@ -30,7 +30,11 @@ async def test_agent_cannot_perform_owner_admin(scenario):
     agent = await scenario.agent("plain")
     victim = await scenario.agent("victim")
 
-    assert (await agent._http.get("/agents")).status_code == 403
+    r = await agent._http.get("/agents")
+    assert r.status_code == 200
+    for a in r.json():
+        assert a["api_key"] == ""
+
     assert (await agent._http.delete(f"/agents/{victim.id}")).status_code == 403
     assert (
         await agent._http.patch(f"/agents/{victim.id}", json={"new_id": "hijacked"})
@@ -84,7 +88,10 @@ async def test_archivist_is_not_agent_admin(scenario):
     archivist = await scenario.archivist_agent()
     await scenario.agent("untouchable")
 
-    assert (await archivist._http.get("/agents")).status_code == 403
+    r = await archivist._http.get("/agents")
+    assert r.status_code == 200
+    for a in r.json():
+        assert a["api_key"] == ""
     assert (await archivist._http.delete("/agents/untouchable")).status_code == 403
 
 

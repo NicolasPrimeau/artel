@@ -2940,15 +2940,17 @@ async def test_handoff_all_fields_round_trip(scenario):
     assert mem["id"] in h["memory_refs"]
 
 
-async def test_handoff_cross_agent_load_forbidden(scenario):
-    """Agent A cannot load agent B's handoff — 403."""
+async def test_handoff_isolated_per_agent(scenario):
+    """Each agent sees only their own handoff."""
     agent_a = await scenario.agent("agent-a")
     agent_b = await scenario.agent("agent-b")
 
     await agent_a.save_handoff(summary="A's private session state")
 
-    r = await agent_b._http.get("/sessions/handoff/agent-a")
-    assert r.status_code == 403
+    h_a = await agent_a.load_handoff()
+    h_b = await agent_b.load_handoff()
+    assert h_a["last_handoff"]["summary"] == "A's private session state"
+    assert h_b["last_handoff"] is None
 
 
 # ── Self-register duplicate ───────────────────────────────────────────────────

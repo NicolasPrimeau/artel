@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from ...store.db import get_db
 from ..auth import ActorDep, ReaderDep
 from ..config import settings
-from ..models import ProjectInfo
+from ..models import ProjectCreate, ProjectInfo
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -17,6 +17,16 @@ class ProjectMember(BaseModel):
 class ProjectSummary(BaseModel):
     project_id: str
     joined_at: str
+
+
+@router.post("", status_code=204, summary="Create a project and join it")
+async def create_project(body: ProjectCreate, agent_id: str = ActorDep):
+    db = get_db()
+    db.execute(
+        "INSERT OR IGNORE INTO project_members (project_id, agent_id) VALUES (?, ?)",
+        (body.name, agent_id),
+    )
+    db.commit()
 
 
 @router.post("/{project_id}/join", status_code=204, summary="Join a project")

@@ -1,6 +1,6 @@
 import json
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from ...store.db import get_db
 from ..auth import ActorDep, ReaderDep, project_filter
@@ -33,21 +33,16 @@ async def post_handoff(body: HandoffPost, agent_id: str = ActorDep):
 
 
 @router.get(
-    "/handoff/{target_agent_id}",
+    "/handoff",
     response_model=HandoffResponse,
     summary="Load last handoff and memory delta since then",
 )
-async def get_handoff(
-    target_agent_id: str,
-    agent_id: str = ReaderDep,
-):
-    if target_agent_id != agent_id:
-        raise HTTPException(status_code=403, detail="forbidden")
+async def get_handoff(agent_id: str = ReaderDep):
     db = get_db()
     row = db.execute(
         """SELECT * FROM session_handoffs WHERE agent_id=?
            ORDER BY created_at DESC LIMIT 1""",
-        (target_agent_id,),
+        (agent_id,),
     ).fetchone()
 
     last_handoff = None
@@ -65,11 +60,11 @@ async def get_handoff(
         }
         since = row["created_at"]
 
-    pf_clause, pf_params = project_filter(target_agent_id)
+    pf_clause, pf_params = project_filter(agent_id)
     delta_sql = """SELECT * FROM memory
                    WHERE updated_at > ? AND deleted_at IS NULL
                      AND (scope != 'agent' OR agent_id = ?)"""
-    delta_params: list = [since, target_agent_id]
+    delta_params: list = [since, agent_id]
     if pf_clause:
         delta_sql += f" AND {pf_clause}"
         delta_params.extend(pf_params)

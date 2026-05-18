@@ -700,3 +700,37 @@ async def test_non_artel_json_feed_uses_legacy_path(client):
     assert len(rows) == 1
     assert rows[0]["id"] != "x1"  # legacy path mints a fresh id
     assert rows[0]["confidence"] == 0.5  # legacy ingest confidence
+
+
+async def test_feed_patch_updates_settings(client):
+    r = await _subscribe(client)
+    feed_id = r.json()["id"]
+
+    r2 = await client.patch(
+        f"/feeds/{feed_id}",
+        json={"name": "Updated Feed", "interval_min": 60, "tags": ["new-tag"]},
+        headers=HEADERS,
+    )
+    assert r2.status_code == 200
+    data = r2.json()
+    assert data["name"] == "Updated Feed"
+    assert data["interval_min"] == 60
+    assert "new-tag" in data["tags"]
+
+
+async def test_feed_patch_not_found(client):
+    r = await client.patch(
+        "/feeds/00000000-0000-0000-0000-000000000000",
+        json={"name": "X"},
+        headers=HEADERS,
+    )
+    assert r.status_code == 404
+
+
+async def test_feed_patch_wrong_owner(client):
+    r = await _subscribe(client)
+    feed_id = r.json()["id"]
+    await client.post("/projects/artel/join", headers=HEADERS2)
+
+    r2 = await client.patch(f"/feeds/{feed_id}", json={"name": "Hijacked"}, headers=HEADERS2)
+    assert r2.status_code == 403

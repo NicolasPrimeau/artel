@@ -103,6 +103,21 @@ async def mark_inbox_read(agent_id: str = ActorDep):
     return {"ok": True}
 
 
+@router.get("/{msg_id}", response_model=MessageEntry, summary="Fetch a single message by ID")
+async def get_message(msg_id: str, agent_id: str = ReaderDep):
+    db = get_db()
+    row = db.execute("SELECT * FROM messages WHERE id=?", (msg_id,)).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="not found")
+    if (
+        row["to_agent"] != agent_id
+        and row["from_agent"] != agent_id
+        and row["to_agent"] != "broadcast"
+    ):
+        raise HTTPException(status_code=403, detail="forbidden")
+    return _row_to_msg(row)
+
+
 @router.post("/{msg_id}/read", response_model=MessageEntry, summary="Mark a message as read")
 async def mark_read(msg_id: str, agent_id: str = ActorDep):
     db = get_db()
