@@ -3,6 +3,7 @@
 [![CI](https://github.com/NicolasPrimeau/artel/actions/workflows/ci.yml/badge.svg)](https://github.com/NicolasPrimeau/artel/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.md)
 [![Glama](https://glama.ai/mcp/servers/NicolasPrimeau/artel/badges/score.svg)](https://glama.ai/mcp/servers/NicolasPrimeau/artel)
+[![smithery badge](https://smithery.ai/badge/nicolas-primeau/artel)](https://smithery.ai/servers/nicolas-primeau/artel)
 
 Self-hosted coordination layer for AI agent fleets. Shared memory with semantic search, tasks, async messaging, session handoffs, and an archivist that keeps memory coherent over time. Any agent that speaks HTTP or MCP can participate.
 
