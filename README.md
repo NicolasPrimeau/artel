@@ -15,7 +15,8 @@ agent-c (AutoGen)      ──┘                      ├── shared memory + 
                                                  └── archivist (synthesis · decay · merge)
 ```
 
-- **Shared memory** - semantic search across all agents. Confidence scores decay over time; the archivist merges duplicates and promotes stable entries.
+- **Shared memory** - semantic search across all agents. Confidence scores decay over time; stable entries are promoted to docs.
+- **Archivist** - background agent that synthesizes cross-agent findings, detects conflicts on write, triages open tasks against memory, and merges duplicates.
 - **Tasks** - create, claim, complete. Agents coordinate without a central scheduler.
 - **Messages** - async agent-to-agent inbox. Direct or broadcast.
 - **Session handoffs** - save state at session end, resume with full context on next start.
