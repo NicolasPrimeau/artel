@@ -139,6 +139,16 @@
               "default": "",
               "title": "X-Api-Key"
             }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
           }
         ],
         "responses": {
@@ -189,6 +199,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -251,6 +271,16 @@
               "default": "",
               "title": "X-Api-Key"
             }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
           }
         ],
         "responses": {
@@ -305,6 +335,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -376,6 +416,16 @@
               "default": "",
               "title": "X-Api-Key"
             }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
           }
         ],
         "responses": {
@@ -421,6 +471,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -566,6 +626,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -769,6 +839,16 @@
               "default": "",
               "title": "X-Api-Key"
             }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
           }
         ],
         "responses": {
@@ -823,6 +903,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -980,6 +1070,16 @@
               "default": "",
               "title": "X-Api-Key"
             }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
           }
         ],
         "responses": {
@@ -1093,6 +1193,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -1450,6 +1560,16 @@
               "default": "",
               "title": "X-Api-Key"
             }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
           }
         ],
         "responses": {
@@ -1509,6 +1629,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -1580,6 +1710,16 @@
               "default": "",
               "title": "X-Api-Key"
             }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
           }
         ],
         "responses": {
@@ -1634,6 +1774,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -1694,6 +1844,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -1757,6 +1917,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -1867,6 +2037,16 @@
               "default": "",
               "title": "X-Api-Key"
             }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
           }
         ],
         "responses": {
@@ -1932,6 +2112,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -2004,6 +2194,16 @@
               "default": "",
               "title": "X-Api-Key"
             }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
           }
         ],
         "requestBody": {
@@ -2074,6 +2274,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -2146,6 +2356,16 @@
               "default": "",
               "title": "X-Api-Key"
             }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
           }
         ],
         "requestBody": {
@@ -2217,6 +2437,16 @@
               "default": "",
               "title": "X-Api-Key"
             }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
           }
         ],
         "requestBody": {
@@ -2287,6 +2517,16 @@
               "default": "",
               "title": "X-Api-Key"
             }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
           }
         ],
         "responses": {
@@ -2343,6 +2583,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -2423,6 +2673,16 @@
               "default": "",
               "title": "X-Api-Key"
             }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
           }
         ],
         "responses": {
@@ -2479,6 +2739,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -2539,6 +2809,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -2602,6 +2882,16 @@
               "default": "",
               "title": "X-Api-Key"
             }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
           }
         ],
         "responses": {
@@ -2654,6 +2944,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -2757,6 +3057,16 @@
               "default": "",
               "title": "X-Api-Key"
             }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
           }
         ],
         "responses": {
@@ -2840,6 +3150,16 @@
               "default": "",
               "title": "X-Api-Key"
             }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
           }
         ],
         "responses": {
@@ -2890,6 +3210,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -2950,6 +3280,16 @@
               "default": "",
               "title": "X-Api-Key"
             }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
           }
         ],
         "responses": {
@@ -3002,6 +3342,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -3056,6 +3406,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -3123,6 +3483,16 @@
               "default": "",
               "title": "X-Api-Key"
             }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
           }
         ],
         "responses": {
@@ -3178,6 +3548,16 @@
               "default": "",
               "title": "X-Api-Key"
             }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
           }
         ],
         "responses": {
@@ -3232,6 +3612,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -3290,6 +3680,16 @@
               "default": "",
               "title": "X-Api-Key"
             }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
           }
         ],
         "responses": {
@@ -3346,6 +3746,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -3407,6 +3817,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -3473,6 +3893,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -3544,6 +3974,16 @@
               "default": "",
               "title": "X-Api-Key"
             }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
           }
         ],
         "responses": {
@@ -3589,6 +4029,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -3726,6 +4176,16 @@
               "default": "",
               "title": "X-Api-Key"
             }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
           }
         ],
         "responses": {
@@ -3782,6 +4242,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -3843,6 +4313,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -3909,6 +4389,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -3980,6 +4470,16 @@
               "default": "",
               "title": "X-Api-Key"
             }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
           }
         ],
         "responses": {
@@ -4025,6 +4525,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -4086,6 +4596,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -4153,6 +4673,16 @@
               "default": "",
               "title": "X-Api-Key"
             }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
           }
         ],
         "responses": {
@@ -4208,6 +4738,16 @@
               "default": "",
               "title": "X-Api-Key"
             }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
           }
         ],
         "responses": {
@@ -4253,6 +4793,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
@@ -4351,6 +4901,16 @@
               "type": "string",
               "default": "",
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
             }
           }
         ],
