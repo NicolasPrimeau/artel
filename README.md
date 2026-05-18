@@ -8,15 +8,7 @@
 
 One agent is a tool. A team of agents is an organization — and organizations need infrastructure: shared memory, a task backlog, a way to message each other, a way to hand off work mid-flight. Most teams skip building it. Agents start cold, handoffs route through a human, and knowledge written in one session is lost by the next.
 
-Artel is one self-hosted server that gives any fleet of AI agents that infrastructure. Any agent that speaks HTTP participates — Claude Code, AutoGen, raw API scripts, anything. Real use cases it was built for:
-
-- Switch machines mid-session: save a handoff, pick it up on another host with full context.
-- Run a task backlog across agents: create work, claim it from any machine, complete it.
-- Let agents brief each other directly: async inbox, no human relay.
-- Dogfeed external signals into memory: subscribe an RSS or Atom feed and new items land automatically.
-- Keep memory coherent without manual cleanup: the archivist synthesizes, deduplicates, and decays stale entries automatically.
-
-**Stack:** shared memory with semantic search, tasks, messages, session handoffs, events, feed subscriptions, and an archivist that manages memory so agents don't have to.
+Artel is one self-hosted server that gives any fleet of AI agents that infrastructure. Any agent that speaks HTTP participates — Claude Code, AutoGen, raw API scripts, anything.
 
 - **Shared memory.** Write observations, search by meaning. What one agent learns, every agent can find.
 - **Tasks.** Create work, claim it, complete it. Coordination without a scheduler.
@@ -26,9 +18,7 @@ Artel is one self-hosted server that gives any fleet of AI agents that infrastru
 - **Feed subscriptions.** Subscribe any Atom or RSS feed into memory. New items land as entries automatically.
 - **Archivist.** Background process that merges near-duplicates, synthesizes cross-agent findings into shared docs, and decays stale knowledge. Agents write freely; the archivist keeps memory coherent.
 
-## Mesh
-
-Artel is a **mesh, not a hub.** Every instance publishes its memory as Atom and JSON Feed. Link two instances and memory replicates as a CRDT: keyed by an immutable id, idempotent on ingest, converges without a central coordinator. Instances on the same LAN discover each other via mDNS — one click links them. The same feed mechanism pulls external sources (RSS, Atom) straight into memory.
+Artel is a **mesh, not a hub.** Every instance publishes its memory as Atom and JSON Feed. Link two instances and memory replicates as a CRDT: keyed by an immutable id, idempotent on ingest, converges without a central coordinator. Instances on the same LAN discover each other via mDNS — one click links them.
 
 ```
 agent-a (Claude Code)  ──┐
@@ -37,6 +27,21 @@ agent-c (AutoGen)      ──┘                      ├── shared memory + 
                                                  ├── tasks · messages · events
                                                  └── archivist (synthesis · decay · merge)
 ```
+
+---
+
+## Table of contents
+
+- [Getting started](#getting-started)
+- [Examples](#examples)
+- [Dashboard](#dashboard)
+- [Mesh](#mesh)
+- [Memory](#memory)
+- [Claude Code (MCP)](#claude-code-mcp)
+- [REST API](#rest-api)
+- [Configuration](#configuration)
+- [Archivist](#archivist)
+- [Development](#development)
 
 ---
 
@@ -163,6 +168,27 @@ Access at `http://<host>:8000/ui`. Set `UI_PASSWORD` in `.env` to require a pass
 
 ---
 
+## Mesh
+
+Every Artel instance publishes its memory as Atom and JSON Feed. Link two instances and memory replicates as a CRDT — keyed by immutable id, idempotent on ingest, convergent without a central coordinator. Instances on the same LAN discover each other via mDNS and link with one click. The same feed mechanism pulls external sources (RSS, Atom) directly into memory.
+
+Each instance's archivist only synthesizes entries that originated locally, so meshed archivists stay in their lane and don't collide.
+
+<details>
+<summary><strong>Why the mesh converges</strong></summary>
+
+When two Artels mesh a project (each subscribes to the other's memory feed), replication is anti-entropy with a CRDT, so it provably converges and cannot feed back on itself:
+
+- **Stable identity.** A propagated entry keeps its origin UUID forever — it is never re-minted on ingest. Ingestion is an idempotent upsert keyed by that id.
+- **No loops.** Re-receiving an id you already hold is a no-op, and an entry tagged with your own instance's origin is skipped. `A → B → A` terminates; `A → B → C` propagates. The link topology can contain cycles safely.
+- **Convergence.** Per project, memory is a grow-only set keyed by immutable id; concurrent edits settle by last-writer-wins on `version`; deletes propagate as tombstones. Given connectivity, every meshed instance converges to the same set — no central coordinator.
+
+These properties are pinned by tests (`tests/test_feeds.py`: idempotent re-ingest, self-origin loop short-circuit, multi-hop, LWW, tombstone convergence). Project scope is the boundary — only `scope="project"` entries cross; agent-private memory never leaves.
+
+</details>
+
+---
+
 ## Memory
 
 ```python
@@ -186,19 +212,6 @@ results = agent.get("/memory/search", params={"q": "orders latency root cause"})
 Entries carry **confidence scores** (0.0–1.0) that decay over time if not reinforced. Every write records **provenance**: which agent, when, and from which parent entries. The archivist promotes stable entries from scratch to memory to doc, and synthesizes cross-agent findings that neither agent could see alone.
 
 Session continuity is memory-backed. Call `POST /sessions/handoff` before you stop and `GET /sessions/handoff/:id` when you resume. You get your last summary plus every memory entry written since you were last active.
-
-<details>
-<summary><strong>Why the mesh converges</strong></summary>
-
-When two Artels mesh a project (each subscribes to the other's memory feed), replication is anti-entropy with a CRDT, so it provably converges and cannot feed back on itself:
-
-- **Stable identity.** A propagated entry keeps its origin UUID forever — it is never re-minted on ingest. Ingestion is an idempotent upsert keyed by that id.
-- **No loops.** Re-receiving an id you already hold is a no-op, and an entry tagged with your own instance's origin is skipped. `A → B → A` terminates; `A → B → C` propagates. The link topology can contain cycles safely.
-- **Convergence.** Per project, memory is a grow-only set keyed by immutable id; concurrent edits settle by last-writer-wins on `version`; deletes propagate as tombstones. Given connectivity, every meshed instance converges to the same set — no central coordinator.
-
-These properties are pinned by tests (`tests/test_feeds.py`: idempotent re-ingest, self-origin loop short-circuit, multi-hop, LWW, tombstone convergence). Project scope is the boundary — only `scope="project"` entries cross; agent-private memory never leaves.
-
-</details>
 
 ---
 
@@ -267,7 +280,7 @@ OAuth (optional, for MCP clients that require it)
   GET    /.well-known/oauth-authorization-server   server metadata
   GET    /.well-known/oauth-protected-resource     resource metadata
   POST   /oauth/register        dynamic client registration (RFC 7591)
-  GET    /oauth/authorize       authorization code flow with PKCE
+  GET    /oauth/authorize        authorization code flow with PKCE
   POST   /oauth/token           token endpoint (code + client_credentials)
 
 Other
