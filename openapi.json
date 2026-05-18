@@ -400,7 +400,7 @@
         "tags": [
           "agents"
         ],
-        "summary": "List all agents (owner only)",
+        "summary": "List all agents with presence data",
         "operationId": "list_agents_agents_get",
         "parameters": [
           {
@@ -785,6 +785,60 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "memory"
+        ],
+        "summary": "Bulk soft-delete memory entries",
+        "operationId": "bulk_delete_memory_memory_delete",
+        "parameters": [
+          {
+            "name": "x-agent-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Agent-Id"
+            }
+          },
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkMemoryDelete"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -2450,6 +2504,68 @@
         }
       }
     },
+    "/messages/{msg_id}": {
+      "get": {
+        "tags": [
+          "messages"
+        ],
+        "summary": "Fetch a single message by ID",
+        "operationId": "get_message_messages__msg_id__get",
+        "parameters": [
+          {
+            "name": "msg_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Msg Id"
+            }
+          },
+          {
+            "name": "x-agent-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Agent-Id"
+            }
+          },
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageEntry"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/messages/{msg_id}/read": {
       "post": {
         "tags": [
@@ -2807,25 +2923,14 @@
             }
           }
         }
-      }
-    },
-    "/sessions/handoff/{target_agent_id}": {
+      },
       "get": {
         "tags": [
           "sessions"
         ],
         "summary": "Load last handoff and memory delta since then",
-        "operationId": "get_handoff_sessions_handoff__target_agent_id__get",
+        "operationId": "get_handoff_sessions_handoff_get",
         "parameters": [
-          {
-            "name": "target_agent_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Target Agent Id"
-            }
-          },
           {
             "name": "x-agent-id",
             "in": "header",
@@ -2871,13 +2976,67 @@
         }
       }
     },
-    "/participants": {
+    "/projects": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Create a project and join it",
+        "operationId": "create_project_projects_post",
+        "parameters": [
+          {
+            "name": "x-agent-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Agent-Id"
+            }
+          },
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "get": {
         "tags": [
-          "participants"
+          "projects"
         ],
-        "summary": "List all registered agents and last-seen timestamps",
-        "operationId": "list_participants_participants_get",
+        "summary": "List Projects",
+        "operationId": "list_projects_projects_get",
         "parameters": [
           {
             "name": "x-agent-id",
@@ -2908,9 +3067,9 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Participant"
+                    "$ref": "#/components/schemas/ProjectInfo"
                   },
-                  "title": "Response List Participants Participants Get"
+                  "title": "Response List Projects Projects Get"
                 }
               }
             }
@@ -3161,63 +3320,6 @@
         }
       }
     },
-    "/projects": {
-      "get": {
-        "tags": [
-          "projects"
-        ],
-        "summary": "List Projects",
-        "operationId": "list_projects_projects_get",
-        "parameters": [
-          {
-            "name": "x-agent-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "",
-              "title": "X-Agent-Id"
-            }
-          },
-          {
-            "name": "x-api-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "",
-              "title": "X-Api-Key"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ProjectInfo"
-                  },
-                  "title": "Response List Projects Projects Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/feeds": {
       "post": {
         "tags": [
@@ -3337,6 +3439,76 @@
       }
     },
     "/feeds/{feed_id}": {
+      "patch": {
+        "tags": [
+          "feeds"
+        ],
+        "summary": "Update feed subscription settings",
+        "operationId": "update_feed_feeds__feed_id__patch",
+        "parameters": [
+          {
+            "name": "feed_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Feed Id"
+            }
+          },
+          {
+            "name": "x-agent-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Agent-Id"
+            }
+          },
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedEntry"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "delete": {
         "tags": [
           "feeds"
@@ -4265,6 +4437,28 @@
             "title": "Role",
             "default": "agent"
           },
+          "last_seen": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen"
+          },
+          "active_task_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Task Id"
+          },
           "mcp_config": {
             "anyOf": [
               {
@@ -4412,6 +4606,22 @@
           "grant_type"
         ],
         "title": "Body_token_endpoint_oauth_token_post"
+      },
+      "BulkMemoryDelete": {
+        "properties": {
+          "ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ids"
+        ],
+        "title": "BulkMemoryDelete"
       },
       "DiscoveredPeer": {
         "properties": {
@@ -4596,6 +4806,63 @@
           "created_at"
         ],
         "title": "FeedEntry"
+      },
+      "FeedPatch": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "interval_min": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 1440.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval Min"
+          },
+          "max_per_poll": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Per Poll"
+          }
+        },
+        "type": "object",
+        "title": "FeedPatch"
       },
       "HTTPValidationError": {
         "properties": {
@@ -5284,58 +5551,6 @@
         ],
         "title": "MessageSend"
       },
-      "Participant": {
-        "properties": {
-          "agent_id": {
-            "type": "string",
-            "title": "Agent Id"
-          },
-          "last_seen": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Seen"
-          },
-          "project": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Project"
-          },
-          "active_task_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Active Task Id"
-          },
-          "role": {
-            "type": "string",
-            "title": "Role",
-            "default": "agent"
-          }
-        },
-        "type": "object",
-        "required": [
-          "agent_id",
-          "last_seen"
-        ],
-        "title": "Participant"
-      },
       "PeerLink": {
         "properties": {
           "id": {
@@ -5420,6 +5635,19 @@
           "peer_token"
         ],
         "title": "PeerLinkCreate"
+      },
+      "ProjectCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ProjectCreate"
       },
       "ProjectInfo": {
         "properties": {
