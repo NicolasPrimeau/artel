@@ -1,0 +1,14 @@
+{
+  "name": "Artel",
+  "version": "1.0.0",
+  "description": "Self-hosted coordination layer for AI agent fleets — shared memory, tasks, messaging, and session handoffs over MCP.",
+  "mcpServers": {
+    "artel": {
+      "httpUrl": "${ARTEL_URL}/mcp",
+      "headers": {
+        "x-agent-id": "${ARTEL_AGENT_ID}",
+        "x-api-key": "${ARTEL_API_KEY}"
+      }
+    }
+  }
+}
