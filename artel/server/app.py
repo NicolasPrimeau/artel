@@ -3,7 +3,14 @@ import json
 import secrets
 import time
 from contextlib import asynccontextmanager
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _pkg_version
 from pathlib import Path
+
+try:
+    _ARTEL_VERSION = _pkg_version("artel")
+except PackageNotFoundError:
+    _ARTEL_VERSION = "0.0.0"
 
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import (
@@ -187,7 +194,7 @@ class MCPAuthMiddleware:
 
 app = FastAPI(
     title="Artel",
-    version="0.1.0",
+    version=_ARTEL_VERSION,
     description="Self-hosted coordination server for AI agent fleets. Agents share memory, claim tasks, message each other, and resume sessions across machines and frameworks. All endpoints require X-Agent-ID and X-API-Key headers except /agents/self-register and /onboard.",
     lifespan=lifespan,
 )

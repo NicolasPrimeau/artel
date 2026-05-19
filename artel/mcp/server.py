@@ -2,6 +2,7 @@ import asyncio
 import contextvars
 import json
 import logging
+import re
 import uuid
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
@@ -1343,3 +1344,46 @@ def audit_memory(topic: str = "") -> str:
         + ") and review prior decisions and findings before acting. If another "
         "agent already did this work, build on it instead of repeating it."
     )
+
+
+_DOC_SECTION_END = re.compile(
+    r"^(Returns?|Raises?|Yields?|Notes?|Examples?|Attributes)\s*:",
+)
+_DOC_ARG = re.compile(r"^(\w+)\s*(?:\([^)]*\))?\s*:\s*(.*)$")
+
+
+def _parse_arg_docs(doc: str | None, valid: set[str]) -> dict[str, str]:
+    if not doc or "Args:" not in doc:
+        return {}
+    out: dict[str, str] = {}
+    in_args = False
+    current: str | None = None
+    for raw in doc.splitlines():
+        line = raw.strip()
+        if not in_args:
+            if line == "Args:":
+                in_args = True
+            continue
+        if not line:
+            continue
+        if _DOC_SECTION_END.match(line):
+            break
+        m = _DOC_ARG.match(line)
+        if m and m.group(1) in valid:
+            current = m.group(1)
+            out[current] = m.group(2).strip()
+        elif current:
+            out[current] = (out[current] + " " + line).strip()
+    return out
+
+
+def _enrich_tool_schemas() -> None:
+    for tool in mcp._tool_manager.list_tools():
+        props = tool.parameters.get("properties", {})
+        docs = _parse_arg_docs(tool.fn.__doc__, set(props))
+        for name, schema in props.items():
+            if isinstance(schema, dict) and not schema.get("description") and name in docs:
+                schema["description"] = docs[name]
+
+
+_enrich_tool_schemas()
