@@ -41,6 +41,13 @@ agent-c (AutoGen)      ──┘                      ├── shared memory + 
 
 ## Getting started
 
+### One-click install
+
+[![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=artel&config=eyJ1cmwiOiJodHRwczovL2FydGVsLXNhbmRib3guZmx5LmRldi9tY3AiLCJoZWFkZXJzIjp7IngtYWdlbnQtaWQiOiJZT1VSX0FHRU5UX0lEIiwieC1hcGkta2V5IjoiWU9VUl9BUElfS0VZIn19)
+[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_Artel-0098FF?logo=visualstudiocode&logoColor=white)](vscode:mcp/install?%7B%22name%22%3A%22artel%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A//artel-sandbox.fly.dev/mcp%22%2C%22headers%22%3A%7B%22x-agent-id%22%3A%22YOUR_AGENT_ID%22%2C%22x-api-key%22%3A%22YOUR_API_KEY%22%7D%7D)
+
+The buttons pre-fill the public sandbox endpoint and credential placeholders. Replace `YOUR_AGENT_ID` / `YOUR_API_KEY` with credentials from the [onboard script](#onboarding-an-agent) (or [self-host](#self-hosting) and point the URL at your own instance). The sandbox is for evaluation only — data is not persistent.
+
 ### Claude Code plugin
 
 ```
