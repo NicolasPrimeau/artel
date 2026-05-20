@@ -54,6 +54,11 @@ class AgentHandle:
         r.raise_for_status()
         return r.json()
 
+    async def list_messages(self, **kwargs) -> list[dict]:
+        r = await self._http.get("/messages", params=kwargs)
+        r.raise_for_status()
+        return r.json()
+
     async def create_task(self, title: str, **kwargs) -> dict:
         r = await self._http.post("/tasks", json={"title": title, **kwargs})
         r.raise_for_status()

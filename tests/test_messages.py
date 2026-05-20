@@ -104,3 +104,30 @@ async def test_message_event_written_to_db(client):
     events = r.json()
     types = [e["type"] for e in events]
     assert "message.received" in types
+
+
+async def test_list_messages_shows_sent_and_received(client):
+    await client.post("/messages", json={"to": AGENT2, "body": "sent"}, headers=HEADERS)
+    await client.post("/messages", json={"to": TEST_AGENT, "body": "received"}, headers=HEADERS2)
+
+    r = await client.get("/messages", headers=HEADERS)
+    assert r.status_code == 200
+    bodies = [m["body"] for m in r.json()]
+    assert "sent" in bodies
+    assert "received" in bodies
+
+
+async def test_list_messages_read_filter(client):
+    r = await client.post("/messages", json={"to": AGENT2, "body": "unread"}, headers=HEADERS)
+    mid = r.json()["id"]
+
+    r2 = await client.get("/messages", params={"read": "false"}, headers=HEADERS2)
+    assert any(m["id"] == mid for m in r2.json())
+
+    await client.post(f"/messages/{mid}/read", headers=HEADERS2)
+
+    r3 = await client.get("/messages", params={"read": "false"}, headers=HEADERS2)
+    assert not any(m["id"] == mid for m in r3.json())
+
+    r4 = await client.get("/messages", params={"read": "true"}, headers=HEADERS2)
+    assert any(m["id"] == mid for m in r4.json())

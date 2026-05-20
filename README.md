@@ -230,6 +230,7 @@ Tasks
 
 Messages
   POST   /messages                   send
+  GET    /messages                   list all sent/received (?read=true|false&limit=)
   GET    /messages/inbox             unread inbox
   POST   /messages/inbox/read-all    mark all read
   GET    /messages/:id               get message by ID

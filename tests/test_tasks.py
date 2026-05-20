@@ -371,3 +371,23 @@ async def test_short_prefix_not_resolved(client):
 
     r2 = await client.get(f"/tasks/{tid[:3]}", headers=HEADERS)
     assert r2.status_code == 404
+
+
+async def test_update_task_project_transfer(client):
+    await client.post("/projects/transfer-target/join", headers=HEADERS)
+    r = await client.post("/tasks", json={"title": "floating task"}, headers=HEADERS)
+    tid = r.json()["id"]
+    assert r.json()["project"] is None
+
+    r2 = await client.patch(f"/tasks/{tid}", json={"project": "transfer-target"}, headers=HEADERS)
+    assert r2.status_code == 200
+    assert r2.json()["project"] == "transfer-target"
+
+
+async def test_update_task_project_non_member_forbidden(client):
+    await client.post("/projects/members-only/join", headers=HEADERS)
+    r = await client.post("/tasks", json={"title": "owned task"}, headers=HEADERS)
+    tid = r.json()["id"]
+
+    r2 = await client.patch(f"/tasks/{tid}", json={"project": "members-only"}, headers=HEADERS2)
+    assert r2.status_code == 403

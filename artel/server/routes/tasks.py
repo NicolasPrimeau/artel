@@ -273,6 +273,12 @@ async def update_task(task_id: str, body: TaskUpdate, agent_id: str = ActorDep):
     if body.expected_outcome is not None:
         set_parts.append("expected_outcome=?")
         params.append(body.expected_outcome)
+    if body.project is not None:
+        allowed = _memberships(agent_id)
+        if allowed is not None and body.project not in allowed:
+            raise HTTPException(status_code=403, detail="not a member of target project")
+        set_parts.append("project=?")
+        params.append(body.project)
     if set_parts:
         set_parts.append("updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')")
         params.append(task_id)

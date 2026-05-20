@@ -84,6 +84,7 @@ class TaskUpdate(BaseModel):
     title: str | None = None
     priority: Priority | None = None
     expected_outcome: str | None = None
+    project: str | None = None
 
 
 class TaskAction(BaseModel):

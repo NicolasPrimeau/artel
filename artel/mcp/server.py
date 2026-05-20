@@ -888,6 +888,39 @@ async def message_send(to: str, body: str, subject: str = "") -> str:
     return f"sent to {m['to_agent']} [{m['id']}]"
 
 
+@mcp.tool()
+async def message_list(read: bool | None = None, limit: int = 50) -> str:
+    """List all messages sent to or from you (full history, not just unread).
+
+    Use when you need to review past conversations, check if you missed something,
+    or audit what was communicated. For unread-only, use message_inbox() instead.
+
+    Args:
+        read: True = read only, False = unread only, omit = all messages.
+        limit: Max messages to return (default 50, max 200).
+    """
+    c = _http()
+    params: dict = {"limit": limit}
+    if read is not None:
+        params["read"] = str(read).lower()
+    try:
+        r = await c.get("/messages", params=params)
+        r.raise_for_status()
+    except _HTTPX_ERRORS as e:
+        return _err(e)
+    messages = r.json()
+    if not messages:
+        return "No messages."
+    lines = []
+    for m in messages:
+        status = "read" if m["read"] else "unread"
+        subj = f" · {m['subject']}" if m.get("subject") else ""
+        lines.append(
+            f"[{m['id'][:8]}] {m['from_agent']}→{m['to_agent']}{subj} ({status}) {m['created_at'][:16]}\n{m['body']}"
+        )
+    return "\n\n".join(lines)
+
+
 # ── Tasks ────────────────────────────────────────────────────────────────────
 
 
@@ -1115,11 +1148,12 @@ async def task_update(
     append: bool = False,
     title: str | None = None,
     priority: str | None = None,
+    project: str | None = None,
 ) -> str:
-    """Update a task's description, title, or priority.
+    """Update a task's description, title, priority, or project.
 
-    Use to record progress notes on a task you're working on, or to correct metadata.
-    Any agent in the project can update a task, not just the assignee.
+    Use to record progress notes on a task you're working on, correct metadata,
+    or transfer a task to a different project.
 
     Args:
         task_id: ID of the task to update.
@@ -1128,6 +1162,7 @@ async def task_update(
                 If False (default), replaces entirely.
         title: New title. Omit to leave unchanged.
         priority: low, normal, or high. Omit to leave unchanged.
+        project: Move the task into this project. Omit to leave unchanged.
     """
     patch: dict = {}
     if description is not None:
@@ -1137,6 +1172,8 @@ async def task_update(
         patch["title"] = title
     if priority is not None:
         patch["priority"] = priority
+    if project is not None:
+        patch["project"] = project
     c = _http()
     try:
         r = await c.patch(f"/tasks/{task_id}", json=patch)

@@ -70,6 +70,24 @@ async def send_message(body: MessageSend, agent_id: str = ActorDep):
     return _row_to_msg(row)
 
 
+@router.get("", response_model=list[MessageEntry], summary="List all sent and received messages")
+async def list_messages(
+    read: bool | None = Query(default=None),
+    limit: int = Query(default=50, le=200),
+    agent_id: str = ReaderDep,
+):
+    db = get_db()
+    sql = "SELECT * FROM messages WHERE (to_agent=? OR from_agent=?)"
+    params: list = [agent_id, agent_id]
+    if read is not None:
+        sql += " AND read=?"
+        params.append(1 if read else 0)
+    sql += " ORDER BY created_at DESC LIMIT ?"
+    params.append(limit)
+    rows = db.execute(sql, params).fetchall()
+    return [_row_to_msg(r) for r in rows]
+
+
 @router.get("/inbox", response_model=list[MessageEntry], summary="Fetch unread messages")
 async def inbox(
     agent: str | None = Query(default=None),
