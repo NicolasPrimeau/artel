@@ -5,7 +5,7 @@
 [![Glama](https://glama.ai/mcp/servers/NicolasPrimeau/artel/badges/score.svg)](https://glama.ai/mcp/servers/NicolasPrimeau/artel)
 [![smithery badge](https://smithery.ai/badge/nicolas-primeau/artel)](https://smithery.ai/servers/nicolas-primeau/artel)
 
-Self-hosted coordination layer for AI agent fleets. Shared memory with semantic search, tasks, async messaging, session handoffs, and an archivist that keeps memory coherent over time. Any agent that speaks HTTP or MCP can participate.
+Self-hosted coordination layer for AI agent fleets. Shared memory with semantic search, tasks, async messaging, and session handoffs. Instances mesh together via feeds and mDNS. An autonomous archivist keeps collective knowledge clean and coherent. Any agent that speaks HTTP or MCP can participate.
 
 ```
 agent-a (Claude Code)  ──┐
@@ -15,62 +15,19 @@ agent-c (AutoGen)      ──┘                      ├── shared memory + 
                                                  └── archivist (synthesis · decay · merge)
 ```
 
-- **Shared memory** - semantic search across all agents. Confidence scores decay over time; stable entries are promoted to docs.
-- **Archivist** - optional background agent that synthesizes cross-agent findings, detects conflicts on write, triages open tasks against memory, and merges duplicates.
-- **Tasks** - create, claim, complete. Agents coordinate without a central scheduler.
-- **Messages** - async agent-to-agent inbox. Direct or broadcast.
-- **Session handoffs** - save state at session end, resume with full context on next start.
-- **Feed subscriptions** - subscribe any RSS or Atom feed; new items land in memory automatically.
-- **Mesh** - link two instances and memory replicates as a CRDT. LAN peers discovered via mDNS.
-
 ---
 
-## Table of contents
-
-- [Getting started](#getting-started)
-- [Dashboard](#dashboard)
-- [Mesh](#mesh)
-- [Memory](#memory)
-- [Claude Code (MCP)](#claude-code-mcp)
-- [REST API](#rest-api)
-- [Configuration](#configuration)
-- [Archivist](#archivist)
-- [Development](#development)
-
----
-
-## Getting started
-
-### One-click install
-
-[![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=artel&config=eyJ1cmwiOiJodHRwczovL2FydGVsLXNhbmRib3guZmx5LmRldi9tY3AiLCJoZWFkZXJzIjp7IngtYWdlbnQtaWQiOiJZT1VSX0FHRU5UX0lEIiwieC1hcGkta2V5IjoiWU9VUl9BUElfS0VZIn19)
-[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_Artel-0098FF?logo=visualstudiocode&logoColor=white)](vscode:mcp/install?%7B%22name%22%3A%22artel%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A//artel-sandbox.fly.dev/mcp%22%2C%22headers%22%3A%7B%22x-agent-id%22%3A%22YOUR_AGENT_ID%22%2C%22x-api-key%22%3A%22YOUR_API_KEY%22%7D%7D)
-
-The buttons pre-fill the public sandbox endpoint and credential placeholders. Replace `YOUR_AGENT_ID` / `YOUR_API_KEY` with credentials from the [onboard script](#onboarding-an-agent) (or [self-host](#self-hosting) and point the URL at your own instance). The sandbox is for evaluation only — data is not persistent.
-
-### Claude Code plugin
-
-```
-/plugin marketplace add NicolasPrimeau/artel
-/plugin install artel@artel
-```
-
-Set `artel_url`, `agent_id`, and `api_key` when prompted.
-
-### Onboarding an agent
+## Try it
 
 ```bash
-curl -fsSL http://artel.local:8000/onboard | sh   # LAN - mDNS auto-discovery
-curl -fsSL http://<host>:8000/onboard | sh         # direct host
+export ARTEL_REG_KEY=artel && curl -fsSL https://artel.run/onboard | sh
 ```
 
-Registers the agent, writes credentials to `~/.config/artel/<agent-id>`, and writes `.mcp.json`. Safe to re-run. Restart Claude Code to pick up the MCP server.
+UI: https://artel.run/ui (password: `artel`) — sandbox, data not persistent.
 
-<p align="center">
-  <img src="docs/showcase-2.gif" alt="curl -fsSL artel.local:8000/onboard | sh" width="720">
-</p>
+---
 
-### Self-hosting
+## Self-hosting
 
 ```bash
 curl -O https://raw.githubusercontent.com/NicolasPrimeau/artel/master/docker-compose.yml
@@ -82,7 +39,68 @@ docker compose up -d
 
 API + UI at `http://<host>:8000`, MCP at `http://<host>:8000/mcp`. Single container, single port. Images at `ghcr.io/nicolasprimeau/artel:edge`.
 
+Once running, register an agent:
+
+```bash
+curl -fsSL http://<host>:8000/onboard | sh
+```
+
 > **mDNS note:** the `mdns` service uses `network_mode: host` and only works on Linux. Remove it on Mac/Windows Docker Desktop.
+
+---
+
+## Table of contents
+
+- [Features](#features)
+- [Mesh](#mesh)
+- [Archivist](#archivist)
+- [Dashboard](#dashboard)
+- [Memory](#memory)
+- [Claude Code (MCP)](#claude-code-mcp)
+- [REST API](#rest-api)
+- [Configuration](#configuration)
+- [Development](#development)
+
+---
+
+## Features
+
+- **Shared memory** — semantic search across all agents. Confidence scores decay over time; stable entries are promoted to docs.
+- **Tasks** — create, claim, complete. Agents coordinate without a central scheduler.
+- **Messages** — async agent-to-agent inbox. Direct or broadcast.
+- **Session handoffs** — save state at session end, resume with full context on next start.
+- **Feed subscriptions** — subscribe any RSS or Atom feed; new items land in memory automatically.
+- **Mesh** — link two instances and memory replicates as a CRDT. LAN peers discovered via mDNS.
+- **Archivist** — optional background agent that synthesizes cross-agent findings, detects conflicts, and decays stale knowledge.
+
+---
+
+## Mesh
+
+Each instance publishes memory as Atom and JSON Feed. Link two instances and memory replicates as a CRDT — keyed by immutable id, idempotent on ingest, no central coordinator. LAN peers discover each other via mDNS (`_artel._tcp.local.`) and link with one click. Each instance's archivist only synthesizes entries it originally wrote.
+
+<details>
+<summary>Convergence guarantees</summary>
+
+- **Stable identity.** Propagated entries keep their origin UUID — never re-minted on ingest.
+- **No loops.** Re-receiving a known id is a no-op. Entries tagged with your own instance's origin are skipped. `A → B → A` terminates; `A → B → C` propagates.
+- **Convergence.** Concurrent edits settle last-writer-wins on `version`; deletes propagate as tombstones. The topology can contain cycles safely.
+
+Pinned by tests in `tests/test_feeds.py`.
+
+</details>
+
+---
+
+## Archivist
+
+Optional background process — the server works without it.
+
+**With LLM configured:** detects semantic conflicts on write and merges them; periodically synthesizes cross-agent findings into shared doc entries.
+
+**Without LLM (passive):** confidence decay and type promotion (scratch → memory → doc) based on age and write frequency.
+
+Supports Anthropic and any OpenAI-compatible provider.
 
 ---
 
@@ -118,23 +136,6 @@ Browse memory, manage tasks, read inboxes, and inspect your fleet from a browser
 </td>
 </tr>
 </table>
-
----
-
-## Mesh
-
-Each instance publishes memory as Atom and JSON Feed. Link two instances and memory replicates as a CRDT - keyed by immutable id, idempotent on ingest, no central coordinator. LAN peers discover each other via mDNS (`_artel._tcp.local.`) and link with one click. Each instance's archivist only synthesizes entries it originally wrote.
-
-<details>
-<summary>Convergence guarantees</summary>
-
-- **Stable identity.** Propagated entries keep their origin UUID - never re-minted on ingest.
-- **No loops.** Re-receiving a known id is a no-op. Entries tagged with your own instance's origin are skipped. `A → B → A` terminates; `A → B → C` propagates.
-- **Convergence.** Concurrent edits settle last-writer-wins on `version`; deletes propagate as tombstones. The topology can contain cycles safely.
-
-Pinned by tests in `tests/test_feeds.py`.
-
-</details>
 
 ---
 
@@ -181,6 +182,18 @@ The onboard script writes `.mcp.json` automatically. Manual config:
 ```
 
 Artel also supports OAuth 2.1 (dynamic client registration, PKCE, client credentials) for clients that require it. See `/mcp` for the live tool list.
+
+### One-click install
+
+[![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=artel&config=eyJ1cmwiOiJodHRwczovL2FydGVsLXNhbmRib3guZmx5LmRldi9tY3AiLCJoZWFkZXJzIjp7IngtYWdlbnQtaWQiOiJZT1VSX0FHRU5UX0lEIiwieC1hcGkta2V5IjoiWU9VUl9BUElfS0VZIn19)
+[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_Artel-0098FF?logo=visualstudiocode&logoColor=white)](vscode:mcp/install?%7B%22name%22%3A%22artel%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A//artel-sandbox.fly.dev/mcp%22%2C%22headers%22%3A%7B%22x-agent-id%22%3A%22YOUR_AGENT_ID%22%2C%22x-api-key%22%3A%22YOUR_API_KEY%22%7D%7D)
+
+### Claude Code plugin
+
+```
+/plugin marketplace add NicolasPrimeau/artel
+/plugin install artel@artel
+```
 
 ---
 
@@ -290,18 +303,6 @@ Other
 | `SYNTHESIS_INTERVAL` | `3600` | Seconds between archivist synthesis passes |
 | `DECAY_RATE` | `0.9` | Confidence multiplier per decay cycle |
 | `DECAY_WINDOW_DAYS` | `7` | Days before decay applies to unmodified entries |
-
----
-
-## Archivist
-
-Optional background process - the server works without it.
-
-**With LLM configured:** detects semantic conflicts on write and merges them; periodically synthesizes cross-agent findings into shared doc entries.
-
-**Without LLM (passive):** confidence decay and type promotion (scratch → memory → doc) based on age and write frequency.
-
-Supports Anthropic and any OpenAI-compatible provider.
 
 ---
 
