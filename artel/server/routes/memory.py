@@ -441,6 +441,11 @@ async def get_memory(
         allowed = _memberships(agent_id)
         if allowed is not None and row["project"] not in allowed:
             raise HTTPException(status_code=403, detail="not a member of this project")
+    db.execute(
+        "UPDATE memory SET read_count = read_count + 1, last_read_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?",
+        (entry_id,),
+    )
+    db.commit()
     return _row_to_entry(row)
 
 

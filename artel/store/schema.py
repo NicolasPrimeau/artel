@@ -23,10 +23,12 @@ CREATE TABLE IF NOT EXISTS memory (
     tags        TEXT NOT NULL DEFAULT '[]',
     created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     updated_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    version     INTEGER NOT NULL DEFAULT 1,
-    deleted_at  TEXT,
-    expires_at  TEXT,
-    origin      TEXT
+    version      INTEGER NOT NULL DEFAULT 1,
+    deleted_at   TEXT,
+    expires_at   TEXT,
+    origin       TEXT,
+    read_count   INTEGER NOT NULL DEFAULT 0,
+    last_read_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS tasks (
@@ -194,4 +196,21 @@ CREATE TABLE IF NOT EXISTS archivist_logs (
 CREATE INDEX IF NOT EXISTS idx_arch_logs_created ON archivist_logs (created_at);
 CREATE INDEX IF NOT EXISTS idx_arch_logs_level   ON archivist_logs (level);
 CREATE INDEX IF NOT EXISTS idx_arch_logs_source  ON archivist_logs (source);
+
+CREATE TABLE IF NOT EXISTS archivist_metrics (
+    id                    TEXT PRIMARY KEY,
+    captured_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    project               TEXT,
+    total_entries         INTEGER NOT NULL DEFAULT 0,
+    utilization_rate      REAL NOT NULL DEFAULT 0.0,
+    decay_regret_count    INTEGER NOT NULL DEFAULT 0,
+    synthesis_count       INTEGER NOT NULL DEFAULT 0,
+    synthesis_uptake_rate REAL NOT NULL DEFAULT 0.0,
+    contradiction_count   INTEGER NOT NULL DEFAULT 0,
+    net_growth            INTEGER NOT NULL DEFAULT 0,
+    merge_count           INTEGER NOT NULL DEFAULT 0,
+    decay_count           INTEGER NOT NULL DEFAULT 0,
+    params                TEXT NOT NULL DEFAULT '{}'
+);
+CREATE INDEX IF NOT EXISTS idx_arch_metrics_captured ON archivist_metrics (captured_at);
 """

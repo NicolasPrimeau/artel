@@ -2,9 +2,10 @@ import asyncio
 import json
 import logging
 import math
+import secrets
 from datetime import UTC, datetime, timedelta
 
-from ..store.db import instance_id
+from ..store.db import get_db, instance_id
 from .client import ArtelClient
 from .config import settings
 from .llm import complete, is_configured
@@ -535,18 +536,24 @@ async def run_synthesis(client: ArtelClient) -> None:
 
     ops = _parse_operations(text)
     await _execute_operations(ops, client, entries)
+    op_counts: dict = {}
+    for o in ops:
+        op_counts[o.get("op")] = op_counts.get(o.get("op"), 0) + 1
     await client.log(
         action="synthesis",
         message=f"synthesis pass complete: {len(ops)} op(s) on {len(entries)} entr{'y' if len(entries) == 1 else 'ies'}",
         details={
             "ops": len(ops),
             "entries": len(entries),
-            "op_types": list({o.get("op") for o in ops}),
+            "op_types": list(op_counts.keys()),
+            "op_counts": op_counts,
         },
     )
 
 
 async def decay_confidence(client: ArtelClient) -> None:
+    from ..store.db import get_db
+
     cutoff = (datetime.now(UTC) - timedelta(days=settings.decay_window_days)).strftime(
         "%Y-%m-%dT%H:%M:%S.000Z"
     )
@@ -560,22 +567,47 @@ async def decay_confidence(client: ArtelClient) -> None:
         and (e.get("origin") is None or e.get("origin") == local_id)
     ]
 
+    db = get_db()
+    entry_ids = [e["id"] for e in entries]
+    heat_map: dict = {}
+    if entry_ids:
+        placeholders = ",".join("?" * len(entry_ids))
+        heat_rows = db.execute(
+            f"SELECT id, read_count, last_read_at FROM memory WHERE id IN ({placeholders})",
+            entry_ids,
+        ).fetchall()
+        for r in heat_rows:
+            heat_map[r["id"]] = (r["read_count"] or 0, r["last_read_at"])
+
+    now = datetime.now(UTC)
     decayed = 0
+    heat_skipped = 0
     for entry in entries:
         current = entry["confidence"]
         if current <= settings.decay_floor:
             continue
+        rc, last_read_str = heat_map.get(entry["id"], (0, None))
+        if rc > 0 and last_read_str:
+            try:
+                last_read = datetime.fromisoformat(last_read_str.replace("Z", "+00:00"))
+                age_weeks = (now - last_read).total_seconds() / (7 * 86400)
+                heat = rc * (0.9**age_weeks)
+                if heat >= 1.0:
+                    heat_skipped += 1
+                    continue
+            except Exception:
+                pass
         new_conf = max(settings.decay_floor, current * settings.decay_rate)
         try:
             await client.patch_memory(entry["id"], confidence=new_conf)
             decayed += 1
         except Exception as e:
             log.warning("decay failed for %s: %s", entry["id"], e)
-    if decayed:
+    if decayed or heat_skipped:
         await client.log(
             action="decay",
-            message=f"decayed confidence on {decayed} entr{'y' if decayed == 1 else 'ies'}",
-            details={"decayed": decayed, "candidates": len(entries)},
+            message=f"decayed confidence on {decayed} entr{'y' if decayed == 1 else 'ies'}, skipped {heat_skipped} heat-protected",
+            details={"decayed": decayed, "candidates": len(entries), "heat_skipped": heat_skipped},
         )
 
 
@@ -717,4 +749,94 @@ async def run_promotion(client: ArtelClient) -> None:
             action="promotion",
             message=f"promoted {promoted} memor{'y' if promoted == 1 else 'ies'} to doc",
             details={"promoted": promoted},
+        )
+
+
+async def capture_metrics(project: str | None = None) -> None:
+    db = get_db()
+    cycle_window_hours = max(1, settings.synthesis_interval // 3600) + 1
+    cycle_cutoff = _utc_ago(cycle_window_hours)
+
+    proj_filter = "AND project = ?" if project else ""
+    proj_params: tuple = (project,) if project else ()
+
+    active = f"deleted_at IS NULL AND type != 'directive' {proj_filter}"
+
+    total = db.execute(f"SELECT COUNT(*) FROM memory WHERE {active}", proj_params).fetchone()[0]
+    utilized = db.execute(
+        f"SELECT COUNT(*) FROM memory WHERE {active} AND read_count > 0", proj_params
+    ).fetchone()[0]
+    utilization_rate = utilized / total if total > 0 else 0.0
+
+    decay_regret = db.execute(
+        f"""SELECT COUNT(*) FROM memory WHERE {active}
+            AND read_count > 0 AND confidence < 0.7
+            AND EXISTS (SELECT 1 FROM json_each(tags) WHERE value = 'archivist-flagged')""",
+        proj_params,
+    ).fetchone()[0]
+
+    contradiction_filter = "deleted_at IS NULL" + (" AND project = ?" if project else "")
+    contradictions = db.execute(
+        f"""SELECT COUNT(*) FROM memory WHERE {contradiction_filter}
+            AND EXISTS (SELECT 1 FROM json_each(tags) WHERE value = 'archivist-conflict')""",
+        proj_params,
+    ).fetchone()[0]
+
+    created = db.execute(
+        f"SELECT COUNT(*) FROM memory WHERE created_at > ? {proj_filter}",
+        (cycle_cutoff, *proj_params),
+    ).fetchone()[0]
+    deleted = db.execute(
+        f"SELECT COUNT(*) FROM memory WHERE deleted_at > ? {proj_filter}",
+        (cycle_cutoff, *proj_params),
+    ).fetchone()[0]
+    net_growth = created - deleted
+
+    synthesis_count = 0
+    merge_count = 0
+    decay_count = 0
+    log_rows = db.execute(
+        "SELECT action, details FROM archivist_logs WHERE created_at > ? AND source = 'archivist'",
+        (cycle_cutoff,),
+    ).fetchall()
+    for row in log_rows:
+        try:
+            d = json.loads(row["details"])
+        except Exception:
+            continue
+        if row["action"] == "synthesis":
+            synthesis_count += d.get("ops", 0)
+            merge_count += d.get("op_counts", {}).get("merge", 0)
+        elif row["action"] == "decay":
+            decay_count += d.get("decayed", 0)
+
+    params_json = json.dumps(
+        {
+            "decay_rate": settings.decay_rate,
+            "decay_window_days": settings.decay_window_days,
+            "synthesis_interval": settings.synthesis_interval,
+        }
+    )
+    mid = secrets.token_hex(16)
+    with db:
+        db.execute(
+            """INSERT INTO archivist_metrics
+               (id, project, total_entries, utilization_rate, decay_regret_count,
+                synthesis_count, synthesis_uptake_rate, contradiction_count,
+                net_growth, merge_count, decay_count, params)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (
+                mid,
+                project,
+                total,
+                utilization_rate,
+                decay_regret,
+                synthesis_count,
+                0.0,
+                contradictions,
+                net_growth,
+                merge_count,
+                decay_count,
+                params_json,
+            ),
         )

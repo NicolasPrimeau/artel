@@ -7,6 +7,7 @@ from .config import settings
 from .conflict import check_and_merge
 from .llm import is_configured
 from .synthesis import (
+    capture_metrics,
     decay_confidence,
     on_task_completed,
     on_task_failed,
@@ -75,6 +76,10 @@ async def _scheduler(client: ArtelClient) -> None:
                 raise
             except Exception as e:
                 log.error("%s failed: %s", name, e)
+        try:
+            await capture_metrics()
+        except Exception as e:
+            log.error("capture_metrics failed: %s", e)
         _HEARTBEAT.touch()
         await asyncio.sleep(settings.synthesis_interval)
 
