@@ -441,7 +441,7 @@ async def run_synthesis(client: ArtelClient) -> None:
         e
         for e in entries
         if e["agent_id"] != settings.archivist_id
-        and e.get("type") != "directive"
+        and e.get("type") not in ("directive", "doc")
         and (e.get("origin") is None or e.get("origin") == local_id)
     ]
 

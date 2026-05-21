@@ -1,3 +1,4 @@
+import os
 import secrets
 import sqlite3
 
@@ -8,9 +9,11 @@ from .schema import SCHEMA
 _conn: sqlite3.Connection | None = None
 
 
-def get_db(path: str = "artel.db") -> sqlite3.Connection:
+def get_db(path: str | None = None) -> sqlite3.Connection:
     global _conn
     if _conn is None:
+        if path is None:
+            path = os.environ.get("DB_PATH", "artel.db")
         _conn = sqlite3.connect(path, check_same_thread=False)
         _conn.row_factory = sqlite3.Row
         _conn.enable_load_extension(True)
