@@ -226,7 +226,7 @@ nav{
 }
 
 /* ── Panels ───────────────────────────── */
-.panel{display:none;padding:20px;max-width:960px;margin-left:var(--sb)}
+.panel{display:none;padding:20px;max-width:960px;margin-left:max(var(--sb),calc((100vw - 960px)/2));margin-right:auto}
 .panel.on{display:block;animation:fadeIn .15s ease}
 
 /* ── Toolbar ──────────────────────────── */
