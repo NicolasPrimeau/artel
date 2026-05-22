@@ -1,12 +1,17 @@
-import importlib.metadata
 import json
 import os
+import subprocess
 from pathlib import Path
 
 
 def _pkg_version() -> str:
-    v = importlib.metadata.version("artel")
-    return v.split(".dev")[0].split("+")[0]
+    r = subprocess.run(
+        ["git", "describe", "--tags", "--abbrev=0"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return r.stdout.strip().lstrip("v")
 
 
 _ROOT = Path(__file__).resolve().parent.parent
