@@ -752,6 +752,79 @@ async def run_promotion(client: ArtelClient) -> None:
         )
 
 
+async def run_brief(client: ArtelClient) -> None:
+    if not is_configured():
+        return
+    try:
+        r = await client._request("GET", "/projects")
+        projects = r.json()
+    except Exception as e:
+        log.warning("run_brief: could not list projects: %s", e)
+        return
+    for p in projects:
+        name = p.get("name")
+        if not name:
+            continue
+        try:
+            await _refresh_project_brief(name, client)
+        except Exception as e:
+            log.warning("run_brief: failed for project %s: %s", name, e)
+
+
+async def _refresh_project_brief(project: str, client: ArtelClient) -> None:
+    docs_r = await client._request(
+        "GET", "/memory", params={"project": project, "type": "doc", "limit": 50}
+    )
+    docs = [d for d in docs_r.json() if "project-brief" not in (d.get("tags") or [])]
+
+    tasks_r = await client._request("GET", "/tasks", params={"project": project, "limit": 50})
+    tasks = tasks_r.json()
+
+    if not docs and not tasks:
+        return
+
+    existing_r = await client._request(
+        "GET", "/memory", params={"project": project, "tag": "project-brief", "limit": 1}
+    )
+    existing = existing_r.json()
+    existing_id = existing[0]["id"] if existing else None
+
+    doc_block = "\n".join(f"- {d['content'][:400]}" for d in docs[:30]) or "(none)"
+    open_tasks = [t for t in tasks if t["status"] in ("open", "claimed")]
+    done_tasks = [t for t in tasks if t["status"] == "completed"]
+    task_block = (
+        "\n".join(
+            f"- [{t['status']}] {t['title']}"
+            + (f" ({t['assigned_to']})" if t.get("assigned_to") else "")
+            for t in (open_tasks + done_tasks[:5])
+        )
+        or "(none)"
+    )
+
+    text = await complete(
+        system=(
+            "You are the Artel archivist. Write a concise project brief (4-6 sentences) for a new agent "
+            "to read at session start. Cover: what this project is, its current state, active work, and key "
+            "decisions. Be factual. No headers, no bullet points — flowing prose only."
+        ),
+        user=(f"Project: {project}\n\nKnowledge docs:\n{doc_block}\n\nTasks:\n{task_block}"),
+        max_tokens=300,
+    )
+    if not text:
+        return
+
+    if existing_id:
+        await client.patch_memory(existing_id, content=text)
+    else:
+        await client.write_memory(
+            content=text,
+            type="doc",
+            tags=["project-brief"],
+            project=project,
+        )
+    log.info("run_brief: updated brief for project %s", project)
+
+
 async def capture_metrics(project: str | None = None) -> None:
     db = get_db()
     cycle_window_hours = max(1, settings.synthesis_interval // 3600) + 1

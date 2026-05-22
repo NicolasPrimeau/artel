@@ -347,6 +347,35 @@ async def session_context(agent_id: str | None = None) -> str:
 
     own_id = agent_id or _agent_id.get(settings.mcp_agent_id)
     parts: list[str] = [f"agent: {own_id}"]
+
+    project = settings.mcp_project
+    if project:
+        parts[0] += f"  project: {project}"
+        try:
+            brief_r = await c.get(
+                "/memory",
+                params={"project": project, "tag": "project-brief", "type": "doc", "limit": 1},
+            )
+            brief_r.raise_for_status()
+            briefs = brief_r.json()
+            if briefs:
+                parts.append(f"## Project brief — {project}\n{briefs[0]['content']}")
+        except _HTTPX_ERRORS:
+            pass
+        try:
+            tasks_r = await c.get("/tasks", params={"project": project, "limit": 10})
+            tasks_r.raise_for_status()
+            tasks = tasks_r.json()
+            if tasks:
+                task_lines = [
+                    f"[{t['id'][:8]}] [{t['status']}] {t['title']}"
+                    + (f" → {t['assigned_to']}" if t.get("assigned_to") else "")
+                    for t in tasks
+                ]
+                parts.append(f"## Tasks ({project})\n" + "\n".join(task_lines))
+        except _HTTPX_ERRORS:
+            pass
+
     h = data.get("last_handoff")
     if h:
         parts.append(f"## Last session ({h['created_at'][:16]})\n{h['summary']}")
