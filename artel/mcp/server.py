@@ -855,18 +855,13 @@ async def message_inbox() -> str:
     """
     c = _http()
     try:
-        r = await c.get("/messages/inbox")
+        r = await c.post("/messages/inbox/consume")
         r.raise_for_status()
     except _HTTPX_ERRORS as e:
         return _err(e)
     messages = r.json()
     if not messages:
         return "No unread messages."
-    for m in messages:
-        try:
-            await c.post(f"/messages/{m['id']}/read")
-        except _HTTPX_ERRORS:
-            pass
     lines = []
     for m in messages:
         header = f"[{m['id']}] from {m['from_agent']} · {m['created_at'][:16]}"

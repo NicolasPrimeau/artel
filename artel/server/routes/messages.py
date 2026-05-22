@@ -107,6 +107,39 @@ async def inbox(
     return [_row_to_msg(r) for r in rows]
 
 
+@router.post(
+    "/inbox/consume",
+    response_model=list[MessageEntry],
+    summary="Atomically fetch and mark unread messages as read",
+)
+async def consume_inbox(agent_id: str = ActorDep):
+    db = get_db()
+    with db:
+        rows = db.execute(
+            """SELECT * FROM messages WHERE (
+                (to_agent=? AND read=0) OR
+                (to_agent='broadcast' AND id NOT IN (
+                    SELECT message_id FROM message_reads WHERE agent_id=?
+                ))
+            ) ORDER BY created_at DESC""",
+            (agent_id, agent_id),
+        ).fetchall()
+        if rows:
+            direct_ids = [r["id"] for r in rows if r["to_agent"] == agent_id]
+            broadcast_ids = [r["id"] for r in rows if r["to_agent"] == "broadcast"]
+            if direct_ids:
+                db.execute(
+                    f"UPDATE messages SET read=1 WHERE id IN ({','.join('?' * len(direct_ids))})",
+                    direct_ids,
+                )
+            for mid in broadcast_ids:
+                db.execute(
+                    "INSERT OR IGNORE INTO message_reads (agent_id, message_id) VALUES (?, ?)",
+                    (agent_id, mid),
+                )
+    return [_row_to_msg(r) for r in rows]
+
+
 @router.post("/inbox/read-all", summary="Mark all unread inbox messages as read")
 async def mark_inbox_read(agent_id: str = ActorDep):
     db = get_db()
