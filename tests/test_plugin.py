@@ -1,7 +1,13 @@
+import importlib.metadata
 import json
 import os
-import tomllib
 from pathlib import Path
+
+
+def _pkg_version() -> str:
+    v = importlib.metadata.version("artel")
+    return v.split(".dev")[0].split("+")[0]
+
 
 _ROOT = Path(__file__).resolve().parent.parent
 _PLUGIN = json.loads((_ROOT / ".claude-plugin" / "plugin.json").read_text())
@@ -9,13 +15,8 @@ _MARKET = json.loads((_ROOT / ".claude-plugin" / "marketplace.json").read_text()
 _HOOKS = json.loads((_ROOT / "hooks" / "hooks.json").read_text())
 
 
-def _pyproject_version() -> str:
-    data = tomllib.loads((_ROOT / "pyproject.toml").read_text())
-    return data["project"]["version"]
-
-
 def test_plugin_version_tracks_pyproject():
-    assert _PLUGIN["version"] == _pyproject_version()
+    assert _PLUGIN["version"] == _pkg_version()
 
 
 def test_plugin_identity():
@@ -53,7 +54,7 @@ def test_marketplace_entry():
     entry = plugins[0]
     assert entry["name"] == "artel"
     assert entry["source"] == "./"
-    assert entry["version"] == _pyproject_version()
+    assert entry["version"] == _pkg_version()
 
 
 def test_hooks_wired_and_scripts_executable():
