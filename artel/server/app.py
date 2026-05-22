@@ -282,6 +282,7 @@ async def mcp_server_card():
                     "name": t.name,
                     "description": t.description or "",
                     "inputSchema": t.inputSchema,
+                    **({"outputSchema": t.outputSchema} if t.outputSchema else {}),
                     "annotations": _tool_annotations(t.name),
                 }
                 for t in tools
