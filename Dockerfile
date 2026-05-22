@@ -5,6 +5,7 @@ COPY --from=ghcr.io/astral-sh/uv:0.11.11 /uv /usr/local/bin/uv
 WORKDIR /app
 
 ARG ARTEL_VERSION=0.0.0.dev0
+ENV ARTEL_VERSION=${ARTEL_VERSION}
 COPY pyproject.toml uv.lock README.md llms.txt ./
 RUN HATCH_VCS_PRETEND_VERSION=${ARTEL_VERSION} SETUPTOOLS_SCM_PRETEND_VERSION_FOR_ARTEL=${ARTEL_VERSION} uv sync --frozen --no-dev
 

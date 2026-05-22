@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import secrets
 import time
 from contextlib import asynccontextmanager
@@ -9,8 +10,10 @@ from pathlib import Path
 
 try:
     _ARTEL_VERSION = _pkg_version("artel")
+    if _ARTEL_VERSION == "0.0.0":
+        _ARTEL_VERSION = os.getenv("ARTEL_VERSION", "0.0.0")
 except PackageNotFoundError:
-    _ARTEL_VERSION = "0.0.0"
+    _ARTEL_VERSION = os.getenv("ARTEL_VERSION", "0.0.0")
 
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import (
