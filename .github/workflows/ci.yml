@@ -112,6 +112,43 @@ jobs:
           git pull --rebase
           git push
 
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: master
+
+      - name: Update manifest versions
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          python3 - <<EOF
+          import json, pathlib
+          v = "$VERSION"
+          p = pathlib.Path(".claude-plugin/plugin.json")
+          d = json.loads(p.read_text())
+          d["version"] = v
+          p.write_text(json.dumps(d, indent=2) + "\n")
+          p = pathlib.Path(".claude-plugin/marketplace.json")
+          d = json.loads(p.read_text())
+          for plugin in d.get("plugins", []):
+              plugin["version"] = v
+          p.write_text(json.dumps(d, indent=2) + "\n")
+          EOF
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .claude-plugin/plugin.json .claude-plugin/marketplace.json
+          git diff --cached --quiet || git commit -m "chore: bump manifest versions to ${GITHUB_REF_NAME#v} [skip ci]"
+          git pull --rebase
+          git push
+
   deploy-sandbox:
     needs: docker
     if: github.ref == 'refs/heads/master'

@@ -1,27 +1,11 @@
 import json
 import os
-import subprocess
 from pathlib import Path
-
-
-def _pkg_version() -> str:
-    r = subprocess.run(
-        ["git", "describe", "--tags", "--abbrev=0"],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    return r.stdout.strip().lstrip("v")
-
 
 _ROOT = Path(__file__).resolve().parent.parent
 _PLUGIN = json.loads((_ROOT / ".claude-plugin" / "plugin.json").read_text())
 _MARKET = json.loads((_ROOT / ".claude-plugin" / "marketplace.json").read_text())
 _HOOKS = json.loads((_ROOT / "hooks" / "hooks.json").read_text())
-
-
-def test_plugin_version_tracks_pyproject():
-    assert _PLUGIN["version"] == _pkg_version()
 
 
 def test_plugin_identity():
@@ -59,7 +43,7 @@ def test_marketplace_entry():
     entry = plugins[0]
     assert entry["name"] == "artel"
     assert entry["source"] == "./"
-    assert entry["version"] == _pkg_version()
+    assert entry["version"]
 
 
 def test_hooks_wired_and_scripts_executable():
