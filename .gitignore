@@ -30,4 +30,5 @@ scripts/sync_env_secrets.py
 
 # Screenshots (Playwright QA artifacts, not shipped)
 *.png
+!logo.png
 !docs/logo-400.png
