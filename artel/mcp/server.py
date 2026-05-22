@@ -548,10 +548,14 @@ async def memory_list(
 
 @mcp.tool()
 async def memory_get(entry_id: str) -> str:
-    """Fetch a single memory entry by ID. Use when you have an ID and need the full content.
+    """Fetch a single memory entry by ID, returning its full content without truncation.
+
+    Use when memory_search() or memory_list() returned a truncated entry and you need
+    the complete text, or when you have a specific entry ID and want all its metadata
+    (confidence, tags, origin, read count). Read-only — no side effects.
 
     Args:
-        entry_id: The UUID of the entry.
+        entry_id: The UUID of the entry. Short prefixes (min 4 chars) are resolved if unambiguous.
     """
     c = _http()
     try:
@@ -699,7 +703,11 @@ async def project_join(project_id: str) -> str:
 
 @mcp.tool()
 async def project_leave(project_id: str) -> str:
-    """Leave a project. You will no longer see its project-scoped memories.
+    """Leave a project — removes you from its member list.
+
+    After leaving, project-scoped memories for this project no longer appear in
+    memory_search() or memory_list() results. Memory you already wrote to the project
+    is retained for other members. You can re-join at any time with project_join().
 
     Args:
         project_id: The project name to leave.
@@ -715,9 +723,11 @@ async def project_leave(project_id: str) -> str:
 
 @mcp.tool()
 async def project_members(project_id: str) -> str:
-    """List the agents that are members of a project.
+    """List the agents currently in a project, with their join timestamps.
 
-    You must be a member of the project to see its members.
+    Use before sending project-wide messages or assigning tasks to confirm who
+    has visibility into the project's shared memory. Returns each member's agent_id
+    and join timestamp. Requires membership — non-members cannot enumerate a project's members.
 
     Args:
         project_id: The project name to inspect.
@@ -1043,11 +1053,17 @@ async def task_unclaim(task_id: str, body: str = "") -> str:
 
 @mcp.tool()
 async def task_complete(task_id: str, body: str = "") -> str:
-    """Mark your claimed task as completed. Only the agent that claimed it can complete it.
+    """Mark your claimed task as completed. Only the claiming agent can complete it.
+
+    Call when the task's expected_outcome has been fully achieved. The body is recorded
+    in the task's comment log and visible to all agents reviewing the task. If you cannot
+    finish the task, use task_fail() instead; if you are stepping away mid-work, use
+    task_unclaim() so another agent can pick it up.
 
     Args:
         task_id: ID of a task you have claimed.
-        body: Optional note recorded on the task's comment log (e.g. result, links, follow-ups).
+        body: Summary of what was accomplished, including follow-up IDs or links.
+              Recommended — it is the only record future agents have of what was done.
     """
     c = _http()
     try:
@@ -1108,8 +1124,11 @@ async def task_comment(task_id: str, body: str) -> str:
 async def task_get(task_id: str) -> str:
     """Fetch full details of a task by ID, including its chronological comment log.
 
+    Use when task_list() gave you an ID and you need the description, expected outcome,
+    and full history of status changes and agent comments. Read-only — no side effects.
+
     Args:
-        task_id: The UUID of the task.
+        task_id: The UUID of the task. Short prefixes (min 4 chars) are resolved if unambiguous.
     """
     c = _http()
     try:
@@ -1260,7 +1279,11 @@ async def feed_subscribe(
 
 @mcp.tool()
 async def feed_list(project: str | None = None) -> str:
-    """List active feed subscriptions visible to you.
+    """List active RSS/Atom feed subscriptions visible to you.
+
+    Use before subscribing to check for duplicates, or to find a feed_id for
+    feed_unsubscribe(). Shows subscription metadata including poll interval and last
+    fetch timestamp. Does not trigger a fetch — the archivist polls on schedule.
 
     Args:
         project: Filter by project. Omit to list all accessible feeds.
@@ -1289,7 +1312,12 @@ async def feed_list(project: str | None = None) -> str:
 
 @mcp.tool()
 async def feed_unsubscribe(feed_id: str) -> str:
-    """Unsubscribe from a feed. Removes the subscription and its seen-item history.
+    """Unsubscribe from a feed and stop future polling.
+
+    Removes the subscription and its seen-item deduplication history. Memory entries
+    already written from this feed are NOT deleted — only the subscription is removed.
+    If the feed is re-subscribed later, previously seen items may be re-ingested.
+    Use feed_list() to find the feed_id.
 
     Args:
         feed_id: ID from feed_list().
