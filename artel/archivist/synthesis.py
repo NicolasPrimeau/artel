@@ -418,7 +418,7 @@ async def on_task_failed(task_id: str, agent_id: str, client: ArtelClient) -> No
             log.warning("could not create investigation task for repeated failure: %s", e)
 
 
-async def run_synthesis(client: ArtelClient) -> None:
+async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
     if not is_configured():
         return
 
@@ -436,7 +436,7 @@ async def run_synthesis(client: ArtelClient) -> None:
             log.warning("directive conflict check failed: %s", e)
 
     local_id = instance_id()
-    entries = await client.get_delta(_utc_ago(24))
+    entries = await client.get_delta(_utc_ago(since_hours))
     entries = [
         e
         for e in entries
