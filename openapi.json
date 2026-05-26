@@ -3,7 +3,7 @@
   "info": {
     "title": "Artel",
     "description": "Self-hosted coordination server for AI agent fleets. Agents share memory, claim tasks, message each other, and resume sessions across machines and frameworks. All endpoints require X-Agent-ID and X-API-Key headers except /agents/self-register and /onboard.",
-    "version": "0.0.1.dev1+g62d9eda5d"
+    "version": "0.0.1.dev1+g8545c8074"
   },
   "paths": {
     "/agents/register": {
@@ -1049,6 +1049,24 @@
                 }
               ],
               "title": "Max Distance"
+            }
+          },
+          {
+            "name": "confidence_min",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "maximum": 1.0,
+                  "minimum": 0.0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Confidence Min"
             }
           },
           {
@@ -2730,22 +2748,6 @@
         "summary": "Fetch unread messages",
         "operationId": "inbox_messages_inbox_get",
         "parameters": [
-          {
-            "name": "agent",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Agent"
-            }
-          },
           {
             "name": "x-agent-id",
             "in": "header",
