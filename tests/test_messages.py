@@ -131,3 +131,83 @@ async def test_list_messages_read_filter(client):
 
     r4 = await client.get("/messages", params={"read": "true"}, headers=HEADERS2)
     assert any(m["id"] == mid for m in r4.json())
+
+
+# ── Project inboxes ──────────────────────────────────────────────────────────
+
+
+async def _join(client, project: str, headers: dict) -> None:
+    r = await client.post(f"/projects/{project}/join", headers=headers)
+    assert r.status_code == 204
+
+
+async def test_project_inbox_member_can_send_and_receive(client):
+    await _join(client, "alpha", HEADERS)
+    await _join(client, "alpha", HEADERS2)
+
+    r = await client.post(
+        "/messages", json={"to": "project:alpha", "body": "team update"}, headers=HEADERS
+    )
+    assert r.status_code == 201
+
+    inbox = await client.get("/messages/inbox", headers=HEADERS2)
+    assert inbox.status_code == 200
+    bodies = [m["body"] for m in inbox.json()]
+    assert "team update" in bodies
+
+
+async def test_project_inbox_non_member_cannot_send(client):
+    await _join(client, "alpha", HEADERS2)
+
+    r = await client.post(
+        "/messages", json={"to": "project:alpha", "body": "intrusion"}, headers=HEADERS
+    )
+    assert r.status_code == 403
+
+
+async def test_project_inbox_non_member_does_not_receive(client):
+    await _join(client, "alpha", HEADERS)
+    # HEADERS2 is not in alpha
+    r = await client.post(
+        "/messages", json={"to": "project:alpha", "body": "alpha-only"}, headers=HEADERS
+    )
+    assert r.status_code == 201
+
+    inbox = await client.get("/messages/inbox", headers=HEADERS2)
+    bodies = [m["body"] for m in inbox.json()]
+    assert "alpha-only" not in bodies
+
+
+async def test_project_inbox_per_recipient_read_tracking(client):
+    await _join(client, "alpha", HEADERS)
+    await _join(client, "alpha", HEADERS2)
+
+    r = await client.post(
+        "/messages", json={"to": "project:alpha", "body": "track me"}, headers=HEADERS
+    )
+    mid = r.json()["id"]
+
+    # HEADERS2 reads it
+    await client.post(f"/messages/{mid}/read", headers=HEADERS2)
+    inbox2 = await client.get("/messages/inbox", headers=HEADERS2)
+    assert not any(m["id"] == mid for m in inbox2.json())
+
+    # HEADERS (sender, also a member) still sees it in their unread inbox
+    inbox1 = await client.get("/messages/inbox", headers=HEADERS)
+    assert any(m["id"] == mid for m in inbox1.json())
+
+
+async def test_project_inbox_unknown_project_404(client):
+    r = await client.post("/messages", json={"to": "project:ghost", "body": "?"}, headers=HEADERS)
+    assert r.status_code == 404
+
+
+async def test_project_inbox_get_message_non_member_forbidden(client):
+    await _join(client, "alpha", HEADERS)
+    r = await client.post(
+        "/messages", json={"to": "project:alpha", "body": "secret"}, headers=HEADERS
+    )
+    mid = r.json()["id"]
+
+    r2 = await client.get(f"/messages/{mid}", headers=HEADERS2)
+    assert r2.status_code == 403

@@ -219,21 +219,42 @@ async def _sse_watcher():
             delay = min(delay * 2, 60.0)
 
 
+def _project_member_ids(project: str) -> list[str]:
+    try:
+        db = get_db()
+        rows = db.execute(
+            "SELECT agent_id FROM project_members WHERE project_id=?", (project,)
+        ).fetchall()
+        return [r["agent_id"] for r in rows]
+    except Exception as e:
+        log.debug("project member lookup failed for %s: %s", project, e)
+        return []
+
+
 async def _deliver_notification(to_agent: str, msg: str) -> None:
+    is_fanout = to_agent == "broadcast" or to_agent.startswith("project:")
     if to_agent == "broadcast":
-        targets = list(_sessions.items())
+        recipients = list(_sessions.keys())
+    elif to_agent.startswith("project:"):
+        recipients = _project_member_ids(to_agent[len("project:") :])
     else:
-        s = _sessions.get(to_agent)
-        targets = [(to_agent, s)] if s else []
-    delivered = False
-    for aid, session in targets:
+        recipients = [to_agent]
+    delivered_any = False
+    for aid in recipients:
+        session = _sessions.get(aid)
+        if session is None:
+            if not is_fanout:
+                _enqueue_notification(aid, msg)
+            continue
         try:
             await session.send_log_message("warning", msg)
-            delivered = True
+            delivered_any = True
         except Exception as e:
             log.debug("notification failed for %s, dropping session: %s", aid, e)
             _sessions.pop(aid, None)
-    if not delivered and to_agent != "broadcast":
+            if not is_fanout:
+                _enqueue_notification(aid, msg)
+    if not delivered_any and not is_fanout and not recipients:
         _enqueue_notification(to_agent, msg)
 
 
@@ -909,7 +930,9 @@ async def message_send(to: str, body: str, subject: str = "") -> str:
     they call message_inbox().
 
     Args:
-        to: The agent_id to send to, or "broadcast" to reach all agents.
+        to: The agent_id to send to, "broadcast" to reach all agents, or
+            "project:<name>" to reach every agent in that project (sender must
+            be a member).
         body: Message body.
         subject: Optional subject line (helps the recipient triage).
     """
