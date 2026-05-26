@@ -17,9 +17,6 @@ async def check_and_merge(entry_id: str, client: ArtelClient) -> None:
 
     entry = await client.get_memory(entry_id)
 
-    if entry.get("agent_id") == settings.archivist_id:
-        return
-
     if entry.get("type") == "directive":
         return
 
@@ -51,7 +48,11 @@ async def check_and_merge(entry_id: str, client: ArtelClient) -> None:
         f"entry [{other['id'][:8]}] into a canonical record [{new_id}]. "
         f"The combined entry is now in shared memory — you may want to review it."
     )
+    notified = set()
     for agent in (entry["agent_id"], other["agent_id"]):
+        if agent == settings.archivist_id or agent in notified:
+            continue
+        notified.add(agent)
         try:
             await client.send_message(
                 to=agent,

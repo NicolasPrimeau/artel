@@ -475,7 +475,7 @@ class TestHeatAwareDecay:
 
         client.patch_memory.assert_not_called()
 
-    async def test_archivist_id_entries_always_excluded(self, raw_db):
+    async def test_archivist_authored_entries_also_decay(self, raw_db):
         eid = _insert_memory(raw_db, confidence=0.9, read_count=0)
         archivist_entry = {
             "id": eid,
@@ -496,7 +496,8 @@ class TestHeatAwareDecay:
             s.synthesis_interval = 3600
             await decay_confidence(client)
 
-        client.patch_memory.assert_not_called()
+        client.patch_memory.assert_called_once()
+        assert client.patch_memory.call_args.kwargs["confidence"] == 0.9 * 0.9
 
     async def test_directive_entries_never_decayed(self, raw_db):
         eid = _insert_memory(raw_db, confidence=0.9, type_="directive")

@@ -440,8 +440,7 @@ async def run_synthesis(client: ArtelClient) -> None:
     entries = [
         e
         for e in entries
-        if e["agent_id"] != settings.archivist_id
-        and e.get("type") not in ("directive", "doc")
+        if e.get("type") not in ("directive", "doc")
         and (e.get("origin") is None or e.get("origin") == local_id)
     ]
 
@@ -562,9 +561,7 @@ async def decay_confidence(client: ArtelClient) -> None:
     entries = [
         e
         for e in entries
-        if e["agent_id"] != settings.archivist_id
-        and e.get("type") != "directive"
-        and (e.get("origin") is None or e.get("origin") == local_id)
+        if e.get("type") != "directive" and (e.get("origin") is None or e.get("origin") == local_id)
     ]
 
     db = get_db()
@@ -733,8 +730,6 @@ async def run_promotion(client: ArtelClient) -> None:
     local_id = instance_id()
     promoted = 0
     for entry in memory_entries:
-        if entry["agent_id"] == settings.archivist_id:
-            continue
         if entry.get("type") == "directive":
             continue
         if entry.get("origin") is not None and entry.get("origin") != local_id:
