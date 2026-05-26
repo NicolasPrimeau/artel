@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from ...store.db import get_db
+from ...store.db import get_db, norm_project
 from ..auth import ActorDep, ReaderDep
 from ..config import settings
 from ..models import ProjectCreate, ProjectInfo
@@ -31,6 +31,9 @@ async def create_project(body: ProjectCreate, agent_id: str = ActorDep):
 
 @router.post("/{project_id}/join", status_code=204, summary="Join a project")
 async def join_project(project_id: str, agent_id: str = ActorDep):
+    project_id = norm_project(project_id) or ""
+    if not project_id:
+        raise HTTPException(status_code=422, detail="project name required")
     db = get_db()
     db.execute(
         "INSERT OR IGNORE INTO project_members (project_id, agent_id) VALUES (?, ?)",
@@ -41,6 +44,7 @@ async def join_project(project_id: str, agent_id: str = ActorDep):
 
 @router.delete("/{project_id}/leave", status_code=204, summary="Leave a project")
 async def leave_project(project_id: str, agent_id: str = ActorDep):
+    project_id = norm_project(project_id) or ""
     db = get_db()
     db.execute(
         "DELETE FROM project_members WHERE project_id=? AND agent_id=?",
@@ -55,6 +59,7 @@ async def leave_project(project_id: str, agent_id: str = ActorDep):
     summary="List members of a project",
 )
 async def list_members(project_id: str, agent_id: str = ReaderDep):
+    project_id = norm_project(project_id) or ""
     db = get_db()
     row = db.execute(
         "SELECT 1 FROM project_members WHERE project_id=? AND agent_id=?",

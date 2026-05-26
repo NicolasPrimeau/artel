@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, HTTPException, Query
 
-from ...store.db import get_db
+from ...store.db import get_db, norm_project
 from ..auth import ActorDep, ReaderDep, _memberships, is_owner
 from ..broadcast import broadcast
 from ..models import EventEntry, MessageEntry, MessageSend, new_id
@@ -86,9 +86,10 @@ async def send_message(body: MessageSend, agent_id: str = ActorDep):
 
     db = get_db()
     if body.to.startswith(_PROJECT_PREFIX):
-        project = body.to[len(_PROJECT_PREFIX) :]
+        project = norm_project(body.to[len(_PROJECT_PREFIX) :])
         if not project:
             raise HTTPException(status_code=400, detail="project name required after 'project:'")
+        body.to = f"{_PROJECT_PREFIX}{project}"
         if not _project_exists(project):
             raise HTTPException(status_code=404, detail="project not found")
         if not _can_post_to_project(agent_id, project):

@@ -3,7 +3,7 @@ import sqlite3
 
 from fastapi import APIRouter, Body, HTTPException, Query
 
-from ...store.db import AmbiguousId, get_db, resolve_id
+from ...store.db import AmbiguousId, get_db, norm_project, resolve_id
 from ..auth import ActorDep, ReaderDep, _memberships, is_owner, project_filter
 from ..models import (
     TaskAction,
@@ -128,6 +128,7 @@ async def list_tasks(
     project: str | None = Query(default=None),
     agent_id: str = ReaderDep,
 ):
+    project = norm_project(project)
     db = get_db()
     sql = "SELECT * FROM tasks WHERE 1=1"
     params: list = []

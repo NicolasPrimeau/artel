@@ -25,6 +25,13 @@ def get_db(path: str | None = None) -> sqlite3.Connection:
     return _conn
 
 
+def norm_project(p: str | None) -> str | None:
+    if p is None:
+        return None
+    s = p.strip()
+    return s.lower() if s else None
+
+
 def instance_id() -> str:
     db = get_db()
     row = db.execute("SELECT value FROM kv WHERE key='instance_id'").fetchone()
@@ -165,6 +172,71 @@ def _migrate(conn: sqlite3.Connection) -> None:
             PRAGMA foreign_keys=on;
         """)
         conn.commit()
+
+    _canonicalize_projects(conn)
+
+
+def _canonicalize_projects(conn: sqlite3.Connection) -> None:
+    row = conn.execute("SELECT value FROM kv WHERE key='project_canonicalized_v1'").fetchone()
+    if row:
+        return
+
+    simple_tables = [
+        "memory",
+        "tasks",
+        "agents",
+        "feed_subscriptions",
+        "peer_links",
+        "mesh_tokens",
+        "archivist_metrics",
+    ]
+    with conn:
+        for table in simple_tables:
+            conn.execute(
+                f"UPDATE {table} SET project = LOWER(TRIM(project)) WHERE project IS NOT NULL AND project != LOWER(TRIM(project))"
+            )
+
+        rows = conn.execute(
+            "SELECT project_id, agent_id, joined_at FROM project_members"
+        ).fetchall()
+        deduped: dict[tuple[str, str], str] = {}
+        for r in rows:
+            pid = (r["project_id"] or "").strip().lower()
+            if not pid:
+                continue
+            key = (pid, r["agent_id"])
+            existing = deduped.get(key)
+            if existing is None or r["joined_at"] < existing:
+                deduped[key] = r["joined_at"]
+        conn.execute("DELETE FROM project_members")
+        for (pid, aid), joined in deduped.items():
+            conn.execute(
+                "INSERT INTO project_members (project_id, agent_id, joined_at) VALUES (?, ?, ?)",
+                (pid, aid, joined),
+            )
+
+        brief_rows = conn.execute(
+            "SELECT id, project, updated_at FROM memory "
+            "WHERE type='doc' AND deleted_at IS NULL "
+            "  AND EXISTS (SELECT 1 FROM json_each(tags) WHERE value='project-brief') "
+            "ORDER BY project, updated_at DESC"
+        ).fetchall()
+        seen_projects: set[str] = set()
+        for br in brief_rows:
+            proj = (br["project"] or "").lower()
+            if not proj:
+                continue
+            if proj in seen_projects:
+                conn.execute(
+                    "UPDATE memory SET deleted_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?",
+                    (br["id"],),
+                )
+            else:
+                seen_projects.add(proj)
+
+        conn.execute(
+            "INSERT OR REPLACE INTO kv (key, value) VALUES ('project_canonicalized_v1', '1')"
+        )
 
 
 def _init_vec_table(conn: sqlite3.Connection) -> None:

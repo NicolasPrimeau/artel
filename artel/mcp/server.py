@@ -221,9 +221,10 @@ async def _sse_watcher():
 
 def _project_member_ids(project: str) -> list[str]:
     try:
+        normalized = (project or "").strip().lower()
         db = get_db()
         rows = db.execute(
-            "SELECT agent_id FROM project_members WHERE project_id=?", (project,)
+            "SELECT agent_id FROM project_members WHERE project_id=?", (normalized,)
         ).fetchall()
         return [r["agent_id"] for r in rows]
     except Exception as e:

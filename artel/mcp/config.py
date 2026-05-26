@@ -32,7 +32,11 @@ class MCPSettings(BaseSettings):
         return ""
 
     def resolve_project(self, override: str | None = None) -> str | None:
-        return override or self.mcp_project or None
+        raw = override or self.mcp_project or None
+        if raw is None:
+            return None
+        s = raw.strip().lower()
+        return s or None
 
 
 settings = MCPSettings()

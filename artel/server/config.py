@@ -41,7 +41,9 @@ class Settings(BaseSettings):
                 if len(parts) >= 2:
                     agent_id = parts[0]
                     if len(parts) >= 3 and parts[2] and parts[2] != "*":
-                        result[agent_id] = parts[2].split(";")
+                        result[agent_id] = [
+                            p.strip().lower() for p in parts[2].split(";") if p.strip()
+                        ]
             object.__setattr__(self, "_projects_cache", result)
         return self._projects_cache  # type: ignore[return-value]
 

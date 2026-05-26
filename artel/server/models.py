@@ -1,11 +1,28 @@
 import uuid
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import AfterValidator, BaseModel, Field
+
+from ..store.db import norm_project as _norm_project
 
 
 def new_id() -> str:
     return str(uuid.uuid4())
+
+
+def _normalize_project_optional(v: str | None) -> str | None:
+    return _norm_project(v)
+
+
+def _normalize_project_required(v: str) -> str:
+    normalized = _norm_project(v)
+    if not normalized:
+        raise ValueError("project name required")
+    return normalized
+
+
+ProjectName = Annotated[str | None, AfterValidator(_normalize_project_optional)]
+ProjectNameRequired = Annotated[str, AfterValidator(_normalize_project_required)]
 
 
 EntryType = Literal["memory", "doc", "directive"]
@@ -18,7 +35,7 @@ LogLevel = Literal["info", "warning", "error"]
 
 class MemoryWrite(BaseModel):
     type: EntryType = "memory"
-    project: str | None = None
+    project: ProjectName = None
     scope: Scope = "project"
     content: str
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
@@ -33,7 +50,7 @@ class MemoryPatch(BaseModel):
     tags: list[str] | None = None
     scope: Scope | None = None
     type: EntryType | None = None
-    project: str | None = None
+    project: ProjectName = None
 
 
 class MemoryEntry(BaseModel):
@@ -57,7 +74,7 @@ class TaskCreate(BaseModel):
     title: str
     description: str = ""
     expected_outcome: str = ""
-    project: str | None = None
+    project: ProjectName = None
     priority: Priority = "normal"
     assigned_to: str | None = None
     due_at: str | None = None
@@ -84,7 +101,7 @@ class TaskUpdate(BaseModel):
     title: str | None = None
     priority: Priority | None = None
     expected_outcome: str | None = None
-    project: str | None = None
+    project: ProjectName = None
 
 
 class TaskAction(BaseModel):
@@ -143,12 +160,12 @@ class Participant(BaseModel):
 
 class AgentRegister(BaseModel):
     agent_id: str
-    project: str | None = None
+    project: ProjectName = None
 
 
 class AgentSelfRegister(BaseModel):
     agent_id: str = "agent"
-    project: str | None = None
+    project: ProjectName = None
 
 
 class AgentRename(BaseModel):
@@ -177,7 +194,7 @@ class ProjectInfo(BaseModel):
 class FeedCreate(BaseModel):
     url: str
     name: str
-    project: str
+    project: ProjectNameRequired
     tags: list[str] = []
     interval_min: int = Field(default=30, ge=1, le=1440)
     max_per_poll: int = Field(default=20, ge=1, le=100)
@@ -208,17 +225,17 @@ class BulkMemoryDelete(BaseModel):
 
 
 class ProjectCreate(BaseModel):
-    name: str
+    name: ProjectNameRequired
 
 
 class MeshTokenCreate(BaseModel):
     label: str | None = None
-    project: str | None = None
+    project: ProjectName = None
 
 
 class MeshTokenUpdate(BaseModel):
     label: str | None = None
-    project: str | None = None
+    project: ProjectName = None
 
 
 class MeshToken(BaseModel):
@@ -233,7 +250,7 @@ class MeshToken(BaseModel):
 class PeerLinkCreate(BaseModel):
     peer_url: str
     peer_token: str
-    project: str | None = None
+    project: ProjectName = None
 
 
 class PeerLink(BaseModel):
@@ -285,7 +302,7 @@ class DiscoveredPeer(BaseModel):
 class HandshakeRequest(BaseModel):
     initiator_url: str
     initiator_token: str
-    project: str | None = None
+    project: ProjectName = None
 
 
 class HandshakeResponse(BaseModel):
@@ -294,4 +311,4 @@ class HandshakeResponse(BaseModel):
 
 class LinkDiscoveredRequest(BaseModel):
     instance_id: str
-    project: str | None = None
+    project: ProjectName = None

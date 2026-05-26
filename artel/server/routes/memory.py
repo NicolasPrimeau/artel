@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse, Response
 
-from ...store.db import AmbiguousId, get_db, instance_id, resolve_id
+from ...store.db import AmbiguousId, get_db, instance_id, norm_project, resolve_id
 from ...store.embeddings import embed
 from ..auth import (
     ActorDep,
@@ -39,6 +39,8 @@ def _fetch_feed_rows(
     include_deleted: bool = False,
     mesh_project: str | None = None,
 ):
+    project = norm_project(project)
+    mesh_project = norm_project(mesh_project) if mesh_project else mesh_project
     clauses = ["(scope != 'agent' OR agent_id = ?)"]
     if not include_deleted:
         clauses.append("deleted_at IS NULL")
@@ -185,6 +187,7 @@ async def search_memory(
     confidence_min: float | None = Query(default=None, ge=0.0, le=1.0),
     agent_id: str = ReaderDep,
 ):
+    project = norm_project(project)
     db = get_db()
     vec = embed(q)
     allowed = _memberships(agent_id)
@@ -240,6 +243,7 @@ async def list_memory(
     limit: int = Query(default=100, le=500),
     agent_id: str = ReaderDep,
 ):
+    project = norm_project(project)
     db = get_db()
     clauses = ["deleted_at IS NULL", "(scope != 'agent' OR agent_id = ?)"]
     params: list = [agent_id]
@@ -293,6 +297,7 @@ async def memory_delta(
     type: str | None = Query(default=None),
     agent_id: str = ReaderDep,
 ):
+    project = norm_project(project)
     db = get_db()
     pf_clause, pf_params = project_filter(agent_id)
     sql = """SELECT * FROM memory
@@ -327,6 +332,7 @@ async def memory_feed_atom(
     limit: int = Query(default=50, le=200),
     auth: FeedAuth = Depends(feed_auth_dep),
 ):
+    project = norm_project(project)
     db = get_db()
     rows = _fetch_feed_rows(
         db, auth.agent_id, project, tag, type, limit, mesh_project=auth.mesh_project
@@ -375,6 +381,7 @@ async def memory_feed_json(
     include_deleted: bool = Query(default=False),
     auth: FeedAuth = Depends(feed_auth_dep),
 ):
+    project = norm_project(project)
     db = get_db()
     rows = _fetch_feed_rows(
         db,
