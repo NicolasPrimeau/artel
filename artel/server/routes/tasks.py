@@ -28,6 +28,14 @@ def _resolve_task(task_id: str) -> str:
     return resolved
 
 
+def _require_project_membership(agent_id: str, project: str | None) -> None:
+    if not project:
+        return
+    allowed = _memberships(agent_id)
+    if allowed is not None and project not in allowed:
+        raise HTTPException(status_code=403, detail="not a member of this project")
+
+
 def _row_to_task(row: sqlite3.Row) -> TaskEntry:
     return TaskEntry(
         id=row["id"],
@@ -193,6 +201,7 @@ async def unclaim_task(
         raise HTTPException(status_code=409, detail="task not claimed")
     if row["assigned_to"] != agent_id and not is_owner(agent_id):
         raise HTTPException(status_code=403, detail="forbidden")
+    _require_project_membership(agent_id, row["project"])
     with db:
         db.execute(
             """UPDATE tasks SET status='open', assigned_to=NULL,
@@ -224,6 +233,7 @@ async def complete_task(
         raise HTTPException(status_code=409, detail="task not claimed")
     if row["assigned_to"] != agent_id and not is_owner(agent_id):
         raise HTTPException(status_code=403, detail="forbidden")
+    _require_project_membership(agent_id, row["project"])
     with db:
         db.execute(
             """UPDATE tasks SET status='completed',
@@ -252,6 +262,8 @@ async def update_task(task_id: str, body: TaskUpdate, agent_id: str = ActorDep):
     )
     if not is_task_actor:
         raise HTTPException(status_code=403, detail="forbidden")
+    if not is_owner(agent_id):
+        _require_project_membership(agent_id, row["project"])
     set_parts: list[str] = []
     params: list = []
     if body.description is not None:
@@ -306,6 +318,7 @@ async def fail_task(
         raise HTTPException(status_code=409, detail="task not claimed")
     if row["assigned_to"] != agent_id and not is_owner(agent_id):
         raise HTTPException(status_code=403, detail="forbidden")
+    _require_project_membership(agent_id, row["project"])
     with db:
         db.execute(
             """UPDATE tasks SET status='failed',

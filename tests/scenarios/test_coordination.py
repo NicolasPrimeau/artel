@@ -2628,10 +2628,11 @@ async def test_memory_list_scope_change(scenario):
 # ── Inbox agent= filter ───────────────────────────────────────────────────────
 
 
-async def test_inbox_agent_filter(scenario):
+async def test_inbox_does_not_expose_other_agents(scenario):
     """
-    GET /messages/inbox?agent= lets an agent read another agent's inbox
-    (admin-style monitoring pattern).
+    GET /messages/inbox only returns the caller's own messages — the previous
+    ?agent= query param was a security bug (any reader could enumerate any
+    agent's unread direct messages) and has been removed.
     """
     sender = await scenario.agent("sender")
     await scenario.agent("target")
@@ -2639,10 +2640,10 @@ async def test_inbox_agent_filter(scenario):
 
     await sender.send_message(to="target", body="Secret message for target")
 
-    target_inbox = await monitor._http.get("/messages/inbox", params={"agent": "target"})
-    assert target_inbox.status_code == 200
-    msgs = target_inbox.json()
-    assert any("Secret message for target" in m["body"] for m in msgs)
+    monitor_inbox = await monitor._http.get("/messages/inbox", params={"agent": "target"})
+    assert monitor_inbox.status_code == 200
+    msgs = monitor_inbox.json()
+    assert not any("Secret message for target" in m["body"] for m in msgs)
 
 
 # ── Edge cases uncovered ──────────────────────────────────────────────────────

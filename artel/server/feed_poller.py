@@ -125,6 +125,8 @@ def _replicate_entry(db, feed: dict, meta: dict, content: str, tags: list, self_
 
     row = db.execute("SELECT version, updated_at FROM memory WHERE id=?", (gid,)).fetchone()
 
+    event_id = new_id()
+    event_type: str | None = None
     if row is None:
         if incoming_del:
             return False
@@ -153,30 +155,50 @@ def _replicate_entry(db, feed: dict, meta: dict, content: str, tags: list, self_
             db.execute(
                 "INSERT INTO memory_vec (id, embedding) VALUES (?, ?)", (gid, json.dumps(vec))
             )
-        return True
-
-    local_ver = int(row["version"])
-    local_upd = row["updated_at"] or ""
-    newer = incoming_ver > local_ver or (incoming_ver == local_ver and incoming_upd > local_upd)
-    if not newer:
-        return False
-    with db:
-        if incoming_del:
+            event_type = "memory.written"
             db.execute(
-                "UPDATE memory SET deleted_at=?, version=?, updated_at=? WHERE id=?",
-                (incoming_del, incoming_ver, incoming_upd, gid),
+                "INSERT INTO events (id, type, agent_id, payload) VALUES (?,?,?,?)",
+                (event_id, event_type, agent_id, json.dumps({"memory_id": gid})),
             )
-        else:
+    else:
+        local_ver = int(row["version"])
+        local_upd = row["updated_at"] or ""
+        newer = incoming_ver > local_ver or (incoming_ver == local_ver and incoming_upd > local_upd)
+        if not newer:
+            return False
+        with db:
+            if incoming_del:
+                db.execute(
+                    "UPDATE memory SET deleted_at=?, version=?, updated_at=? WHERE id=?",
+                    (incoming_del, incoming_ver, incoming_upd, gid),
+                )
+                event_type = "memory.deleted"
+            else:
+                db.execute(
+                    """UPDATE memory SET type=?, content=?, confidence=?, parents=?, tags=?,
+                       updated_at=?, version=?, deleted_at=NULL WHERE id=?""",
+                    (etype, content, conf, parents, tags_json, incoming_upd, incoming_ver, gid),
+                )
+                db.execute("DELETE FROM memory_vec WHERE id=?", (gid,))
+                db.execute(
+                    "INSERT INTO memory_vec (id, embedding) VALUES (?, ?)",
+                    (gid, json.dumps(embed(content))),
+                )
+                event_type = "memory.written"
             db.execute(
-                """UPDATE memory SET type=?, content=?, confidence=?, parents=?, tags=?,
-                   updated_at=?, version=?, deleted_at=NULL WHERE id=?""",
-                (etype, content, conf, parents, tags_json, incoming_upd, incoming_ver, gid),
+                "INSERT INTO events (id, type, agent_id, payload) VALUES (?,?,?,?)",
+                (event_id, event_type, agent_id, json.dumps({"memory_id": gid})),
             )
-            db.execute("DELETE FROM memory_vec WHERE id=?", (gid,))
-            db.execute(
-                "INSERT INTO memory_vec (id, embedding) VALUES (?, ?)",
-                (gid, json.dumps(embed(content))),
+    if event_type:
+        broadcast(
+            EventEntry(
+                id=event_id,
+                type=event_type,
+                agent_id=agent_id,
+                payload={"memory_id": gid},
+                created_at=_utcnow(),
             )
+        )
     return True
 
 

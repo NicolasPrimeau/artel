@@ -89,12 +89,8 @@ async def list_messages(
 
 
 @router.get("/inbox", response_model=list[MessageEntry], summary="Fetch unread messages")
-async def inbox(
-    agent: str | None = Query(default=None),
-    agent_id: str = ReaderDep,
-):
+async def inbox(agent_id: str = ReaderDep):
     db = get_db()
-    target = agent or agent_id
     rows = db.execute(
         """SELECT * FROM messages WHERE (
             (to_agent=? AND read=0) OR
@@ -102,7 +98,7 @@ async def inbox(
                 SELECT message_id FROM message_reads WHERE agent_id=?
             ))
         ) ORDER BY created_at DESC""",
-        (target, target),
+        (agent_id, agent_id),
     ).fetchall()
     return [_row_to_msg(r) for r in rows]
 

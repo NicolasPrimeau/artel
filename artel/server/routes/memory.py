@@ -182,6 +182,7 @@ async def search_memory(
     type: str | None = Query(default=None),
     agent: str | None = Query(default=None),
     max_distance: float | None = Query(default=None),
+    confidence_min: float | None = Query(default=None, ge=0.0, le=1.0),
     agent_id: str = ReaderDep,
 ):
     db = get_db()
@@ -214,6 +215,8 @@ async def search_memory(
         rows = [r for r in rows if r["project"] is None or r["project"] in allowed]
     if max_distance is not None:
         rows = [r for r in rows if r["distance"] <= max_distance]
+    if confidence_min is not None:
+        rows = [r for r in rows if (r["confidence"] or 0.0) >= confidence_min]
     if tag:
         rows = [r for r in rows if tag in json.loads(r["tags"])]
     if type:
@@ -522,23 +525,23 @@ async def patch_memory(
 async def bulk_delete_memory(body: BulkMemoryDelete, agent_id: str = ActorDep):
     db = get_db()
     now = "strftime('%Y-%m-%dT%H:%M:%fZ','now')"
-    for raw_id in body.ids:
-        try:
-            entry_id = _resolve_entry(raw_id)
-        except Exception:
-            continue
-        row = db.execute(
-            "SELECT agent_id FROM memory WHERE id=? AND deleted_at IS NULL", (entry_id,)
-        ).fetchone()
-        if not row:
-            continue
-        if row["agent_id"] != agent_id and not can_curate_memory(agent_id):
-            continue
-        db.execute(
-            f"UPDATE memory SET deleted_at={now} WHERE id=?",
-            (entry_id,),
-        )
-    db.commit()
+    with db:
+        for raw_id in body.ids:
+            try:
+                entry_id = _resolve_entry(raw_id)
+            except Exception:
+                continue
+            row = db.execute(
+                "SELECT agent_id FROM memory WHERE id=? AND deleted_at IS NULL", (entry_id,)
+            ).fetchone()
+            if not row:
+                continue
+            if row["agent_id"] != agent_id and not can_curate_memory(agent_id):
+                continue
+            db.execute(
+                f"UPDATE memory SET deleted_at={now} WHERE id=?",
+                (entry_id,),
+            )
 
 
 @router.delete("/{entry_id}", status_code=204, summary="Soft-delete a memory entry (owner only)")

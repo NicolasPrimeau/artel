@@ -734,6 +734,8 @@ async def run_promotion(client: ArtelClient) -> None:
             continue
         if entry.get("origin") is not None and entry.get("origin") != local_id:
             continue
+        if {"feed-item", "unprocessed"} & set(entry.get("tags") or []):
+            continue
         try:
             await client.patch_memory(entry["id"], type="doc")
             promoted += 1
