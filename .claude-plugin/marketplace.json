@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-marketplace.json",
   "name": "artel",
-  "description": "Artel — harness-agnostic coordination layer for AI agent fleets.",
+  "description": "Artel \u2014 harness-agnostic coordination layer for AI agent fleets.",
   "owner": {
     "name": "Nicolas Primeau",
     "url": "https://github.com/NicolasPrimeau"
@@ -11,7 +11,7 @@
       "name": "artel",
       "source": "./",
       "description": "Shared semantic memory, tasks, agent-to-agent messages, and session handoffs for AI agent fleets. Bundles the Artel MCP server wiring and the recommended session hooks.",
-      "version": "0.16.5",
+      "version": "0.17.0",
       "homepage": "https://github.com/NicolasPrimeau/artel",
       "repository": "https://github.com/NicolasPrimeau/artel",
       "license": "MIT",
