@@ -197,7 +197,10 @@ class ArtelClient:
         params = {}
         if event_type:
             params["type"] = event_type
-        async with self._http.stream("GET", "/events/stream", params=params) as response:
+        stream_timeout = httpx.Timeout(30.0, read=None)
+        async with self._http.stream(
+            "GET", "/events/stream", params=params, timeout=stream_timeout
+        ) as response:
             response.raise_for_status()
             async for line in response.aiter_lines():
                 if line.startswith("data: "):

@@ -56,7 +56,7 @@ async def _event_watcher(client: ArtelClient) -> None:
         except asyncio.CancelledError:
             raise
         except Exception as e:
-            log.error("event stream disconnected: %s, retrying in %.0fs", e, delay)
+            log.error("event stream disconnected: %r, retrying in %.0fs", e, delay)
             await asyncio.sleep(delay)
             delay = min(delay * 2, 60.0)
 
