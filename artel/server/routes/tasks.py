@@ -4,7 +4,14 @@ import sqlite3
 from fastapi import APIRouter, Body, HTTPException, Query
 
 from ...store.db import AmbiguousId, get_db, norm_project, resolve_id
-from ..auth import ActorDep, ReaderDep, _memberships, is_owner, project_filter
+from ..auth import (
+    ActorDep,
+    ReaderDep,
+    _memberships,
+    enforce_no_phantom_project,
+    is_owner,
+    project_filter,
+)
 from ..models import (
     TaskAction,
     TaskComment,
@@ -95,6 +102,7 @@ async def get_task(task_id: str, agent_id: str = ReaderDep):
 @router.post("", response_model=TaskEntry, status_code=201, summary="Create a task")
 async def create_task(body: TaskCreate, agent_id: str = ActorDep):
     db = get_db()
+    enforce_no_phantom_project(agent_id, body.project)
     if body.project:
         allowed = _memberships(agent_id)
         if allowed is not None and body.project not in allowed:
@@ -287,6 +295,7 @@ async def update_task(task_id: str, body: TaskUpdate, agent_id: str = ActorDep):
         set_parts.append("expected_outcome=?")
         params.append(body.expected_outcome)
     if body.project is not None:
+        enforce_no_phantom_project(agent_id, body.project)
         allowed = _memberships(agent_id)
         if allowed is not None and body.project not in allowed:
             raise HTTPException(status_code=403, detail="not a member of target project")

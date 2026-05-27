@@ -104,8 +104,47 @@ def is_owner(agent_id: str) -> bool:
     return role_of(agent_id) == "owner"
 
 
+def is_archivist(agent_id: str) -> bool:
+    return role_of(agent_id) == "archivist"
+
+
 def can_curate_memory(agent_id: str) -> bool:
     return role_of(agent_id) in ("owner", "archivist")
+
+
+def project_has_external_presence(project: str, archivist_id: str) -> bool:
+    db = get_db()
+    if db.execute(
+        "SELECT 1 FROM project_members WHERE project_id=? LIMIT 1", (project,)
+    ).fetchone():
+        return True
+    if db.execute(
+        "SELECT 1 FROM memory WHERE project=? AND agent_id != ? AND deleted_at IS NULL LIMIT 1",
+        (project, archivist_id),
+    ).fetchone():
+        return True
+    if db.execute("SELECT 1 FROM tasks WHERE project=? LIMIT 1", (project,)).fetchone():
+        return True
+    if db.execute(
+        "SELECT 1 FROM agents WHERE project=? AND id != ? LIMIT 1", (project, archivist_id)
+    ).fetchone():
+        return True
+    for proj_list in settings.agent_projects().values():
+        if project in (proj_list or []):
+            return True
+    return False
+
+
+def enforce_no_phantom_project(agent_id: str, project: str | None) -> None:
+    if not project:
+        return
+    if not is_archivist(agent_id):
+        return
+    if not project_has_external_presence(project, agent_id):
+        raise HTTPException(
+            status_code=403,
+            detail="archivist cannot create new projects; project has no external presence",
+        )
 
 
 def require_role(minimum: str):
@@ -119,6 +158,8 @@ def require_role(minimum: str):
 
 def _memberships(agent_id: str) -> list[str] | None:
     if agent_id == settings.ui_agent_id:
+        return None
+    if role_of(agent_id) == "archivist":
         return None
     is_static = agent_id in settings.api_keys().values()
     static = settings.agent_projects().get(agent_id)

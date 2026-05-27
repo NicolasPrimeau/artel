@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from ...store.db import get_db, norm_project
-from ..auth import ActorDep, ReaderDep
+from ..auth import ActorDep, ReaderDep, is_archivist
 from ..config import settings
 from ..models import ProjectCreate, ProjectInfo
 
@@ -21,6 +21,8 @@ class ProjectSummary(BaseModel):
 
 @router.post("", status_code=204, summary="Create a project and join it")
 async def create_project(body: ProjectCreate, agent_id: str = ActorDep):
+    if is_archivist(agent_id):
+        raise HTTPException(status_code=403, detail="archivist cannot create projects")
     db = get_db()
     db.execute(
         "INSERT OR IGNORE INTO project_members (project_id, agent_id) VALUES (?, ?)",
@@ -31,6 +33,8 @@ async def create_project(body: ProjectCreate, agent_id: str = ActorDep):
 
 @router.post("/{project_id}/join", status_code=204, summary="Join a project")
 async def join_project(project_id: str, agent_id: str = ActorDep):
+    if is_archivist(agent_id):
+        raise HTTPException(status_code=403, detail="archivist cannot join projects")
     project_id = norm_project(project_id) or ""
     if not project_id:
         raise HTTPException(status_code=422, detail="project name required")
