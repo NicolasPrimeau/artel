@@ -55,6 +55,7 @@ def _row_to_task(row: sqlite3.Row) -> TaskEntry:
         project=row["project"],
         priority=row["priority"],
         due_at=row["due_at"],
+        tags=json.loads(row["tags"] or "[]"),
         created_at=row["created_at"],
         updated_at=row["updated_at"],
     )
@@ -111,7 +112,7 @@ async def create_task(body: TaskCreate, agent_id: str = ActorDep):
     with db:
         db.execute(
             """INSERT INTO tasks (id, title, description, expected_outcome, created_by,
-               project, priority, assigned_to, due_at) VALUES (?,?,?,?,?,?,?,?,?)""",
+               project, priority, assigned_to, due_at, tags) VALUES (?,?,?,?,?,?,?,?,?,?)""",
             (
                 task_id,
                 body.title,
@@ -122,6 +123,7 @@ async def create_task(body: TaskCreate, agent_id: str = ActorDep):
                 body.priority,
                 body.assigned_to,
                 body.due_at,
+                json.dumps(body.tags),
             ),
         )
         _emit_event(db, "task.created", agent_id, {"task_id": task_id})
@@ -134,6 +136,7 @@ async def list_tasks(
     status: str | None = Query(default=None),
     agent: str | None = Query(default=None),
     project: str | None = Query(default=None),
+    tag: str | None = Query(default=None),
     agent_id: str = ReaderDep,
 ):
     project = norm_project(project)
@@ -157,6 +160,9 @@ async def list_tasks(
     if agent:
         sql += " AND (created_by=? OR assigned_to=?)"
         params.extend([agent, agent])
+    if tag:
+        sql += " AND EXISTS (SELECT 1 FROM json_each(tags) WHERE value=?)"
+        params.append(tag)
     sql += " ORDER BY created_at DESC"
     rows = db.execute(sql, params).fetchall()
     return [_row_to_task(r) for r in rows]
@@ -301,6 +307,9 @@ async def update_task(task_id: str, body: TaskUpdate, agent_id: str = ActorDep):
             raise HTTPException(status_code=403, detail="not a member of target project")
         set_parts.append("project=?")
         params.append(body.project)
+    if body.tags is not None:
+        set_parts.append("tags=?")
+        params.append(json.dumps(body.tags))
     if set_parts:
         set_parts.append("updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')")
         params.append(task_id)

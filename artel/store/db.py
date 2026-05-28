@@ -80,6 +80,9 @@ def _migrate(conn: sqlite3.Connection) -> None:
     if "expected_outcome" not in task_cols:
         conn.execute("ALTER TABLE tasks ADD COLUMN expected_outcome TEXT NOT NULL DEFAULT ''")
         conn.commit()
+    if "tags" not in task_cols:
+        conn.execute("ALTER TABLE tasks ADD COLUMN tags TEXT NOT NULL DEFAULT '[]'")
+        conn.commit()
     mem_cols = {r[1] for r in conn.execute("PRAGMA table_info(memory)").fetchall()}
     if "expires_at" not in mem_cols:
         conn.execute("ALTER TABLE memory ADD COLUMN expires_at TEXT")

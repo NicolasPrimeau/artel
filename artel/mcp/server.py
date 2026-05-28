@@ -984,7 +984,11 @@ async def message_list(read: bool | None = None, limit: int = 50) -> str:
 
 
 @mcp.tool(structured_output=True)
-async def task_list(status: str | None = None, project: str | None = None) -> str:
+async def task_list(
+    status: str | None = None,
+    project: str | None = None,
+    tag: str | None = None,
+) -> str:
     """List tasks. Call with status="open" to find work that needs doing.
 
     Tasks are the coordination primitive for multi-agent work: one agent creates a task,
@@ -993,6 +997,7 @@ async def task_list(status: str | None = None, project: str | None = None) -> st
     Args:
         status: open, claimed, completed, or failed. Omit for all.
         project: Filter by project name.
+        tag: Filter to tasks carrying this tag.
     """
     c = _http()
     try:
@@ -1001,6 +1006,8 @@ async def task_list(status: str | None = None, project: str | None = None) -> st
             params["status"] = status
         if project:
             params["project"] = project
+        if tag:
+            params["tag"] = tag
         r = await c.get("/tasks", params=params)
         r.raise_for_status()
     except _HTTPX_ERRORS as e:
@@ -1011,6 +1018,7 @@ async def task_list(status: str | None = None, project: str | None = None) -> st
     return "\n".join(
         f"[{t['id']}] [{t['status']}] [{t['priority']}] {t['title']}"
         + (f" (assigned: {t['assigned_to']})" if t.get("assigned_to") else "")
+        + (f" tags={','.join(t['tags'])}" if t.get("tags") else "")
         for t in tasks
     )
 
@@ -1022,6 +1030,7 @@ async def task_create(
     expected_outcome: str = "",
     project: str | None = None,
     priority: str = "normal",
+    tags: list[str] | None = None,
 ) -> str:
     """Create a task for yourself or another agent to pick up.
 
@@ -1035,6 +1044,7 @@ async def task_create(
         expected_outcome: What done looks like — specific, observable result.
         project: Project scope. Defaults to MCP_PROJECT if set.
         priority: low, normal (default), or high.
+        tags: Labels for filtering, e.g. ["writing", "infra"].
     """
     c = _http()
     try:
@@ -1046,6 +1056,7 @@ async def task_create(
                 "expected_outcome": expected_outcome,
                 "project": settings.resolve_project(project),
                 "priority": priority,
+                "tags": tags or [],
             },
         )
         r.raise_for_status()

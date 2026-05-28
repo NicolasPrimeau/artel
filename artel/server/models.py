@@ -78,6 +78,7 @@ class TaskCreate(BaseModel):
     priority: Priority = "normal"
     assigned_to: str | None = None
     due_at: str | None = None
+    tags: list[str] = []
 
 
 class TaskEntry(BaseModel):
@@ -91,6 +92,7 @@ class TaskEntry(BaseModel):
     project: str | None
     priority: Priority
     due_at: str | None
+    tags: list[str]
     created_at: str
     updated_at: str
 
@@ -102,6 +104,7 @@ class TaskUpdate(BaseModel):
     priority: Priority | None = None
     expected_outcome: str | None = None
     project: ProjectName = None
+    tags: list[str] | None = None
 
 
 class TaskAction(BaseModel):
