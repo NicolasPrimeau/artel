@@ -478,12 +478,15 @@ async def patch_memory(
         raise HTTPException(status_code=404, detail="not found")
 
     is_entry_owner = row["agent_id"] == agent_id or can_curate_memory(agent_id)
-    wants_owner_fields = any(
-        f is not None
-        for f in (body.content, body.tags, body.scope, body.project, body.confidence, body.type)
+    wants_restricted_fields = any(
+        f is not None for f in (body.content, body.scope, body.project, body.confidence, body.type)
     )
-    if not is_entry_owner and wants_owner_fields:
+    if not is_entry_owner and wants_restricted_fields:
         raise HTTPException(status_code=403, detail="forbidden")
+    if not is_entry_owner and body.tags is not None:
+        allowed = _memberships(agent_id)
+        if allowed is not None and row["project"] not in (allowed or []):
+            raise HTTPException(status_code=403, detail="forbidden")
 
     updates: dict = {}
     vec = None

@@ -279,8 +279,21 @@ async def update_task(task_id: str, body: TaskUpdate, agent_id: str = ActorDep):
         or is_owner(agent_id)
         or is_archivist(agent_id)
     )
+    tag_only = (
+        body.tags is not None
+        and body.description is None
+        and body.title is None
+        and body.priority is None
+        and body.expected_outcome is None
+        and body.project is None
+    )
     if not is_task_actor:
-        raise HTTPException(status_code=403, detail="forbidden")
+        if tag_only and row["project"]:
+            allowed = _memberships(agent_id)
+            if allowed is not None and row["project"] not in allowed:
+                raise HTTPException(status_code=403, detail="forbidden")
+        elif not tag_only:
+            raise HTTPException(status_code=403, detail="forbidden")
     if not is_owner(agent_id) and not is_archivist(agent_id):
         _require_project_membership(agent_id, row["project"])
     set_parts: list[str] = []
