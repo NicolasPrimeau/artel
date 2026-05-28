@@ -20,10 +20,11 @@ _git_name() {{
     fi
 }}
 _repo=$(_git_name)
+_sanitize() {{ printf '%s' "$1" | tr -cs 'a-zA-Z0-9_-' '-' | sed 's/--*/-/g; s/^-//; s/-$//'; }}
 if [ -n "$_repo" ]; then
-    DEFAULT_ID="$(hostname -s)-${{_repo}}"
+    DEFAULT_ID="$(_sanitize "$(hostname -s)")-$(_sanitize "${{_repo}}")"
 else
-    DEFAULT_ID="$(hostname -s)"
+    DEFAULT_ID="$(_sanitize "$(hostname -s)")"
 fi
 
 _MCP=".mcp.json"
