@@ -46,9 +46,10 @@ def _write_memory(agent_id: str, project: str, content: str, tags: list[str]) ->
     event_id = new_id()
     vec = embed(content)
     with db:
+        now = _utcnow()
         db.execute(
             """INSERT INTO memory (id, type, agent_id, project, scope, content,
-               confidence, parents, tags) VALUES (?,?,?,?,?,?,?,?,?)""",
+               confidence, parents, tags, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 entry_id,
                 "memory",
@@ -59,6 +60,8 @@ def _write_memory(agent_id: str, project: str, content: str, tags: list[str]) ->
                 0.5,
                 "[]",
                 json.dumps(tags),
+                now,
+                now,
             ),
         )
         db.execute(
