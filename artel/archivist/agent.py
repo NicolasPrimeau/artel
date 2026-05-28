@@ -29,7 +29,7 @@ async def _dispatch(event: dict, client: ArtelClient) -> None:
 
     if event_type == "memory.written":
         entry_id = payload.get("memory_id")
-        if entry_id:
+        if entry_id and agent_id != settings.archivist_id:
             await check_and_merge(entry_id, client)
 
     elif event_type == "task.completed":
@@ -39,7 +39,7 @@ async def _dispatch(event: dict, client: ArtelClient) -> None:
 
     elif event_type == "task.failed":
         task_id = payload.get("task_id")
-        if task_id:
+        if task_id and agent_id != settings.archivist_id:
             await on_task_failed(task_id, agent_id, client)
 
 
