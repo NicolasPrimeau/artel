@@ -13,6 +13,8 @@ from .llm import complete, is_configured
 
 log = logging.getLogger(__name__)
 
+_CARRY_BLOCKED_TAGS = {"archivist-flagged"}
+
 _KNOWN_OPS = {
     "merge",
     "promote",
@@ -167,7 +169,9 @@ async def _execute_operations(
                 source_entries = [entries_by_id[eid] for eid in ids]
                 primary = max(source_entries, key=lambda e: e.get("confidence", 1.0))
                 entry_type = primary.get("type", "memory")
-                merged_tags = list({tag for e in source_entries for tag in e.get("tags", [])})
+                merged_tags = list(
+                    {tag for e in source_entries for tag in e.get("tags", [])} - _CARRY_BLOCKED_TAGS
+                )
                 projects = {e.get("project") for e in source_entries}
                 merged_project = projects.pop() if len(projects) == 1 else None
                 await client.write_memory(
@@ -245,7 +249,9 @@ async def _execute_operations(
                 original_project = original.get("project")
                 original_type = original.get("type", "memory")
                 for part in parts:
-                    part_tags = list(set(original_tags) | set(part.get("tags", [])))
+                    part_tags = list(
+                        (set(original_tags) | set(part.get("tags", []))) - _CARRY_BLOCKED_TAGS
+                    )
                     await client.write_memory(
                         content=part["content"],
                         type=original_type,
@@ -894,6 +900,67 @@ async def _refresh_project_brief(project: str, client: ArtelClient) -> None:
             project=project,
         )
     log.info("run_brief: updated brief for project %s", project)
+
+
+async def run_feed_triage(client: ArtelClient) -> None:
+    r = await client._request("GET", "/memory", params={"tag": "unprocessed", "limit": 50})
+    items = [e for e in r.json() if "feed-item" in (e.get("tags") or [])]
+    if not items:
+        return
+
+    processed = 0
+    for entry in items:
+        try:
+            await _process_feed_item(entry, client)
+            processed += 1
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            log.warning("feed triage failed for %s: %s", entry["id"], e)
+
+    if processed:
+        await client.log(
+            action="feed_triage",
+            message=f"processed {processed} feed item{'s' if processed != 1 else ''}",
+            details={"processed": processed},
+        )
+
+
+async def _process_feed_item(entry: dict, client: ArtelClient) -> None:
+    entry_id = entry["id"]
+    clean_tags = [t for t in (entry.get("tags") or []) if t != "unprocessed"]
+
+    if is_configured():
+        try:
+            text = await complete(
+                system="You are the Artel archivist reviewing an incoming feed item. Extract any facts worth keeping in project memory — decisions, releases, API changes, ecosystem shifts. Be conservative: skip general news with no project relevance. Output a JSON array of strings, each a standalone fact to store. Output [] if nothing is worth keeping.",
+                user=entry["content"][:3000],
+                max_tokens=512,
+            )
+            stripped = text.strip()
+            if stripped.startswith("```"):
+                lines = stripped.splitlines()
+                end = len(lines) - 1
+                while end > 0 and not lines[end].strip().startswith("```"):
+                    end -= 1
+                stripped = "\n".join(lines[1:end]).strip()
+            facts = json.loads(stripped)
+            if isinstance(facts, list):
+                for fact in facts:
+                    if isinstance(fact, str) and fact.strip():
+                        await client.write_memory(
+                            content=fact.strip(),
+                            type="memory",
+                            tags=["feed-extracted"],
+                            project=entry.get("project"),
+                        )
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            log.warning("feed item LLM extraction failed for %s: %s", entry_id, e)
+
+    await client.patch_memory(entry_id, tags=clean_tags)
+    log.info("feed triage: processed item %s", entry_id[:8])
 
 
 async def capture_metrics(project: str | None = None) -> None:

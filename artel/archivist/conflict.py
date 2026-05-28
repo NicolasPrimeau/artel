@@ -8,7 +8,7 @@ log = logging.getLogger(__name__)
 
 _MAX_DISTANCE = 1.0 - settings.conflict_threshold
 
-_WORKFLOW_TAGS = {"unprocessed", "feed-item"}
+_WORKFLOW_TAGS = {"unprocessed", "feed-item", "archivist-flagged"}
 
 
 async def check_and_merge(entry_id: str, client: ArtelClient) -> None:

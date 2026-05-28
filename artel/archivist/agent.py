@@ -12,6 +12,7 @@ from .synthesis import (
     on_task_completed,
     on_task_failed,
     run_brief,
+    run_feed_triage,
     run_promotion,
     run_synthesis,
     run_task_triage,
@@ -64,6 +65,7 @@ async def _event_watcher(client: ArtelClient) -> None:
 async def _scheduler(client: ArtelClient) -> None:
     while True:
         for fn, name in (
+            (run_feed_triage, "feed_triage"),
             (run_synthesis, "synthesis"),
             (decay_confidence, "decay"),
             (run_promotion, "promotion"),
