@@ -1228,11 +1228,12 @@ async def task_update(
     title: str | None = None,
     priority: str | None = None,
     project: str | None = None,
+    tags: list[str] | None = None,
 ) -> str:
-    """Update a task's description, title, priority, or project.
+    """Update a task's description, title, priority, project, or tags.
 
     Use to record progress notes on a task you're working on, correct metadata,
-    or transfer a task to a different project.
+    or transfer a task to a different project. Any project member can update tags.
 
     Args:
         task_id: ID of the task to update.
@@ -1242,6 +1243,7 @@ async def task_update(
         title: New title. Omit to leave unchanged.
         priority: low, normal, or high. Omit to leave unchanged.
         project: Move the task into this project. Omit to leave unchanged.
+        tags: Replace the tags list. Any project member can set this.
     """
     patch: dict = {}
     if description is not None:
@@ -1253,6 +1255,8 @@ async def task_update(
         patch["priority"] = priority
     if project is not None:
         patch["project"] = project
+    if tags is not None:
+        patch["tags"] = tags
     c = _http()
     try:
         r = await c.patch(f"/tasks/{task_id}", json=patch)
