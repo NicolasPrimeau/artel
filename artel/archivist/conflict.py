@@ -1,5 +1,6 @@
 import logging
 
+from ..store.db import instance_id
 from .client import ArtelClient
 from .config import settings
 from .llm import complete, is_configured
@@ -18,6 +19,10 @@ async def check_and_merge(entry_id: str, client: ArtelClient) -> None:
     entry = await client.get_memory(entry_id)
 
     if entry.get("type") == "directive":
+        return
+
+    local = instance_id()
+    if entry.get("origin") and entry.get("origin") != local:
         return
 
     similar = await client.search_memory(entry["content"], limit=6, max_distance=_MAX_DISTANCE)

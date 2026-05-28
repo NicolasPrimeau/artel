@@ -861,10 +861,14 @@ async def _refresh_project_brief(project: str, client: ArtelClient) -> None:
         return
 
     existing_r = await client._request(
-        "GET", "/memory", params={"project": project, "tag": "project-brief", "limit": 1}
+        "GET", "/memory", params={"project": project, "tag": "project-brief", "limit": 10}
     )
-    existing = existing_r.json()
-    existing_id = existing[0]["id"] if existing else None
+    local = instance_id()
+    all_briefs = existing_r.json()
+    local_briefs = [e for e in all_briefs if e.get("origin") is None or e.get("origin") == local]
+    if not local_briefs and all_briefs:
+        return
+    existing_id = local_briefs[0]["id"] if local_briefs else None
 
     doc_block = "\n".join(f"- {d['content'][:400]}" for d in docs[:30]) or "(none)"
     open_tasks = [t for t in tasks if t["status"] in ("open", "claimed")]
@@ -903,8 +907,14 @@ async def _refresh_project_brief(project: str, client: ArtelClient) -> None:
 
 
 async def run_feed_triage(client: ArtelClient) -> None:
+    local = instance_id()
     r = await client._request("GET", "/memory", params={"tag": "unprocessed", "limit": 50})
-    items = [e for e in r.json() if "feed-item" in (e.get("tags") or [])]
+    items = [
+        e
+        for e in r.json()
+        if "feed-item" in (e.get("tags") or [])
+        and (e.get("origin") is None or e.get("origin") == local)
+    ]
     if not items:
         return
 
