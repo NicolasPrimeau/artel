@@ -22,7 +22,7 @@
     "artel_url": {
       "type": "string",
       "title": "Artel server URL",
-      "description": "Base URL of your Artel server, e.g. http://artel.local:8000 or https://artel-sandbox.fly.dev",
+      "description": "Base URL of your Artel server, e.g. http://artel.local:8000 or https://artel.run",
       "required": true
     },
     "agent_id": {

@@ -16,7 +16,7 @@
         "artel_host": {
           "description": "Host of YOUR self-hosted Artel instance (e.g. artel.example.com). Defaults to the public demo sandbox; self-host for real use.",
           "isRequired": true,
-          "default": "artel-sandbox.fly.dev"
+          "default": "artel.run"
         }
       },
       "headers": [

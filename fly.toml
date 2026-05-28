@@ -8,7 +8,7 @@ primary_region = "yyz"
   DB_PATH = "/data/artel.db"
   FASTEMBED_CACHE_PATH = "/data/fastembed_cache"
   HF_HUB_DISABLE_XET_DOWNLOAD = "1"
-  PUBLIC_URL = "https://artel-sandbox.fly.dev"
+  PUBLIC_URL = "https://artel.run"
   UI_PASSWORD = "artel"
 
 [http_service]
