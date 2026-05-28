@@ -30,9 +30,7 @@ def flatten(src: str, dst: str, colors: int = 64, max_width: int = 820) -> tuple
 
     merged, merged_durations = [], []
     for image, duration in zip(rgb_frames, durations):
-        identical = (
-            merged and ImageChops.difference(image, merged[-1]).getbbox() is None
-        )
+        identical = merged and ImageChops.difference(image, merged[-1]).getbbox() is None
         too_short = merged and duration < MIN_FRAME_MS
         if identical or too_short:
             merged_durations[-1] += duration
@@ -48,8 +46,7 @@ def flatten(src: str, dst: str, colors: int = 64, max_width: int = 820) -> tuple
 
     sample_count = 8
     picks = [
-        merged[min(len(merged) - 1, i * len(merged) // sample_count)]
-        for i in range(sample_count)
+        merged[min(len(merged) - 1, i * len(merged) // sample_count)] for i in range(sample_count)
     ]
     montage = Image.new("RGB", (width, height * sample_count))
     for i, image in enumerate(picks):
@@ -57,9 +54,7 @@ def flatten(src: str, dst: str, colors: int = 64, max_width: int = 820) -> tuple
     master = montage.convert("P", palette=Image.ADAPTIVE, colors=colors)
 
     palette = master.getpalette()
-    paletted = [
-        image.quantize(palette=master, dither=Image.Dither.NONE) for image in merged
-    ]
+    paletted = [image.quantize(palette=master, dither=Image.Dither.NONE) for image in merged]
 
     def dist_to_bg(index: int) -> int:
         color = palette[index * 3 : index * 3 + 3]
@@ -68,9 +63,7 @@ def flatten(src: str, dst: str, colors: int = 64, max_width: int = 820) -> tuple
     order = sorted(range(colors), key=dist_to_bg)
     marker_a = order[0]
     color_a = palette[marker_a * 3 : marker_a * 3 + 3]
-    marker_b = next(
-        (i for i in order[1:] if palette[i * 3 : i * 3 + 3] != color_a), order[1]
-    )
+    marker_b = next((i for i in order[1:] if palette[i * 3 : i * 3 + 3] != color_a), order[1])
 
     corners = [(x % width, y % height) for x, y in CORNERS_OFFSETS]
     for i, frame in enumerate(paletted):
