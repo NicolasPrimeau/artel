@@ -283,6 +283,7 @@ class TestExecuteOperations:
         client.patch_memory = AsyncMock(return_value={})
         client.get_memory = AsyncMock()
         client.create_task = AsyncMock(return_value={"id": "task-id"})
+        client.complete_task_as_done = AsyncMock()
         client.log = AsyncMock()
         return client
 
@@ -417,6 +418,70 @@ class TestExecuteOperations:
         ops = [{"op": "task", "title": "Do something", "priority": "critical"}]
         await _execute_operations(ops, client, entries)
         assert client.create_task.call_args.kwargs["priority"] == "normal"
+
+    async def test_meta_task_title_is_rejected(self):
+        entries = self._make_entries()
+        client = self._make_client()
+        ops = [
+            {"op": "task", "title": "Resolve and deduplicate open task list"},
+            {"op": "task", "title": "Remove duplicate BuildData Nominatim migration tasks"},
+            {"op": "task", "title": "Deduplicate open task list entries in bf7a829f"},
+            {"op": "task", "title": "Cleanup open task list"},
+            {"op": "task", "title": "Prune duplicate memory entries"},
+        ]
+        await _execute_operations(ops, client, entries)
+        client.create_task.assert_not_called()
+
+    async def test_duplicate_of_open_task_is_rejected(self):
+        entries = self._make_entries()
+        client = self._make_client()
+        ops = [{"op": "task", "title": "Publish dev.to blog post"}]
+        await _execute_operations(
+            ops,
+            client,
+            entries,
+            open_task_titles={"  Publish dev.to blog post  "},
+        )
+        client.create_task.assert_not_called()
+
+    async def test_non_meta_task_still_creates(self):
+        entries = self._make_entries()
+        client = self._make_client()
+        ops = [{"op": "task", "title": "Investigate rate limit spikes"}]
+        await _execute_operations(ops, client, entries, open_task_titles={"some other open task"})
+        client.create_task.assert_called_once()
+
+    async def test_close_task_completes_when_id_is_open(self):
+        entries = self._make_entries()
+        client = self._make_client()
+        ops = [
+            {
+                "op": "close_task",
+                "task_id": "task-abc-123",
+                "reason": "Memory entry [aaaa-1111] confirms feature shipped 2026-05-27",
+            }
+        ]
+        await _execute_operations(
+            ops, client, entries, open_task_ids={"task-abc-123", "task-other"}
+        )
+        client.complete_task_as_done.assert_called_once()
+        call = client.complete_task_as_done.call_args
+        assert call.args[0] == "task-abc-123"
+        assert "Memory entry" in call.args[1]
+
+    async def test_close_task_skipped_when_id_unknown(self):
+        entries = self._make_entries()
+        client = self._make_client()
+        ops = [{"op": "close_task", "task_id": "ghost-id", "reason": "x"}]
+        await _execute_operations(ops, client, entries, open_task_ids={"task-other"})
+        client.complete_task_as_done.assert_not_called()
+
+    async def test_close_task_skipped_when_reason_missing(self):
+        entries = self._make_entries()
+        client = self._make_client()
+        ops = [{"op": "close_task", "task_id": "task-abc-123", "reason": ""}]
+        await _execute_operations(ops, client, entries, open_task_ids={"task-abc-123"})
+        client.complete_task_as_done.assert_not_called()
 
     async def test_hallucinated_id_is_skipped_for_promote(self):
         entries = self._make_entries()

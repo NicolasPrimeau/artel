@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import math
+import re
 import secrets
 from datetime import UTC, datetime, timedelta
 
@@ -12,7 +13,34 @@ from .llm import complete, is_configured
 
 log = logging.getLogger(__name__)
 
-_KNOWN_OPS = {"merge", "promote", "prune", "tag", "adjust_confidence", "task", "split", "extract"}
+_KNOWN_OPS = {
+    "merge",
+    "promote",
+    "prune",
+    "tag",
+    "adjust_confidence",
+    "task",
+    "split",
+    "extract",
+    "close_task",
+}
+
+_META_TASK_PATTERNS = [
+    re.compile(r"\b(de-?duplicat\w*|deduplicat\w*)\b.*\b(task|open task list)\b", re.I),
+    re.compile(r"\bresolve\b.*\bduplicate\b.*\btask", re.I),
+    re.compile(r"\bremove\b.*\bduplicate\b.*\btask", re.I),
+    re.compile(r"\bclean(up)?\b.*\b(open )?task list\b", re.I),
+    re.compile(r"\bprune\b.*\b(task|memory|entries)\b", re.I),
+    re.compile(r"\bmerge\b.*\bduplicate\b.*\b(memory|entries|tasks)\b", re.I),
+]
+
+
+def _normalize_task_title(title: str) -> str:
+    return re.sub(r"\s+", " ", (title or "").strip().lower())
+
+
+def _is_meta_task_title(title: str) -> bool:
+    return any(p.search(title or "") for p in _META_TASK_PATTERNS)
 
 
 def _cosine_similarity(a: list[float], b: list[float]) -> float:
@@ -109,9 +137,17 @@ def _parse_operations(text: str) -> list[dict]:
     return ops
 
 
-async def _execute_operations(ops: list[dict], client: ArtelClient, entries: list[dict]) -> None:
+async def _execute_operations(
+    ops: list[dict],
+    client: ArtelClient,
+    entries: list[dict],
+    open_task_titles: set[str] | None = None,
+    open_task_ids: set[str] | None = None,
+) -> None:
     valid_ids = {e["id"] for e in entries}
     entries_by_id = {e["id"]: e for e in entries}
+    open_norm = {_normalize_task_title(t) for t in (open_task_titles or set())}
+    open_ids = set(open_task_ids or set())
 
     for op in ops:
         op_name = op.get("op")
@@ -245,6 +281,15 @@ async def _execute_operations(ops: list[dict], client: ArtelClient, entries: lis
                 if not title:
                     log.warning("task op missing title")
                     continue
+                if _is_meta_task_title(title):
+                    log.info(
+                        "archivist rejected meta task (do it directly, don't delegate): %s",
+                        title[:80],
+                    )
+                    continue
+                if _normalize_task_title(title) in open_norm:
+                    log.info("archivist rejected duplicate of open task: %s", title[:80])
+                    continue
                 priority = op.get("priority", "normal")
                 if priority not in ("low", "normal", "high"):
                     priority = "normal"
@@ -254,7 +299,26 @@ async def _execute_operations(ops: list[dict], client: ArtelClient, entries: lis
                     priority=priority,
                     project=op.get("project"),
                 )
+                open_norm.add(_normalize_task_title(title))
                 log.info("archivist created task: %s", title[:60])
+
+            elif op_name == "close_task":
+                task_id = op.get("task_id", "")
+                reason = (op.get("reason") or "").strip()
+                if not task_id:
+                    log.warning("close_task op missing task_id")
+                    continue
+                if not reason:
+                    log.warning("close_task op missing reason (%s)", task_id[:8])
+                    continue
+                if task_id not in open_ids:
+                    log.warning("close_task references unknown or non-open task: %s", task_id[:8])
+                    continue
+                await client.complete_task_as_done(
+                    task_id, f"[archivist] Closed based on memory evidence: {reason}"
+                )
+                open_ids.discard(task_id)
+                log.info("archivist closed task %s as done: %s", task_id[:8], reason[:60])
 
         except Exception as e:
             log.warning("synthesis op %s failed: %s", op_name, e)
@@ -478,8 +542,12 @@ async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
         ]
         task_block = "\n\nCompleted tasks (last 24h):\n" + "\n".join(task_lines)
     if open_tasks:
-        open_lines = [f'- "{t["title"]}"' for t in open_tasks]
-        task_block += "\n\nAlready-open tasks (do NOT create duplicates):\n" + "\n".join(open_lines)
+        open_lines = [f'- [{t["id"]}] "{t["title"]}"' for t in open_tasks]
+        task_block += (
+            "\n\nAlready-open tasks (do NOT create duplicates; "
+            "use close_task with the bracketed id when memory clearly shows the work is done):\n"
+            + "\n".join(open_lines)
+        )
 
     preamble = _build_directive_preamble(directives)
     if conflict_warning:
@@ -507,7 +575,8 @@ async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
                     '- {"op": "adjust_confidence", "entry": "<id>", "confidence": <0.0-1.0>}\n'
                     '- {"op": "task", "title": "<title>", "description": "<desc>", "priority": "low|normal|high", "project": "<project|null>"}\n'
                     '- {"op": "split", "entry": "<id>", "parts": [{"content": "...", "tags": [...]}, ...]}\n'
-                    '- {"op": "extract", "from": "<id>", "into": "<id>", "extracted_content": "<segment moved>", "remaining_content": "<what stays in from, empty to delete>", "merged_content": "<into rewritten with extracted segment>"}\n\n'
+                    '- {"op": "extract", "from": "<id>", "into": "<id>", "extracted_content": "<segment moved>", "remaining_content": "<what stays in from, empty to delete>", "merged_content": "<into rewritten with extracted segment>"}\n'
+                    '- {"op": "close_task", "task_id": "<open task id from the Already-open tasks list>", "reason": "<which memory entry/IDs evidence completion>"}\n\n'
                     "Rules:\n"
                     "- Merge entries that are redundant or say the same thing from different agents. Write merged_content that synthesizes both.\n"
                     "- Promote entries that are stable, high-signal, and likely to remain true.\n"
@@ -515,7 +584,8 @@ async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
                     "- Split entries that cover multiple unrelated topics into focused entries. Each part must be self-contained. Minimum 2 parts.\n"
                     "- Extract a segment from one entry and fold it into another when partial content belongs with a different entry. Set remaining_content to empty string to delete the source after extraction. from and into must be different IDs.\n"
                     "- Use tag/adjust_confidence to surface connections or correct signal strength.\n"
-                    "- Create tasks ONLY for work requiring an external agent — never for memory operations.\n"
+                    "- Create tasks ONLY for work requiring an external agent — never for memory operations. Do memory cleanup yourself with merge/prune/promote/split/extract.\n"
+                    "- close_task only when the recent memory entries clearly evidence the task's outcome was achieved (cite the entry ID in reason). Do not close based on guesswork.\n"
                     "- When in doubt about an operation, omit it. Conservatism is correct.\n"
                     "- Output ONLY the JSON array. No prose, no explanation, no markdown fences."
                 ),
@@ -534,7 +604,11 @@ async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
         return
 
     ops = _parse_operations(text)
-    await _execute_operations(ops, client, entries)
+    open_titles = {t["title"] for t in open_tasks if t.get("title")}
+    open_ids = {t["id"] for t in open_tasks if t.get("id")}
+    await _execute_operations(
+        ops, client, entries, open_task_titles=open_titles, open_task_ids=open_ids
+    )
     op_counts: dict = {}
     for o in ops:
         op_counts[o.get("op")] = op_counts.get(o.get("op"), 0) + 1
