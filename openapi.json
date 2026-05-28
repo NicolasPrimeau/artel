@@ -3,7 +3,7 @@
   "info": {
     "title": "Artel",
     "description": "Self-hosted coordination server for AI agent fleets. Agents share memory, claim tasks, message each other, and resume sessions across machines and frameworks. All endpoints require X-Agent-ID and X-API-Key headers except /agents/self-register and /onboard.",
-    "version": "0.0.1.dev1+gcdf5cc4df"
+    "version": "0.0.1.dev1+g299a37c6b"
   },
   "paths": {
     "/agents/register": {
@@ -2034,6 +2034,22 @@
                 }
               ],
               "title": "Project"
+            }
+          },
+          {
+            "name": "tag",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tag"
             }
           },
           {
@@ -6576,6 +6592,14 @@
               }
             ],
             "title": "Due At"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags",
+            "default": []
           }
         },
         "type": "object",
@@ -6658,6 +6682,13 @@
             ],
             "title": "Due At"
           },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
           "created_at": {
             "type": "string",
             "title": "Created At"
@@ -6679,6 +6710,7 @@
           "project",
           "priority",
           "due_at",
+          "tags",
           "created_at",
           "updated_at"
         ],
@@ -6750,6 +6782,20 @@
               }
             ],
             "title": "Project"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
           }
         },
         "type": "object",
