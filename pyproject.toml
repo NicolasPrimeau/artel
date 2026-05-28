@@ -45,6 +45,7 @@ artel-mdns = "artel.server.mdns_announce:main"
 
 [dependency-groups]
 dev = [
+    "asciinema>=2.4.0",   # record terminal demos; convert to gif with agg (uv tool install agg-bin)
     "hatchling>=1.27.0",
     "httpx>=0.28.1",
     "pre-commit>=4.0.0",

@@ -54,3 +54,4 @@ API key + `agent_id` string. No framework coupling. Any HTTP client participates
 ```bash
 uv run python -m artel.server
 ```
+
