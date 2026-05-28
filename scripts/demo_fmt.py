@@ -9,7 +9,6 @@ Usage:
 """
 
 import json
-import re
 import sys
 import threading
 import time
@@ -60,7 +59,7 @@ def _short(text: str, n: int = 92) -> str:
 
 
 def _tool_label(name: str) -> str:
-    return name[len(PREFIX):] if name.startswith(PREFIX) else name
+    return name[len(PREFIX) :] if name.startswith(PREFIX) else name
 
 
 def handle(line: str) -> None:
