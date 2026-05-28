@@ -9,6 +9,7 @@ from ..auth import (
     ReaderDep,
     _memberships,
     enforce_no_phantom_project,
+    is_archivist,
     is_owner,
     project_filter,
 )
@@ -273,11 +274,14 @@ async def update_task(task_id: str, body: TaskUpdate, agent_id: str = ActorDep):
     if row["status"] in ("completed", "failed"):
         raise HTTPException(status_code=409, detail="task is terminal and cannot be modified")
     is_task_actor = (
-        row["created_by"] == agent_id or row["assigned_to"] == agent_id or is_owner(agent_id)
+        row["created_by"] == agent_id
+        or row["assigned_to"] == agent_id
+        or is_owner(agent_id)
+        or is_archivist(agent_id)
     )
     if not is_task_actor:
         raise HTTPException(status_code=403, detail="forbidden")
-    if not is_owner(agent_id):
+    if not is_owner(agent_id) and not is_archivist(agent_id):
         _require_project_membership(agent_id, row["project"])
     set_parts: list[str] = []
     params: list = []
