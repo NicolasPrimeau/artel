@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.17.1] — 2026-05-27
+
+### Canonical URL
+
+- Repoint `artel-sandbox.fly.dev` → `artel.run` across user-facing surfaces (`README` install buttons, `server.json` default `artel_host`, `fly.toml` `PUBLIC_URL`, `llms-install.md`, `.claude-plugin/plugin.json`). Triggers MCP Registry / PulseMCP refresh.
+
+### Archivist
+
+- Synthesis loop no longer emits meta-cleanup `task` ops (e.g. "Resolve and deduplicate open task list"); blocked at the gate with a regex + open-title guard. The archivist does memory dedup itself via `merge`/`prune`.
+- New `close_task` synthesis op so the archivist can close open tasks that recent memory entries clearly evidence as done, keeping task/memory state in sync.
+
 ## [0.15.5] — 2026-05-17
 
 ### UI
