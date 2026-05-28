@@ -2,16 +2,10 @@
 
 [![CI](https://github.com/NicolasPrimeau/artel/actions/workflows/ci.yml/badge.svg)](https://github.com/NicolasPrimeau/artel/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.md)
+[![Glama](https://glama.ai/mcp/servers/NicolasPrimeau/artel/badges/score.svg)](https://glama.ai/mcp/servers/NicolasPrimeau/artel)
+[![smithery badge](https://smithery.ai/badge/nicolas-primeau/artel)](https://smithery.ai/servers/nicolas-primeau/artel)
 
-**The infrastructure for AI teams.**
-
-One agent is a tool. A team of agents is an organization, and organizations need infrastructure: shared memory, a task system, a way to message each other, a way to hand off mid-flight. Most teams skip building it and accept that every agent starts cold and every handoff routes through a human. Some build it inside one framework, brittle and incompatible with the next.
-
-Artel is one self-hosted server that supplies that infrastructure to any fleet of agents on your network. Semantic memory the whole fleet reads and writes. Tasks any agent can create and claim. Direct agent-to-agent messages. Session handoffs that resume any agent exactly where another left off, across machines, across frameworks, across providers.
-
-Memory doesn't stay clean on its own. Artel ships an **archivist**: an autonomous agent that runs in the background, merges conflicting entries, synthesizes cross-agent findings into shared docs, decays stale knowledge, and promotes stable observations up the confidence ladder. Agents write what they know; the archivist turns it into something the whole fleet can trust.
-
-Any agent that speaks HTTP participates: Claude Code, AutoGen, raw API scripts, anything.
+Self-hosted coordination layer for AI agent fleets. Shared memory with semantic search, tasks, async messaging, and session handoffs. Instances mesh together via feeds and mDNS. An autonomous archivist keeps collective knowledge clean and coherent. Any agent that speaks HTTP or MCP can participate.
 
 ```
 agent-a (Claude Code)  ──┐
@@ -21,125 +15,15 @@ agent-c (AutoGen)      ──┘                      ├── shared memory + 
                                                  └── archivist (synthesis · decay · merge)
 ```
 
-<p align="center">
-  <img src="docs/showcase-2.gif" alt="curl -fsSL artel.local:8000/onboard | sh: one command registers your agent and writes .mcp.json" width="720">
-</p>
-
-## Contents
-
-- [What agents can do](#what-agents-can-do)
-- [Examples](#examples)
-- [Dashboard](#dashboard)
-- [Onboarding](#onboarding)
-- [Self-hosting](#self-hosting)
-- [Memory](#memory)
-- [Usage](#usage)
-- [Claude Code (MCP)](#claude-code-mcp)
-- [REST API](#rest-api)
-- [Configuration](#configuration)
-- [Archivist](#archivist)
-- [Development](#development)
-
 ---
 
-## What agents can do
-
-**Any agent on your network** registers in one command, then gets access to:
-
-- **Shared memory.** Write observations, search by meaning. What one agent learns, every agent can find.
-- **Tasks.** Create work, claim it, complete it. Coordination without a scheduler.
-- **Messages.** Async inbox. Agents talk to each other directly, or broadcast to the fleet.
-- **Session handoffs.** Save state before going idle, resume with full context on the next start.
-- **Events.** Pub/sub stream with SSE for real-time coordination.
-
-The **archivist** runs in the background, continuously managing shared memory: merging conflicts, synthesizing cross-agent knowledge into docs, decaying stale entries, and promoting stable observations. Agents write freely; the archivist keeps the collective memory coherent.
-
----
-
-## Examples
-
-### Claude Code plugin setup
-
-Add Artel to an existing Claude Code session with one command. The onboard script registers your agent, writes `.mcp.json`, and instructs Claude to reload plugins. Artel tools appear in the next session. [Watch the demo.](docs/plugin-setup.gif)
-
-### Incident response
-
-Two agents coordinate a production p99 spike: one writes timeline entries to memory, the other claims a follow-up task and resumes the investigation in a fresh session with full context. [Watch the demo.](docs/incident_response.gif)
-
-### Code review handoff
-
-`nova` writes a rate-limiting middleware, records design decisions in memory, opens a review task, and messages `orion`. `orion` joins cold, reads the full context, reviews the design, and completes the task with a verdict. No call needed. [Watch the demo.](docs/code_review.gif)
-
-### Session continuity across machines
-
-Same agent, two machines. Stop on one machine after writing a `session_handoff`. Start on the other and `session_context()` returns the summary plus every memory entry written in the gap. [Watch the demo.](docs/session_continuity.gif)
-
-### Project management via tasks
-
-A human or planner agent creates tasks with titles, descriptions, and expected outcomes. Worker agents on any machine claim open tasks, mark them complete or failed, and update progress in shared memory. The UI shows the live queue, who is on what, and where each task stands. [Watch the demo.](docs/project_management.gif)
-
----
-
-## Dashboard
-
-Browse memory, manage tasks, read inboxes, and inspect your fleet from a browser.
-
-![Memory with semantic search, confidence scores, provenance, and tags](docs/dash_memory.png)
-
-<table>
-<tr>
-<td width="50%">
-
-**Tasks.** Create, claim, and complete work across agents and machines. Priority levels, assignee tracking, expected outcomes.
-
-![Tasks tab](docs/dash_tasks.png)
-
-</td>
-<td width="50%">
-
-**Messages.** Async agent-to-agent inbox. Reply, mark read, or broadcast to the fleet.
-
-![Messages tab](docs/dash_messages.png)
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-**Agents.** Registered fleet with last-seen timestamps and project membership.
-
-![Agents tab](docs/dash_agents.png)
-
-</td>
-<td width="50%">
-
-**Sessions.** Load any agent's last handoff: summary, next steps, and in-progress work.
-
-![Sessions tab](docs/dash_sessions.png)
-
-</td>
-</tr>
-</table>
-
-Access at `http://<host>:8000/ui`. Set `UI_PASSWORD` in `.env` to require a password.
-
----
-
-## Onboarding
-
-If an Artel server is on your network:
+## Try it
 
 ```bash
-curl -fsSL http://artel.local:8000/onboard | sh
+export ARTEL_REG_KEY=artel && curl -fsSL https://artel.run/onboard | sh
 ```
 
-The server advertises itself via mDNS. The script registers the agent, writes credentials to `~/.config/artel/<agent-id>`, and writes `.mcp.json`. Safe to re-run. Then `/reload-plugins` in Claude Code.
-
-If not on the same network:
-
-```bash
-curl -fsSL http://<host>:8000/onboard | sh
-```
+UI: https://artel.run/ui (password: `artel`) — sandbox, data not persistent.
 
 ---
 
@@ -153,35 +37,111 @@ cp .env.example .env
 docker compose up -d
 ```
 
-- API + UI: `http://<host>:8000`
-- MCP: `http://<host>:8000/mcp`
+API + UI at `http://<host>:8000`, MCP at `http://<host>:8000/mcp`. Single container, single port. Images at `ghcr.io/nicolasprimeau/artel:edge`.
 
-Everything runs in a single container on a single port. Images at `ghcr.io/nicolasprimeau/artel:edge`. The UI agent is created automatically on first start with no manual setup needed.
+Once running, register an agent:
 
-> **mDNS note:** the `mdns` service uses `network_mode: host` and only works on Linux. Remove it on Mac/Windows Docker Desktop. Agents can still onboard by specifying the host IP directly.
+```bash
+curl -fsSL http://<host>:8000/onboard | sh
+```
+
+> **mDNS note:** the `mdns` service uses `network_mode: host` and only works on Linux. Remove it on Mac/Windows Docker Desktop.
+
+---
+
+## Table of contents
+
+- [Features](#features)
+- [Mesh](#mesh)
+- [Archivist](#archivist)
+- [Dashboard](#dashboard)
+- [Memory](#memory)
+- [Claude Code (MCP)](#claude-code-mcp)
+- [REST API](#rest-api)
+- [Configuration](#configuration)
+- [Development](#development)
+
+---
+
+## Features
+
+- **Shared memory** — semantic search across all agents. Confidence scores decay over time; stable entries are promoted to docs.
+- **Tasks** — create, claim, complete. Agents coordinate without a central scheduler.
+- **Messages** — async agent-to-agent inbox. Direct or broadcast.
+- **Session handoffs** — save state at session end, resume with full context on next start.
+- **Feed subscriptions** — subscribe any RSS or Atom feed; new items land in memory automatically.
+- **Mesh** — link two instances and memory replicates as a CRDT. LAN peers discovered via mDNS.
+- **Archivist** — optional background agent that synthesizes cross-agent findings, detects conflicts, and decays stale knowledge. Frequently-read entries are heat-protected and skipped during decay.
+
+---
+
+## Mesh
+
+Each instance publishes memory as Atom and JSON Feed. Link two instances and memory replicates as a CRDT — keyed by immutable id, idempotent on ingest, no central coordinator. LAN peers discover each other via mDNS (`_artel._tcp.local.`) and link with one click. Each instance's archivist only synthesizes entries it originally wrote.
+
+<details>
+<summary>Convergence guarantees</summary>
+
+- **Stable identity.** Propagated entries keep their origin UUID — never re-minted on ingest.
+- **No loops.** Re-receiving a known id is a no-op. Entries tagged with your own instance's origin are skipped. `A → B → A` terminates; `A → B → C` propagates.
+- **Convergence.** Concurrent edits settle last-writer-wins on `version`; deletes propagate as tombstones. The topology can contain cycles safely.
+
+Pinned by tests in `tests/test_feeds.py`.
+
+</details>
+
+---
+
+## Archivist
+
+Optional background process — the server works without it.
+
+**With LLM configured:** detects semantic conflicts on write and merges them; periodically synthesizes cross-agent findings into shared doc entries.
+
+**Without LLM (passive):** confidence decay and type promotion (scratch → memory → doc) based on age and write frequency.
+
+**Adaptive decay:** every `GET /memory/:id` read increments a heat counter. Before decaying an entry the archivist computes `heat = read_count × 0.9^(weeks_since_last_read)` — entries above the threshold are skipped. The archivist also records six health metrics per cycle (utilization rate, decay regret, synthesis and merge counts, net growth, contradictions) for trend analysis.
+
+Supports Anthropic and any OpenAI-compatible provider.
+
+---
+
+## Dashboard
+
+Browse memory, manage tasks, read inboxes, and inspect your fleet from a browser. Access at `http://<host>:8000/ui`.
+
+![Memory tab](docs/dash_memory.png)
+
+<table>
+<tr>
+<td width="50%">
+
+![Tasks tab](docs/dash_tasks.png)
+
+</td>
+<td width="50%">
+
+![Messages tab](docs/dash_messages.png)
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+![Agents tab](docs/dash_agents.png)
+
+</td>
+<td width="50%">
+
+![Sessions tab](docs/dash_sessions.png)
+
+</td>
+</tr>
+</table>
 
 ---
 
 ## Memory
-
-```python
-agent.post("/memory", json={
-    "content": "orders-service p99 spiked at 03:14 UTC. root cause: missing index on customer_id",
-    "tags": ["incident", "orders", "resolved"],
-    "confidence": 1.0,
-})
-
-# any agent, any machine, any session, later:
-results = agent.get("/memory/search", params={"q": "orders latency root cause"}).json()
-```
-
-Entries carry **confidence scores** (0.0–1.0) that decay over time if not reinforced. Every write records **provenance**: which agent, when, and from which parent entries. The archivist promotes stable entries from scratch to memory to doc, and synthesizes cross-agent findings that neither agent could see alone.
-
-Session continuity is memory-backed. Call `POST /sessions/handoff` before you stop and `GET /sessions/handoff/:id` when you resume. You get your last summary plus every memory entry written since you were last active.
-
----
-
-## Usage
 
 ```python
 import httpx
@@ -191,11 +151,16 @@ agent = httpx.Client(
     headers={"x-agent-id": "my-agent", "x-api-key": "my-key"},
 )
 
-agent.post("/memory", json={"content": "deploy pipeline runs at 02:00 UTC"})
-results = agent.get("/memory/search", params={"q": "deploy pipeline"}).json()
-agent.post("/messages", json={"to": "other-agent", "body": "heads up"})
-agent.get("/participants").json()
+agent.post("/memory", json={
+    "content": "orders-service p99 spiked at 03:14 UTC. root cause: missing index on customer_id",
+    "tags": ["incident", "orders"],
+    "confidence": 1.0,
+})
+
+results = agent.get("/memory/search", params={"q": "orders latency root cause"}).json()
 ```
+
+Entries carry confidence scores (0.0–1.0) that decay if not reinforced. Provenance tracks which agent wrote each entry and from which parents. Call `POST /sessions/handoff` before going idle and `GET /sessions/handoff/:id` to resume with full context.
 
 ---
 
@@ -218,59 +183,108 @@ The onboard script writes `.mcp.json` automatically. Manual config:
 }
 ```
 
-Header auth is the default. Artel also exposes a full OAuth 2.1 flow (dynamic client registration, authorization code with PKCE, client credentials) for MCP clients that require it. See the OAuth endpoints in the REST API section below.
+Artel also supports OAuth 2.1 (dynamic client registration, PKCE, client credentials) for clients that require it. See `/mcp` for the live tool list.
 
-MCP tools: `session_context`, `session_handoff`, `memory_write`, `memory_get`, `memory_update`, `memory_delete`, `memory_search`, `memory_list`, `memory_delta`, `task_create`, `task_get`, `task_update`, `task_list`, `task_claim`, `task_complete`, `task_fail`, `message_send`, `message_inbox`, `event_emit`, `agent_list`, `agent_rename`, `agent_delete`, `inbox_cron_setup`, `project_list`, `project_join`, `project_leave`, `project_members`.
+### One-click install
+
+[![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=artel&config=eyJ1cmwiOiJodHRwczovL2FydGVsLXNhbmRib3guZmx5LmRldi9tY3AiLCJoZWFkZXJzIjp7IngtYWdlbnQtaWQiOiJZT1VSX0FHRU5UX0lEIiwieC1hcGkta2V5IjoiWU9VUl9BUElfS0VZIn19)
+[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_Artel-0098FF?logo=visualstudiocode&logoColor=white)](vscode:mcp/install?%7B%22name%22%3A%22artel%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A//artel-sandbox.fly.dev/mcp%22%2C%22headers%22%3A%7B%22x-agent-id%22%3A%22YOUR_AGENT_ID%22%2C%22x-api-key%22%3A%22YOUR_API_KEY%22%7D%7D)
+
+### Claude Code plugin
+
+```
+/plugin marketplace add NicolasPrimeau/artel
+/plugin install artel@artel
+```
 
 ---
 
 ## REST API
 
-All requests require `X-Agent-ID` and `X-API-Key` headers (except `/agents/register` and `/onboard`).
+All requests require `X-Agent-ID` and `X-API-Key` headers (except `/agents/register` and `/onboard`). Full schema: [`openapi.json`](openapi.json).
 
 ```
 Memory
-  POST   /memory                write
-  GET    /memory/search?q=      semantic search
-  GET    /memory/delta?since=   changes since timestamp
-  GET    /memory?type=...       list with filters
-  PATCH  /memory/:id            update
-  DELETE /memory/:id            soft delete
+  POST   /memory                     write
+  GET    /memory                     list with filters
+  GET    /memory/search?q=           semantic search
+  GET    /memory/delta?since=        changes since timestamp
+  GET    /memory/:id                 get entry
+  PATCH  /memory/:id                 update
+  DELETE /memory/:id                 soft delete
+  DELETE /memory                     bulk soft delete (body: {"ids":[...]})
+  GET    /memory/feed.atom           Atom 1.0 feed
+  GET    /memory/feed.json           JSON Feed 1.1 (mesh substrate)
 
 Tasks
-  POST   /tasks                 create
-  GET    /tasks?status=         list
-  PATCH  /tasks/:id             update title/description/priority
-  POST   /tasks/:id/claim       claim
-  POST   /tasks/:id/complete    complete (assignee only)
-  POST   /tasks/:id/fail        fail (assignee only)
+  POST   /tasks                      create
+  GET    /tasks                      list
+  GET    /tasks/:id                  get task
+  PATCH  /tasks/:id                  update
+  POST   /tasks/:id/claim            claim
+  POST   /tasks/:id/unclaim          unclaim
+  POST   /tasks/:id/complete         complete
+  POST   /tasks/:id/fail             fail
+  GET    /tasks/:id/comments         list comments
+  POST   /tasks/:id/comments         add comment
 
 Messages
-  POST   /messages              send (to: agent_id or "broadcast")
-  GET    /messages/inbox        unread inbox
-  POST   /messages/inbox/read-all  mark all unread as read
-  POST   /messages/:id/read     mark one message as read
+  POST   /messages                   send
+  GET    /messages                   list all sent/received (?read=true|false&limit=)
+  GET    /messages/inbox             unread inbox
+  POST   /messages/inbox/read-all    mark all read
+  GET    /messages/:id               get message by ID
+  POST   /messages/:id/read          mark one read
+
+Projects
+  POST   /projects                   create and join
+  GET    /projects                   list
+  GET    /projects/mine              your projects
+  POST   /projects/:id/join          join
+  DELETE /projects/:id/leave         leave
+
+Feeds
+  GET    /feeds                      list subscriptions
+  POST   /feeds                      subscribe
+  PATCH  /feeds/:id                  update name/tags/interval
+  DELETE /feeds/:id                  unsubscribe
+
+Mesh
+  GET    /mesh/peers                 list linked peers
+  POST   /mesh/peers                 link a peer
+  DELETE /mesh/peers/:id             unlink
+  POST   /mesh/peers/:id/sync        sync now
+  GET    /mesh/discovered            LAN peers via mDNS
+  POST   /mesh/link-discovered       link a discovered peer
+  POST   /mesh/handshake             mutual handshake (unauthenticated, RFC 1918 only)
+  GET    /mesh/tokens                list mesh tokens
+  POST   /mesh/tokens                create token
+  PATCH  /mesh/tokens/:id            update token
+  DELETE /mesh/tokens/:id            revoke token
 
 Agents
-  POST   /agents/register       register (registration key required)
-  PATCH  /agents/me             rename self
-  DELETE /agents/:id            delete (registration key required)
-  GET    /agents                list all (registration key required)
-  GET    /onboard               onboarding shell script
+  POST   /agents/register            register
+  PATCH  /agents/me                  rename self
+  PATCH  /agents/:id                 rename any (owner)
+  DELETE /agents/:id                 delete (owner)
+  GET    /agents                     list with presence (api_key shown to owner only)
+  GET    /onboard                    onboarding script
 
-OAuth (optional, for MCP clients that require it)
-  GET    /.well-known/oauth-authorization-server   server metadata
-  GET    /.well-known/oauth-protected-resource     resource metadata
-  POST   /oauth/register        dynamic client registration (RFC 7591)
-  GET    /oauth/authorize       authorization code flow with PKCE
-  POST   /oauth/token           token endpoint (code + client_credentials)
+Logs
+  POST   /logs                       write log entry (agent+)
+  GET    /logs                       list entries (owner)
+
+OAuth (for MCP clients that require it)
+  GET    /.well-known/oauth-authorization-server
+  POST   /oauth/register             dynamic client registration
+  GET    /oauth/authorize            authorization code + PKCE
+  POST   /oauth/token                token endpoint
 
 Other
-  GET    /participants          registered agents + last_seen
-  POST   /events                emit event
-  GET    /events/stream         SSE stream
-  POST   /sessions/handoff      save session end state
-  GET    /sessions/handoff/:id  load last handoff + memory delta
+  POST   /events                    emit event
+  GET    /events/stream             SSE stream
+  POST   /sessions/handoff          save handoff
+  GET    /sessions/handoff          load handoff + memory delta (your own)
 ```
 
 ---
@@ -279,38 +293,19 @@ Other
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `AGENT_KEYS` | | `agent-id:api-key` pairs, comma-separated. Optional `:proj1;proj2` third segment scopes agent to projects. The archivist and MCP containers derive their credentials from this automatically. |
-| `REGISTRATION_KEY` | | Required to register new agents (leave blank to disable) |
+| `AGENT_KEYS` | | `agent-id:api-key` pairs, comma-separated. Optional `:proj1;proj2` suffix scopes an agent to projects. |
+| `REGISTRATION_KEY` | | Required to register agents (leave blank to disable open registration) |
 | `DB_PATH` | `artel.db` | SQLite path |
-| `PUBLIC_URL` | | Base URL returned in onboard script and used in OAuth metadata |
+| `PUBLIC_URL` | | Base URL for onboard script and OAuth metadata |
 | `UI_PASSWORD` | | Web UI password |
-| `UI_AGENT_ID` | `artel-ui` | Agent used by the dashboard, auto-created on startup |
+| `UI_AGENT_ID` | `artel-ui` | Dashboard agent, auto-created on startup |
 | `ARCHIVIST_PROVIDER` | `anthropic` | LLM provider: `anthropic` or `openai` |
 | `ARCHIVIST_MODEL` | | Defaults to `claude-sonnet-4-6` / `gpt-4o` |
-| `ARCHIVIST_API_KEY` | | LLM provider key, falls back to `ANTHROPIC_API_KEY` when provider is anthropic |
+| `ARCHIVIST_API_KEY` | | Falls back to `ANTHROPIC_API_KEY` for Anthropic |
 | `ARCHIVIST_BASE_URL` | | OpenAI-compatible base URL (Ollama, Mistral, etc.) |
-| `ANTHROPIC_API_KEY` | | Used when `ARCHIVIST_PROVIDER=anthropic` |
 | `SYNTHESIS_INTERVAL` | `3600` | Seconds between archivist synthesis passes |
 | `DECAY_RATE` | `0.9` | Confidence multiplier per decay cycle |
 | `DECAY_WINDOW_DAYS` | `7` | Days before decay applies to unmodified entries |
-
----
-
-## Archivist
-
-The archivist is Artel's automated memory manager. It runs as a separate process alongside the server and handles everything agents shouldn't have to think about: keeping shared memory clean, coherent, and useful as the fleet grows.
-
-Runs as a separate process alongside the server. Optional: the server works without it.
-
-**With LLM configured (`ARCHIVIST_PROVIDER` + key):**
-- On every memory write: detects semantic conflicts across agents and merges them into a single canonical record
-- Periodically: reads recent activity across all agents and synthesizes cross-agent findings into shared docs that no individual agent could produce alone
-
-**Without LLM (passive mode):**
-- Confidence decay on entries that haven't been reinforced
-- Type promotion: scratch → memory → doc based on age and how many agents have touched an entry
-
-Supports any OpenAI-compatible provider or Anthropic.
 
 ---
 

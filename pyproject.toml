@@ -1,7 +1,7 @@
 [project]
 name = "artel"
-version = "0.8.0"
-description = "Harness-agnostic coordination layer for AI agents"
+dynamic = ["version"]
+description = "Self-hosted, self-organizing mesh for AI agent fleets"
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "Nicolas Primeau", email = "nicolas.primeau@gmail.com" }]
@@ -46,8 +46,11 @@ artel-mdns = "artel.server.mdns_announce:main"
 [dependency-groups]
 dev = [
     "asciinema>=2.4.0",   # record terminal demos; convert to gif with agg (uv tool install agg-bin)
+    "boto3>=1.43.0",
+    "hatch-vcs>=0.4.0",
     "hatchling>=1.27.0",
     "httpx>=0.28.1",
+    "playwright>=1.59.0",
     "pre-commit>=4.0.0",
     "pyte>=0.8.2",
     "pytest>=8.3.0",
@@ -57,8 +60,12 @@ dev = [
 ]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+fallback-version = "0.0.0"
 
 [tool.hatch.build.targets.wheel]
 packages = ["artel"]

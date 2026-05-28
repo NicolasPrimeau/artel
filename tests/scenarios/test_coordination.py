@@ -2628,10 +2628,11 @@ async def test_memory_list_scope_change(scenario):
 # ── Inbox agent= filter ───────────────────────────────────────────────────────
 
 
-async def test_inbox_agent_filter(scenario):
+async def test_inbox_does_not_expose_other_agents(scenario):
     """
-    GET /messages/inbox?agent= lets an agent read another agent's inbox
-    (admin-style monitoring pattern).
+    GET /messages/inbox only returns the caller's own messages — the previous
+    ?agent= query param was a security bug (any reader could enumerate any
+    agent's unread direct messages) and has been removed.
     """
     sender = await scenario.agent("sender")
     await scenario.agent("target")
@@ -2639,10 +2640,10 @@ async def test_inbox_agent_filter(scenario):
 
     await sender.send_message(to="target", body="Secret message for target")
 
-    target_inbox = await monitor._http.get("/messages/inbox", params={"agent": "target"})
-    assert target_inbox.status_code == 200
-    msgs = target_inbox.json()
-    assert any("Secret message for target" in m["body"] for m in msgs)
+    monitor_inbox = await monitor._http.get("/messages/inbox", params={"agent": "target"})
+    assert monitor_inbox.status_code == 200
+    msgs = monitor_inbox.json()
+    assert not any("Secret message for target" in m["body"] for m in msgs)
 
 
 # ── Edge cases uncovered ──────────────────────────────────────────────────────
@@ -2867,7 +2868,8 @@ async def test_admin_list_agents(scenario):
 
 async def test_admin_delete_nonexistent_agent(scenario):
     """Admin deleting a non-existent agent returns 404."""
-    r = await scenario._admin.delete("/agents/ghost-agent")
+    owner = await scenario.owner_agent()
+    r = await owner._http.delete("/agents/ghost-agent")
     assert r.status_code == 404
 
 
@@ -2939,15 +2941,17 @@ async def test_handoff_all_fields_round_trip(scenario):
     assert mem["id"] in h["memory_refs"]
 
 
-async def test_handoff_cross_agent_load_forbidden(scenario):
-    """Agent A cannot load agent B's handoff — 403."""
+async def test_handoff_isolated_per_agent(scenario):
+    """Each agent sees only their own handoff."""
     agent_a = await scenario.agent("agent-a")
     agent_b = await scenario.agent("agent-b")
 
     await agent_a.save_handoff(summary="A's private session state")
 
-    r = await agent_b._http.get("/sessions/handoff/agent-a")
-    assert r.status_code == 403
+    h_a = await agent_a.load_handoff()
+    h_b = await agent_b.load_handoff()
+    assert h_a["last_handoff"]["summary"] == "A's private session state"
+    assert h_b["last_handoff"] is None
 
 
 # ── Self-register duplicate ───────────────────────────────────────────────────

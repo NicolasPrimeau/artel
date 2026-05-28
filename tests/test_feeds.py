@@ -1,3 +1,4 @@
+import json
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -91,6 +92,13 @@ async def test_feed_unsubscribe_wrong_owner(client):
     assert r2.status_code == 403
 
 
+async def test_feed_unsubscribe_other_agent_no_membership_forbidden(client):
+    r = await _subscribe(client)
+    feed_id = r.json()["id"]
+    r2 = await client.delete(f"/feeds/{feed_id}", headers=HEADERS2)
+    assert r2.status_code == 403
+
+
 # ── Poller ────────────────────────────────────────────────────────────────────
 
 
@@ -113,6 +121,14 @@ def _make_parsed(entries):
     return parsed
 
 
+def _mock_rss_resp(text="<rss/>"):
+    mock_resp = MagicMock()
+    mock_resp.text = text
+    mock_resp.headers = {"content-type": "application/rss+xml"}
+    mock_resp.raise_for_status = MagicMock()
+    return mock_resp
+
+
 async def test_poller_writes_new_items_as_memories(client):
     import artel.store.db as db_mod
 
@@ -132,11 +148,7 @@ async def test_poller_writes_new_items_as_memories(client):
         patch("artel.server.feed_poller.feedparser.parse", return_value=parsed),
         patch("httpx.AsyncClient.get") as mock_get,
     ):
-        mock_resp = MagicMock()
-        mock_resp.text = "<rss/>"
-        mock_resp.raise_for_status = MagicMock()
-        mock_get.return_value.__aenter__ = MagicMock(return_value=mock_resp)
-        mock_get.return_value.__aexit__ = MagicMock(return_value=False)
+        mock_get.return_value = _mock_rss_resp()
         await feed_poller._poll_feed(feed)
 
     memories = db.execute(
@@ -171,11 +183,7 @@ async def test_poller_skips_seen_items(client):
         patch("artel.server.feed_poller.feedparser.parse", return_value=parsed),
         patch("httpx.AsyncClient.get") as mock_get,
     ):
-        mock_resp = MagicMock()
-        mock_resp.text = "<rss/>"
-        mock_resp.raise_for_status = MagicMock()
-        mock_get.return_value.__aenter__ = MagicMock(return_value=mock_resp)
-        mock_get.return_value.__aexit__ = MagicMock(return_value=False)
+        mock_get.return_value = _mock_rss_resp()
         await feed_poller._poll_feed(feed)
 
     count = db.execute("SELECT COUNT(*) FROM memory WHERE agent_id=?", (TEST_AGENT,)).fetchone()[0]
@@ -201,11 +209,7 @@ async def test_poller_respects_max_per_poll(client):
         patch("artel.server.feed_poller.feedparser.parse", return_value=parsed),
         patch("httpx.AsyncClient.get") as mock_get,
     ):
-        mock_resp = MagicMock()
-        mock_resp.text = "<rss/>"
-        mock_resp.raise_for_status = MagicMock()
-        mock_get.return_value.__aenter__ = MagicMock(return_value=mock_resp)
-        mock_get.return_value.__aexit__ = MagicMock(return_value=False)
+        mock_get.return_value = _mock_rss_resp()
         await feed_poller._poll_feed(feed)
 
     count = (
@@ -231,11 +235,7 @@ async def test_poller_updates_last_fetched_at(client):
         patch("artel.server.feed_poller.feedparser.parse", return_value=parsed),
         patch("httpx.AsyncClient.get") as mock_get,
     ):
-        mock_resp = MagicMock()
-        mock_resp.text = "<rss/>"
-        mock_resp.raise_for_status = MagicMock()
-        mock_get.return_value.__aenter__ = MagicMock(return_value=mock_resp)
-        mock_get.return_value.__aexit__ = MagicMock(return_value=False)
+        mock_get.return_value = _mock_rss_resp()
         await feed_poller._poll_feed(feed)
 
     updated = db.execute(
@@ -245,8 +245,6 @@ async def test_poller_updates_last_fetched_at(client):
 
 
 async def test_poller_tags_items_with_feed_item_and_unprocessed(client):
-    import json as _json
-
     import artel.store.db as db_mod
     from artel.server import feed_poller
 
@@ -261,18 +259,167 @@ async def test_poller_tags_items_with_feed_item_and_unprocessed(client):
         patch("artel.server.feed_poller.feedparser.parse", return_value=parsed),
         patch("httpx.AsyncClient.get") as mock_get,
     ):
-        mock_resp = MagicMock()
-        mock_resp.text = "<rss/>"
-        mock_resp.raise_for_status = MagicMock()
-        mock_get.return_value.__aenter__ = MagicMock(return_value=mock_resp)
-        mock_get.return_value.__aexit__ = MagicMock(return_value=False)
+        mock_get.return_value = _mock_rss_resp()
         await feed_poller._poll_feed(feed)
 
     row = db.execute("SELECT tags FROM memory WHERE agent_id=?", (TEST_AGENT,)).fetchone()
-    tags = _json.loads(row["tags"])
+    tags = json.loads(row["tags"])
     assert "feed-item" in tags
     assert "unprocessed" in tags
     assert "test" in tags
+
+
+# ── Outbound feed endpoints ───────────────────────────────────────────────────
+
+
+async def test_memory_feed_atom_returns_entries(client):
+    import xml.etree.ElementTree as ET
+
+    await client.post(
+        "/memory",
+        json={"content": "test atom entry\nsecond line", "tags": ["t1"]},
+        headers=HEADERS,
+    )
+    r = await client.get("/memory/feed.atom", headers=HEADERS)
+    assert r.status_code == 200
+    assert "atom+xml" in r.headers["content-type"]
+
+    root = ET.fromstring(r.content)
+    ns = {"a": "http://www.w3.org/2005/Atom"}
+    entries = root.findall("a:entry", ns)
+    assert len(entries) == 1
+    assert entries[0].find("a:title", ns).text == "test atom entry"
+    assert entries[0].find("a:content", ns).text == "test atom entry\nsecond line"
+    assert entries[0].find("a:author/a:name", ns).text == TEST_AGENT
+
+
+async def test_memory_feed_json_returns_entries(client):
+    await client.post(
+        "/memory",
+        json={"content": "test json entry", "tags": ["t1", "t2"]},
+        headers=HEADERS,
+    )
+    r = await client.get("/memory/feed.json", headers=HEADERS)
+    assert r.status_code == 200
+    assert "feed+json" in r.headers["content-type"]
+
+    data = r.json()
+    assert data["version"] == "https://jsonfeed.org/version/1.1"
+    assert len(data["items"]) == 1
+    item = data["items"][0]
+    assert item["content_text"] == "test json entry"
+    assert item["tags"] == ["t1", "t2"]
+    assert item["authors"] == [{"name": TEST_AGENT}]
+    assert item["_artel"]["type"] == "memory"
+    assert item["_artel"]["confidence"] == 1.0
+
+
+async def test_memory_feed_auth_via_query_params(client):
+    await client.post("/memory", json={"content": "cross-artel test"}, headers=HEADERS)
+    r = await client.get(f"/memory/feed.json?agent_id={TEST_AGENT}&api_key={TEST_KEY}")
+    assert r.status_code == 200
+    data = r.json()
+    assert any(i["content_text"] == "cross-artel test" for i in data["items"])
+
+
+async def test_memory_feed_atom_requires_auth(client):
+    r = await client.get("/memory/feed.atom")
+    assert r.status_code == 401
+
+
+async def test_memory_feed_json_requires_auth(client):
+    r = await client.get("/memory/feed.json")
+    assert r.status_code == 401
+
+
+async def test_memory_feed_tag_filter(client):
+    await client.post("/memory", json={"content": "tagged A", "tags": ["alpha"]}, headers=HEADERS)
+    await client.post("/memory", json={"content": "tagged B", "tags": ["beta"]}, headers=HEADERS)
+
+    r = await client.get("/memory/feed.json?tag=alpha", headers=HEADERS)
+    assert r.status_code == 200
+    items = r.json()["items"]
+    assert len(items) == 1
+    assert items[0]["content_text"] == "tagged A"
+
+
+async def test_poller_ingests_json_feed(client):
+    import artel.store.db as db_mod
+    from artel.server import feed_poller
+
+    await _subscribe(client)
+    db = db_mod.get_db()
+    feed = dict(db.execute("SELECT * FROM feed_subscriptions").fetchone())
+
+    json_payload = json.dumps(
+        {
+            "version": "https://jsonfeed.org/version/1.1",
+            "title": "Artel Memory / artel",
+            "items": [
+                {
+                    "id": "https://other.artel/memory/abc",
+                    "title": "Cross-Artel entry",
+                    "content_text": "learned from another artel instance",
+                    "date_published": "2026-05-16T00:00:00Z",
+                    "url": "https://other.artel/memory/abc",
+                }
+            ],
+        }
+    )
+
+    with patch("httpx.AsyncClient.get") as mock_get:
+        mock_resp = MagicMock()
+        mock_resp.text = json_payload
+        mock_resp.headers = {"content-type": "application/feed+json"}
+        mock_resp.raise_for_status = MagicMock()
+        mock_get.return_value = mock_resp
+        await feed_poller._poll_feed(feed)
+
+    memories = db.execute(
+        "SELECT content FROM memory WHERE agent_id=? AND project='artel'", (TEST_AGENT,)
+    ).fetchall()
+    assert len(memories) == 1
+    assert "Cross-Artel entry" in memories[0]["content"]
+    assert "learned from another artel instance" in memories[0]["content"]
+
+
+async def test_poller_deduplicates_json_feed_items(client):
+    import artel.store.db as db_mod
+    from artel.server import feed_poller
+
+    await _subscribe(client)
+    db = db_mod.get_db()
+    feed = dict(db.execute("SELECT * FROM feed_subscriptions").fetchone())
+
+    json_payload = json.dumps(
+        {
+            "version": "https://jsonfeed.org/version/1.1",
+            "title": "Test",
+            "items": [
+                {
+                    "id": "https://other.artel/memory/seen",
+                    "title": "Already seen",
+                    "content_text": "old",
+                }
+            ],
+        }
+    )
+    db.execute(
+        "INSERT INTO feed_items_seen (feed_id, item_guid) VALUES (?,?)",
+        (feed["id"], "https://other.artel/memory/seen"),
+    )
+    db.commit()
+
+    with patch("httpx.AsyncClient.get") as mock_get:
+        mock_resp = MagicMock()
+        mock_resp.text = json_payload
+        mock_resp.headers = {"content-type": "application/feed+json"}
+        mock_resp.raise_for_status = MagicMock()
+        mock_get.return_value = mock_resp
+        await feed_poller._poll_feed(feed)
+
+    count = db.execute("SELECT COUNT(*) FROM memory WHERE agent_id=?", (TEST_AGENT,)).fetchone()[0]
+    assert count == 0
 
 
 # ── MCP tools ─────────────────────────────────────────────────────────────────
@@ -354,3 +501,236 @@ def mcp(tmp_path, monkeypatch):
         db_mod._conn.close()
         db_mod._conn = None
     bc_mod._subscribers.clear()
+
+
+# ── Cross-instance mesh replication (CRDT proof) ───────────────────────────────
+
+
+def _artel_item(
+    mid,
+    origin,
+    content,
+    version=1,
+    updated_at="2026-05-16T00:00:00.000Z",
+    deleted_at=None,
+    tags=None,
+    agent="remote-agent",
+):
+    return {
+        "id": f"http://peer/memory/{mid}",
+        "title": content[:80],
+        "content_text": content,
+        "date_published": "2026-05-16T00:00:00.000Z",
+        "date_modified": updated_at,
+        "authors": [{"name": agent}],
+        "tags": tags or [],
+        "_artel": {
+            "memory_id": mid,
+            "type": "memory",
+            "confidence": 1.0,
+            "project": "artel",
+            "scope": "project",
+            "agent_id": agent,
+            "version": version,
+            "created_at": "2026-05-16T00:00:00.000Z",
+            "updated_at": updated_at,
+            "deleted_at": deleted_at,
+            "parents": [],
+            "origin": origin,
+        },
+    }
+
+
+def _mock_json_resp(payload):
+    m = MagicMock()
+    m.text = json.dumps(payload)
+    m.headers = {"content-type": "application/feed+json"}
+    m.raise_for_status = MagicMock()
+    return m
+
+
+async def _poll_artel(feed, items):
+    from artel.server import feed_poller
+
+    payload = {
+        "version": "https://jsonfeed.org/version/1.1",
+        "title": "Artel Memory",
+        "items": items,
+    }
+    with patch("httpx.AsyncClient.get") as mock_get:
+        mock_get.return_value = _mock_json_resp(payload)
+        await feed_poller._poll_feed(feed)
+
+
+async def _peer_feed(client):
+    import artel.store.db as db_mod
+
+    await _subscribe(client, url="http://peer/memory/feed.json?project=artel", name="Peer Artel")
+    return dict(db_mod.get_db().execute("SELECT * FROM feed_subscriptions").fetchone())
+
+
+async def test_replication_stable_id_and_origin(client):
+    import artel.store.db as db_mod
+
+    feed = await _peer_feed(client)
+    await _poll_artel(feed, [_artel_item("gid-1", "peer-A", "shared finding one")])
+    db = db_mod.get_db()
+    row = db.execute("SELECT id, origin, content, project FROM memory WHERE id='gid-1'").fetchone()
+    assert row is not None
+    assert row["id"] == "gid-1"
+    assert row["origin"] == "peer-A"
+    assert row["content"] == "shared finding one"
+    assert row["project"] == "artel"
+
+
+async def test_replication_idempotent_no_amplification(client):
+    import artel.store.db as db_mod
+
+    feed = await _peer_feed(client)
+    item = [_artel_item("gid-2", "peer-A", "idempotent entry")]
+    await _poll_artel(feed, item)
+    await _poll_artel(feed, item)
+    await _poll_artel(feed, item)
+    db = db_mod.get_db()
+    n = db.execute("SELECT COUNT(*) FROM memory WHERE id='gid-2'").fetchone()[0]
+    assert n == 1
+    nv = db.execute("SELECT COUNT(*) FROM memory_vec WHERE id='gid-2'").fetchone()[0]
+    assert nv == 1
+
+
+async def test_replication_loop_short_circuit_on_self_origin(client):
+    import artel.store.db as db_mod
+
+    feed = await _peer_feed(client)
+    self_id = db_mod.instance_id()
+    await _poll_artel(feed, [_artel_item("gid-self", self_id, "our own entry echoed back")])
+    db = db_mod.get_db()
+    assert db.execute("SELECT COUNT(*) FROM memory WHERE id='gid-self'").fetchone()[0] == 0
+
+
+async def test_replication_preserves_foreign_origin_for_multi_hop(client):
+    import artel.store.db as db_mod
+
+    feed = await _peer_feed(client)
+    # B serves an entry that originated at A; we ingest via B and must keep origin=A
+    await _poll_artel(feed, [_artel_item("gid-hop", "origin-A", "born at A, seen via B")])
+    db = db_mod.get_db()
+    assert (
+        db.execute("SELECT origin FROM memory WHERE id='gid-hop'").fetchone()["origin"]
+        == "origin-A"
+    )
+
+
+async def test_replication_lww_update_and_stale_rejected(client):
+    import artel.store.db as db_mod
+
+    feed = await _peer_feed(client)
+    await _poll_artel(
+        feed,
+        [
+            _artel_item(
+                "gid-3", "peer-A", "v1 content", version=1, updated_at="2026-05-16T00:00:00.000Z"
+            )
+        ],
+    )
+    await _poll_artel(
+        feed,
+        [
+            _artel_item(
+                "gid-3", "peer-A", "v2 content", version=2, updated_at="2026-05-16T01:00:00.000Z"
+            )
+        ],
+    )
+    db = db_mod.get_db()
+    row = db.execute("SELECT content, version FROM memory WHERE id='gid-3'").fetchone()
+    assert row["content"] == "v2 content"
+    assert row["version"] == 2
+    # stale v1 must not downgrade
+    await _poll_artel(
+        feed,
+        [
+            _artel_item(
+                "gid-3", "peer-A", "v1 content", version=1, updated_at="2026-05-16T00:00:00.000Z"
+            )
+        ],
+    )
+    row = db.execute("SELECT content, version FROM memory WHERE id='gid-3'").fetchone()
+    assert row["content"] == "v2 content"
+    assert row["version"] == 2
+
+
+async def test_replication_tombstone_delete_converges(client):
+    import artel.store.db as db_mod
+
+    feed = await _peer_feed(client)
+    await _poll_artel(feed, [_artel_item("gid-4", "peer-A", "to be deleted", version=1)])
+    await _poll_artel(
+        feed,
+        [
+            _artel_item(
+                "gid-4",
+                "peer-A",
+                "to be deleted",
+                version=2,
+                updated_at="2026-05-16T02:00:00.000Z",
+                deleted_at="2026-05-16T02:00:00.000Z",
+            )
+        ],
+    )
+    db = db_mod.get_db()
+    row = db.execute("SELECT deleted_at FROM memory WHERE id='gid-4'").fetchone()
+    assert row["deleted_at"] == "2026-05-16T02:00:00.000Z"
+
+
+async def test_non_artel_json_feed_uses_legacy_path(client):
+    import artel.store.db as db_mod
+
+    feed = await _peer_feed(client)
+    plain = [
+        {
+            "id": "x1",
+            "title": "Plain",
+            "content_text": "no _artel here",
+            "date_published": "2026-05-16",
+        }
+    ]
+    await _poll_artel(feed, plain)
+    db = db_mod.get_db()
+    rows = db.execute("SELECT id, confidence FROM memory WHERE project='artel'").fetchall()
+    assert len(rows) == 1
+    assert rows[0]["id"] != "x1"  # legacy path mints a fresh id
+    assert rows[0]["confidence"] == 0.5  # legacy ingest confidence
+
+
+async def test_feed_patch_updates_settings(client):
+    r = await _subscribe(client)
+    feed_id = r.json()["id"]
+
+    r2 = await client.patch(
+        f"/feeds/{feed_id}",
+        json={"name": "Updated Feed", "interval_min": 60, "tags": ["new-tag"]},
+        headers=HEADERS,
+    )
+    assert r2.status_code == 200
+    data = r2.json()
+    assert data["name"] == "Updated Feed"
+    assert data["interval_min"] == 60
+    assert "new-tag" in data["tags"]
+
+
+async def test_feed_patch_not_found(client):
+    r = await client.patch(
+        "/feeds/00000000-0000-0000-0000-000000000000",
+        json={"name": "X"},
+        headers=HEADERS,
+    )
+    assert r.status_code == 404
+
+
+async def test_feed_patch_wrong_owner(client):
+    r = await _subscribe(client)
+    feed_id = r.json()["id"]
+    await client.post("/projects/artel/join", headers=HEADERS2)
+
+    r2 = await client.patch(f"/feeds/{feed_id}", json={"name": "Hijacked"}, headers=HEADERS2)
+    assert r2.status_code == 403

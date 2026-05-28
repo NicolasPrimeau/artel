@@ -1,11 +1,11 @@
 import json
 import sqlite3
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 
 from ...store.db import get_db
-from ..auth import _memberships, require_agent
-from ..models import FeedCreate, FeedEntry, new_id
+from ..auth import ActorDep, ReaderDep, _memberships, is_owner
+from ..models import FeedCreate, FeedEntry, FeedPatch, new_id
 
 router = APIRouter(prefix="/feeds", tags=["feeds"])
 
@@ -26,7 +26,7 @@ def _row_to_entry(row: sqlite3.Row) -> FeedEntry:
 
 
 @router.post("", response_model=FeedEntry, status_code=201, summary="Subscribe to an RSS/Atom feed")
-async def subscribe(body: FeedCreate, agent_id: str = Depends(require_agent)):
+async def subscribe(body: FeedCreate, agent_id: str = ActorDep):
     allowed = _memberships(agent_id)
     if allowed is not None and body.project not in allowed:
         raise HTTPException(status_code=403, detail="not a member of this project")
@@ -53,7 +53,7 @@ async def subscribe(body: FeedCreate, agent_id: str = Depends(require_agent)):
 
 
 @router.get("", response_model=list[FeedEntry], summary="List feed subscriptions")
-async def list_feeds(agent_id: str = Depends(require_agent)):
+async def list_feeds(agent_id: str = ReaderDep):
     allowed = _memberships(agent_id)
     db = get_db()
     if allowed is None:
@@ -69,16 +69,42 @@ async def list_feeds(agent_id: str = Depends(require_agent)):
     return [_row_to_entry(r) for r in rows]
 
 
+@router.patch("/{feed_id}", response_model=FeedEntry, summary="Update feed subscription settings")
+async def update_feed(feed_id: str, body: FeedPatch, agent_id: str = ActorDep):
+    db = get_db()
+    row = db.execute("SELECT * FROM feed_subscriptions WHERE id=?", (feed_id,)).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="feed not found")
+    if row["agent_id"] != agent_id and not is_owner(agent_id):
+        raise HTTPException(status_code=403, detail="not your subscription")
+    updates: dict = {}
+    if body.name is not None:
+        updates["name"] = body.name
+    if body.tags is not None:
+        updates["tags"] = json.dumps(body.tags)
+    if body.interval_min is not None:
+        updates["interval_min"] = body.interval_min
+    if body.max_per_poll is not None:
+        updates["max_per_poll"] = body.max_per_poll
+    if updates:
+        set_parts = [f"{k}=?" for k in updates]
+        with db:
+            db.execute(
+                f"UPDATE feed_subscriptions SET {', '.join(set_parts)} WHERE id=?",
+                [*updates.values(), feed_id],
+            )
+    row = db.execute("SELECT * FROM feed_subscriptions WHERE id=?", (feed_id,)).fetchone()
+    return _row_to_entry(row)
+
+
 @router.delete("/{feed_id}", status_code=204, summary="Unsubscribe from a feed")
-async def unsubscribe(feed_id: str, agent_id: str = Depends(require_agent)):
+async def unsubscribe(feed_id: str, agent_id: str = ActorDep):
     db = get_db()
     row = db.execute("SELECT agent_id FROM feed_subscriptions WHERE id=?", (feed_id,)).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="feed not found")
-    if row["agent_id"] != agent_id:
-        allowed = _memberships(agent_id)
-        if allowed is not None:
-            raise HTTPException(status_code=403, detail="not your subscription")
+    if row["agent_id"] != agent_id and not is_owner(agent_id):
+        raise HTTPException(status_code=403, detail="not your subscription")
     with db:
         db.execute("DELETE FROM feed_items_seen WHERE feed_id=?", (feed_id,))
         db.execute("DELETE FROM feed_subscriptions WHERE id=?", (feed_id,))

@@ -1,10 +1,38 @@
+import time
 from datetime import UTC, datetime
+from typing import NamedTuple
 
-from fastapi import Depends, Header, HTTPException, Request
+from fastapi import Depends, Header, HTTPException, Query, Request
 
 from ..store.db import get_db
 from .config import settings
 from .presence import update_seen
+
+_SESSION_TTL = 86400.0
+
+
+class FeedAuth(NamedTuple):
+    agent_id: str
+    mesh_project: str | None
+
+
+def verify_ui_session(token: str) -> bool:
+    if not settings.ui_password:
+        return True
+    if not token:
+        return False
+    db = get_db()
+    row = db.execute("SELECT last_seen_at FROM ui_sessions WHERE token=?", (token,)).fetchone()
+    if not row:
+        return False
+    now = time.time()
+    if now - row["last_seen_at"] > _SESSION_TTL:
+        with db:
+            db.execute("DELETE FROM ui_sessions WHERE token=?", (token,))
+        return False
+    with db:
+        db.execute("UPDATE ui_sessions SET last_seen_at=? WHERE token=?", (now, token))
+    return True
 
 
 def _verify_agent(agent_id: str, api_key: str) -> bool:
@@ -22,7 +50,15 @@ async def require_agent(
     request: Request,
     x_agent_id: str = Header(default=""),
     x_api_key: str = Header(default=""),
+    x_ui_session: str = Header(default=""),
 ) -> str:
+    if x_ui_session:
+        if not verify_ui_session(request.cookies.get("session", "")):
+            raise HTTPException(status_code=401, detail="invalid or expired session")
+        aid = settings.ui_agent_id
+        update_seen(aid, datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"))
+        return aid
+
     auth = request.headers.get("authorization", "")
     if auth.startswith("Bearer "):
         try:
@@ -53,14 +89,77 @@ async def require_registration_key(
         raise HTTPException(status_code=401, detail="invalid registration key")
 
 
-def is_owner(agent_id: str) -> bool:
+ROLE_RANK = {"viewer": 0, "agent": 1, "archivist": 2, "owner": 3}
+
+
+def role_of(agent_id: str) -> str:
     db = get_db()
     row = db.execute("SELECT role FROM agents WHERE id=?", (agent_id,)).fetchone()
-    return row is not None and row["role"] == "owner"
+    if row is not None and row["role"] in ROLE_RANK:
+        return row["role"]
+    return "agent"
+
+
+def is_owner(agent_id: str) -> bool:
+    return role_of(agent_id) == "owner"
+
+
+def is_archivist(agent_id: str) -> bool:
+    return role_of(agent_id) == "archivist"
+
+
+def can_curate_memory(agent_id: str) -> bool:
+    return role_of(agent_id) in ("owner", "archivist")
+
+
+def project_has_external_presence(project: str, archivist_id: str) -> bool:
+    db = get_db()
+    if db.execute(
+        "SELECT 1 FROM project_members WHERE project_id=? LIMIT 1", (project,)
+    ).fetchone():
+        return True
+    if db.execute(
+        "SELECT 1 FROM memory WHERE project=? AND agent_id != ? AND deleted_at IS NULL LIMIT 1",
+        (project, archivist_id),
+    ).fetchone():
+        return True
+    if db.execute("SELECT 1 FROM tasks WHERE project=? LIMIT 1", (project,)).fetchone():
+        return True
+    if db.execute(
+        "SELECT 1 FROM agents WHERE project=? AND id != ? LIMIT 1", (project, archivist_id)
+    ).fetchone():
+        return True
+    for proj_list in settings.agent_projects().values():
+        if project in (proj_list or []):
+            return True
+    return False
+
+
+def enforce_no_phantom_project(agent_id: str, project: str | None) -> None:
+    if not project:
+        return
+    if not is_archivist(agent_id):
+        return
+    if not project_has_external_presence(project, agent_id):
+        raise HTTPException(
+            status_code=403,
+            detail="archivist cannot create new projects; project has no external presence",
+        )
+
+
+def require_role(minimum: str):
+    async def _dep(agent_id: str = Depends(require_agent)) -> str:
+        if ROLE_RANK[role_of(agent_id)] < ROLE_RANK[minimum]:
+            raise HTTPException(status_code=403, detail="insufficient role")
+        return agent_id
+
+    return _dep
 
 
 def _memberships(agent_id: str) -> list[str] | None:
     if agent_id == settings.ui_agent_id:
+        return None
+    if role_of(agent_id) == "archivist":
         return None
     is_static = agent_id in settings.api_keys().values()
     static = settings.agent_projects().get(agent_id)
@@ -84,4 +183,78 @@ def project_filter(agent_id: str) -> tuple[str, list]:
     return f"(project IS NULL OR project IN ({placeholders}))", list(allowed)
 
 
+async def require_agent_feed(
+    request: Request,
+    agent_id_q: str = Query(default="", alias="agent_id"),
+    api_key_q: str = Query(default="", alias="api_key"),
+    x_agent_id: str = Header(default=""),
+    x_api_key: str = Header(default=""),
+) -> str:
+    auth = request.headers.get("authorization", "")
+    if auth.startswith("Bearer "):
+        try:
+            from .jwt_utils import verify_token
+
+            aid, key = verify_token(auth[7:])
+            if not _verify_agent(aid, key):
+                raise HTTPException(status_code=401, detail="invalid credentials")
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(status_code=401, detail="invalid credentials")
+        update_seen(aid, datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"))
+        return aid
+    aid = x_agent_id or agent_id_q
+    key = x_api_key or api_key_q
+    if not aid or not key:
+        raise HTTPException(status_code=401, detail="invalid credentials")
+    if not _verify_agent(aid, key):
+        raise HTTPException(status_code=401, detail="invalid credentials")
+    update_seen(aid, datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"))
+    return aid
+
+
+async def feed_auth_dep(
+    request: Request,
+    mesh_token: str = Query(default="", alias="mesh_token"),
+    agent_id_q: str = Query(default="", alias="agent_id"),
+    api_key_q: str = Query(default="", alias="api_key"),
+    x_agent_id: str = Header(default=""),
+    x_api_key: str = Header(default=""),
+) -> FeedAuth:
+    if mesh_token:
+        db = get_db()
+        row = db.execute(
+            "SELECT id, project FROM mesh_tokens WHERE token=?", (mesh_token,)
+        ).fetchone()
+        if not row:
+            raise HTTPException(status_code=401, detail="invalid mesh token")
+        return FeedAuth(agent_id=f"__mesh__{row['id']}", mesh_project=row["project"] or "")
+    auth = request.headers.get("authorization", "")
+    if auth.startswith("Bearer "):
+        try:
+            from .jwt_utils import verify_token
+
+            aid, key = verify_token(auth[7:])
+            if not _verify_agent(aid, key):
+                raise HTTPException(status_code=401, detail="invalid credentials")
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(status_code=401, detail="invalid credentials")
+        update_seen(aid, datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"))
+        return FeedAuth(agent_id=aid, mesh_project=None)
+    aid = x_agent_id or agent_id_q
+    key = x_api_key or api_key_q
+    if not aid or not key:
+        raise HTTPException(status_code=401, detail="invalid credentials")
+    if not _verify_agent(aid, key):
+        raise HTTPException(status_code=401, detail="invalid credentials")
+    update_seen(aid, datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"))
+    return FeedAuth(agent_id=aid, mesh_project=None)
+
+
 AgentDep = Depends(require_agent)
+ReaderDep = Depends(require_role("viewer"))
+ActorDep = Depends(require_role("agent"))
+OwnerDep = Depends(require_role("owner"))

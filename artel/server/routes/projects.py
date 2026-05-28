@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from ...store.db import get_db
-from ..auth import require_agent
+from ...store.db import get_db, norm_project
+from ..auth import ActorDep, ReaderDep, is_archivist
 from ..config import settings
-from ..models import ProjectInfo
+from ..models import ProjectCreate, ProjectInfo
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -19,8 +19,25 @@ class ProjectSummary(BaseModel):
     joined_at: str
 
 
+@router.post("", status_code=204, summary="Create a project and join it")
+async def create_project(body: ProjectCreate, agent_id: str = ActorDep):
+    if is_archivist(agent_id):
+        raise HTTPException(status_code=403, detail="archivist cannot create projects")
+    db = get_db()
+    db.execute(
+        "INSERT OR IGNORE INTO project_members (project_id, agent_id) VALUES (?, ?)",
+        (body.name, agent_id),
+    )
+    db.commit()
+
+
 @router.post("/{project_id}/join", status_code=204, summary="Join a project")
-async def join_project(project_id: str, agent_id: str = Depends(require_agent)):
+async def join_project(project_id: str, agent_id: str = ActorDep):
+    if is_archivist(agent_id):
+        raise HTTPException(status_code=403, detail="archivist cannot join projects")
+    project_id = norm_project(project_id) or ""
+    if not project_id:
+        raise HTTPException(status_code=422, detail="project name required")
     db = get_db()
     db.execute(
         "INSERT OR IGNORE INTO project_members (project_id, agent_id) VALUES (?, ?)",
@@ -30,7 +47,8 @@ async def join_project(project_id: str, agent_id: str = Depends(require_agent)):
 
 
 @router.delete("/{project_id}/leave", status_code=204, summary="Leave a project")
-async def leave_project(project_id: str, agent_id: str = Depends(require_agent)):
+async def leave_project(project_id: str, agent_id: str = ActorDep):
+    project_id = norm_project(project_id) or ""
     db = get_db()
     db.execute(
         "DELETE FROM project_members WHERE project_id=? AND agent_id=?",
@@ -44,7 +62,8 @@ async def leave_project(project_id: str, agent_id: str = Depends(require_agent))
     response_model=list[ProjectMember],
     summary="List members of a project",
 )
-async def list_members(project_id: str, agent_id: str = Depends(require_agent)):
+async def list_members(project_id: str, agent_id: str = ReaderDep):
+    project_id = norm_project(project_id) or ""
     db = get_db()
     row = db.execute(
         "SELECT 1 FROM project_members WHERE project_id=? AND agent_id=?",
@@ -60,7 +79,7 @@ async def list_members(project_id: str, agent_id: str = Depends(require_agent)):
 
 
 @router.get("/mine", response_model=list[ProjectSummary], summary="List projects you belong to")
-async def list_my_projects(agent_id: str = Depends(require_agent)):
+async def list_my_projects(agent_id: str = ReaderDep):
     db = get_db()
     rows = db.execute(
         "SELECT project_id, joined_at FROM project_members WHERE agent_id=? ORDER BY joined_at",
@@ -70,7 +89,7 @@ async def list_my_projects(agent_id: str = Depends(require_agent)):
 
 
 @router.get("", response_model=list[ProjectInfo])
-async def list_projects(agent_id: str = Depends(require_agent)):
+async def list_projects(agent_id: str = ReaderDep):
     db = get_db()
 
     projects: dict[str, dict] = {}

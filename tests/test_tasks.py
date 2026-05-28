@@ -277,3 +277,117 @@ async def test_task_lifecycle(client):
     await client.post(f"/tasks/{tid}/complete", headers=HEADERS)
     r_list3 = await client.get("/tasks", params={"status": "completed"}, headers=HEADERS)
     assert any(t["id"] == tid for t in r_list3.json())
+
+
+async def test_update_task_by_non_creator_non_assignee_forbidden(client):
+    r = await client.post("/tasks", json={"title": "guarded task"}, headers=HEADERS)
+    tid = r.json()["id"]
+
+    r2 = await client.patch(f"/tasks/{tid}", json={"title": "hijacked"}, headers=HEADERS2)
+    assert r2.status_code == 403
+
+
+async def test_update_task_by_assignee_allowed(client):
+    r = await client.post("/tasks", json={"title": "claimable update"}, headers=HEADERS)
+    tid = r.json()["id"]
+    await client.post(f"/tasks/{tid}/claim", headers=HEADERS2)
+
+    r2 = await client.patch(
+        f"/tasks/{tid}", json={"description": "progress noted"}, headers=HEADERS2
+    )
+    assert r2.status_code == 200
+    assert r2.json()["description"] == "progress noted"
+
+
+async def test_claim_task_project_membership_required(client):
+    await client.post("/projects/restricted/join", headers=HEADERS)
+    r = await client.post(
+        "/tasks", json={"title": "restricted task", "project": "restricted"}, headers=HEADERS
+    )
+    tid = r.json()["id"]
+
+    r2 = await client.post(f"/tasks/{tid}/claim", headers=HEADERS2)
+    assert r2.status_code == 403
+
+
+async def test_claim_task_project_member_can_claim(client):
+    await client.post("/projects/shared/join", headers=HEADERS)
+    await client.post("/projects/shared/join", headers=HEADERS2)
+    r = await client.post(
+        "/tasks", json={"title": "shared task", "project": "shared"}, headers=HEADERS
+    )
+    tid = r.json()["id"]
+
+    r2 = await client.post(f"/tasks/{tid}/claim", headers=HEADERS2)
+    assert r2.status_code == 200
+    assert r2.json()["assigned_to"] == "otheragent"
+
+
+async def test_get_task_by_id_prefix(client):
+    r = await client.post("/tasks", json={"title": "prefix lookup"}, headers=HEADERS)
+    tid = r.json()["id"]
+
+    r2 = await client.get(f"/tasks/{tid[:8]}", headers=HEADERS)
+    assert r2.status_code == 200
+    assert r2.json()["id"] == tid
+
+
+async def test_claim_task_by_id_prefix(client):
+    r = await client.post("/tasks", json={"title": "prefix claim"}, headers=HEADERS)
+    tid = r.json()["id"]
+
+    r2 = await client.post(f"/tasks/{tid[:10]}/claim", headers=HEADERS2)
+    assert r2.status_code == 200
+    assert r2.json()["id"] == tid
+    assert r2.json()["status"] == "claimed"
+
+
+async def test_get_task_unknown_prefix_404(client):
+    r = await client.get("/tasks/deadbeef", headers=HEADERS)
+    assert r.status_code == 404
+
+
+async def test_get_task_ambiguous_prefix_400(client):
+    from artel.store.db import get_db
+
+    db = get_db()
+    with db:
+        db.execute(
+            "INSERT INTO tasks (id, title, status, created_by) VALUES (?,?,?,?)",
+            ("abcd1111-aaaa", "t1", "open", TEST_AGENT),
+        )
+        db.execute(
+            "INSERT INTO tasks (id, title, status, created_by) VALUES (?,?,?,?)",
+            ("abcd2222-bbbb", "t2", "open", TEST_AGENT),
+        )
+
+    r = await client.get("/tasks/abcd", headers=HEADERS)
+    assert r.status_code == 400
+
+
+async def test_short_prefix_not_resolved(client):
+    r = await client.post("/tasks", json={"title": "tiny"}, headers=HEADERS)
+    tid = r.json()["id"]
+
+    r2 = await client.get(f"/tasks/{tid[:3]}", headers=HEADERS)
+    assert r2.status_code == 404
+
+
+async def test_update_task_project_transfer(client):
+    await client.post("/projects/transfer-target/join", headers=HEADERS)
+    r = await client.post("/tasks", json={"title": "floating task"}, headers=HEADERS)
+    tid = r.json()["id"]
+    assert r.json()["project"] is None
+
+    r2 = await client.patch(f"/tasks/{tid}", json={"project": "transfer-target"}, headers=HEADERS)
+    assert r2.status_code == 200
+    assert r2.json()["project"] == "transfer-target"
+
+
+async def test_update_task_project_non_member_forbidden(client):
+    await client.post("/projects/members-only/join", headers=HEADERS)
+    r = await client.post("/tasks", json={"title": "owned task"}, headers=HEADERS)
+    tid = r.json()["id"]
+
+    r2 = await client.patch(f"/tasks/{tid}", json={"project": "members-only"}, headers=HEADERS2)
+    assert r2.status_code == 403

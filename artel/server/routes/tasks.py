@@ -1,10 +1,17 @@
 import json
 import sqlite3
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, HTTPException, Query
 
-from ...store.db import get_db
-from ..auth import _memberships, is_owner, project_filter, require_agent
+from ...store.db import AmbiguousId, get_db, norm_project, resolve_id
+from ..auth import (
+    ActorDep,
+    ReaderDep,
+    _memberships,
+    enforce_no_phantom_project,
+    is_owner,
+    project_filter,
+)
 from ..models import (
     TaskAction,
     TaskComment,
@@ -16,6 +23,24 @@ from ..models import (
 )
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
+
+
+def _resolve_task(task_id: str) -> str:
+    try:
+        resolved = resolve_id("tasks", task_id)
+    except AmbiguousId:
+        raise HTTPException(status_code=400, detail="ambiguous task id prefix")
+    if resolved is None:
+        raise HTTPException(status_code=404, detail="not found")
+    return resolved
+
+
+def _require_project_membership(agent_id: str, project: str | None) -> None:
+    if not project:
+        return
+    allowed = _memberships(agent_id)
+    if allowed is not None and project not in allowed:
+        raise HTTPException(status_code=403, detail="not a member of this project")
 
 
 def _row_to_task(row: sqlite3.Row) -> TaskEntry:
@@ -61,7 +86,8 @@ def _add_comment(db: sqlite3.Connection, task_id: str, agent_id: str, kind: str,
 
 
 @router.get("/{task_id}", response_model=TaskEntry, summary="Get a task by ID")
-async def get_task(task_id: str, agent_id: str = Depends(require_agent)):
+async def get_task(task_id: str, agent_id: str = ReaderDep):
+    task_id = _resolve_task(task_id)
     db = get_db()
     row = db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
     if not row:
@@ -74,8 +100,9 @@ async def get_task(task_id: str, agent_id: str = Depends(require_agent)):
 
 
 @router.post("", response_model=TaskEntry, status_code=201, summary="Create a task")
-async def create_task(body: TaskCreate, agent_id: str = Depends(require_agent)):
+async def create_task(body: TaskCreate, agent_id: str = ActorDep):
     db = get_db()
+    enforce_no_phantom_project(agent_id, body.project)
     if body.project:
         allowed = _memberships(agent_id)
         if allowed is not None and body.project not in allowed:
@@ -107,8 +134,9 @@ async def list_tasks(
     status: str | None = Query(default=None),
     agent: str | None = Query(default=None),
     project: str | None = Query(default=None),
-    agent_id: str = Depends(require_agent),
+    agent_id: str = ReaderDep,
 ):
+    project = norm_project(project)
     db = get_db()
     sql = "SELECT * FROM tasks WHERE 1=1"
     params: list = []
@@ -138,11 +166,17 @@ async def list_tasks(
 async def claim_task(
     task_id: str,
     body: TaskAction = Body(default_factory=TaskAction),
-    agent_id: str = Depends(require_agent),
+    agent_id: str = ActorDep,
 ):
+    task_id = _resolve_task(task_id)
     db = get_db()
-    if not db.execute("SELECT id FROM tasks WHERE id=?", (task_id,)).fetchone():
+    row = db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
+    if not row:
         raise HTTPException(status_code=404, detail="not found")
+    if row["project"]:
+        allowed = _memberships(agent_id)
+        if allowed is not None and row["project"] not in allowed:
+            raise HTTPException(status_code=403, detail="not a member of this project")
     with db:
         cursor = db.execute(
             """UPDATE tasks SET status='claimed', assigned_to=?,
@@ -165,8 +199,9 @@ async def claim_task(
 async def unclaim_task(
     task_id: str,
     body: TaskAction = Body(default_factory=TaskAction),
-    agent_id: str = Depends(require_agent),
+    agent_id: str = ActorDep,
 ):
+    task_id = _resolve_task(task_id)
     db = get_db()
     row = db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
     if not row:
@@ -175,6 +210,7 @@ async def unclaim_task(
         raise HTTPException(status_code=409, detail="task not claimed")
     if row["assigned_to"] != agent_id and not is_owner(agent_id):
         raise HTTPException(status_code=403, detail="forbidden")
+    _require_project_membership(agent_id, row["project"])
     with db:
         db.execute(
             """UPDATE tasks SET status='open', assigned_to=NULL,
@@ -195,8 +231,9 @@ async def unclaim_task(
 async def complete_task(
     task_id: str,
     body: TaskAction = Body(default_factory=TaskAction),
-    agent_id: str = Depends(require_agent),
+    agent_id: str = ActorDep,
 ):
+    task_id = _resolve_task(task_id)
     db = get_db()
     row = db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
     if not row:
@@ -205,6 +242,7 @@ async def complete_task(
         raise HTTPException(status_code=409, detail="task not claimed")
     if row["assigned_to"] != agent_id and not is_owner(agent_id):
         raise HTTPException(status_code=403, detail="forbidden")
+    _require_project_membership(agent_id, row["project"])
     with db:
         db.execute(
             """UPDATE tasks SET status='completed',
@@ -220,13 +258,21 @@ async def complete_task(
 @router.patch(
     "/{task_id}", response_model=TaskEntry, summary="Update task title, description, or priority"
 )
-async def update_task(task_id: str, body: TaskUpdate, agent_id: str = Depends(require_agent)):
+async def update_task(task_id: str, body: TaskUpdate, agent_id: str = ActorDep):
+    task_id = _resolve_task(task_id)
     db = get_db()
     row = db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="not found")
     if row["status"] in ("completed", "failed"):
         raise HTTPException(status_code=409, detail="task is terminal and cannot be modified")
+    is_task_actor = (
+        row["created_by"] == agent_id or row["assigned_to"] == agent_id or is_owner(agent_id)
+    )
+    if not is_task_actor:
+        raise HTTPException(status_code=403, detail="forbidden")
+    if not is_owner(agent_id):
+        _require_project_membership(agent_id, row["project"])
     set_parts: list[str] = []
     params: list = []
     if body.description is not None:
@@ -248,6 +294,13 @@ async def update_task(task_id: str, body: TaskUpdate, agent_id: str = Depends(re
     if body.expected_outcome is not None:
         set_parts.append("expected_outcome=?")
         params.append(body.expected_outcome)
+    if body.project is not None:
+        enforce_no_phantom_project(agent_id, body.project)
+        allowed = _memberships(agent_id)
+        if allowed is not None and body.project not in allowed:
+            raise HTTPException(status_code=403, detail="not a member of target project")
+        set_parts.append("project=?")
+        params.append(body.project)
     if set_parts:
         set_parts.append("updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')")
         params.append(task_id)
@@ -264,8 +317,9 @@ async def update_task(task_id: str, body: TaskUpdate, agent_id: str = Depends(re
 async def fail_task(
     task_id: str,
     body: TaskAction = Body(default_factory=TaskAction),
-    agent_id: str = Depends(require_agent),
+    agent_id: str = ActorDep,
 ):
+    task_id = _resolve_task(task_id)
     db = get_db()
     row = db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
     if not row:
@@ -274,6 +328,7 @@ async def fail_task(
         raise HTTPException(status_code=409, detail="task not claimed")
     if row["assigned_to"] != agent_id and not is_owner(agent_id):
         raise HTTPException(status_code=403, detail="forbidden")
+    _require_project_membership(agent_id, row["project"])
     with db:
         db.execute(
             """UPDATE tasks SET status='failed',
@@ -292,9 +347,8 @@ async def fail_task(
     status_code=201,
     summary="Add a free-form comment to a task",
 )
-async def add_comment(
-    task_id: str, body: TaskCommentCreate, agent_id: str = Depends(require_agent)
-):
+async def add_comment(task_id: str, body: TaskCommentCreate, agent_id: str = ActorDep):
+    task_id = _resolve_task(task_id)
     db = get_db()
     row = db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
     if not row:
@@ -319,7 +373,8 @@ async def add_comment(
     response_model=list[TaskComment],
     summary="List comments and status events for a task",
 )
-async def list_comments(task_id: str, agent_id: str = Depends(require_agent)):
+async def list_comments(task_id: str, agent_id: str = ReaderDep):
+    task_id = _resolve_task(task_id)
     db = get_db()
     row = db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
     if not row:

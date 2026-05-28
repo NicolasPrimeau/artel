@@ -1,4 +1,4 @@
-from tests.conftest import HEADERS, TEST_AGENT
+from tests.conftest import HEADERS, HEADERS2
 
 
 async def test_handoff_store_and_retrieve(client):
@@ -14,7 +14,7 @@ async def test_handoff_store_and_retrieve(client):
     assert r.status_code == 201
     assert "id" in r.json()
 
-    r2 = await client.get(f"/sessions/handoff/{TEST_AGENT}", headers=HEADERS)
+    r2 = await client.get("/sessions/handoff", headers=HEADERS)
     assert r2.status_code == 200
     data = r2.json()
     assert data["last_handoff"]["summary"] == "finished memory work"
@@ -22,21 +22,20 @@ async def test_handoff_store_and_retrieve(client):
 
 
 async def test_no_previous_session(client):
-    r = await client.get(f"/sessions/handoff/{TEST_AGENT}", headers=HEADERS)
+    r = await client.get("/sessions/handoff", headers=HEADERS)
     assert r.status_code == 200
     data = r.json()
     assert data["last_handoff"] is None
     assert data["memory_delta"] == []
 
 
-async def test_handoff_cross_agent_forbidden(client):
-    r = await client.post("/sessions/handoff", json={"summary": "mine"}, headers=HEADERS)
+async def test_handoff_isolated_per_agent(client):
+    r = await client.post("/sessions/handoff", json={"summary": "agent1 session"}, headers=HEADERS)
     assert r.status_code == 201
 
-    from tests.conftest import HEADERS2
-
-    r2 = await client.get(f"/sessions/handoff/{TEST_AGENT}", headers=HEADERS2)
-    assert r2.status_code == 403
+    r2 = await client.get("/sessions/handoff", headers=HEADERS2)
+    assert r2.status_code == 200
+    assert r2.json()["last_handoff"] is None
 
 
 async def test_memory_delta_included_in_context(client):
@@ -58,7 +57,7 @@ async def test_memory_delta_included_in_context(client):
         headers=HEADERS,
     )
 
-    r = await client.get(f"/sessions/handoff/{TEST_AGENT}", headers=HEADERS)
+    r = await client.get("/sessions/handoff", headers=HEADERS)
     data = r.json()
     assert len(data["memory_delta"]) >= 1
     contents = [e["content"] for e in data["memory_delta"]]
@@ -69,5 +68,5 @@ async def test_latest_handoff_returned(client):
     await client.post("/sessions/handoff", json={"summary": "first"}, headers=HEADERS)
     await client.post("/sessions/handoff", json={"summary": "second"}, headers=HEADERS)
 
-    r = await client.get(f"/sessions/handoff/{TEST_AGENT}", headers=HEADERS)
+    r = await client.get("/sessions/handoff", headers=HEADERS)
     assert r.json()["last_handoff"]["summary"] == "second"

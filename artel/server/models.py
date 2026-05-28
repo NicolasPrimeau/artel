@@ -1,11 +1,28 @@
 import uuid
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import AfterValidator, BaseModel, Field
+
+from ..store.db import norm_project as _norm_project
 
 
 def new_id() -> str:
     return str(uuid.uuid4())
+
+
+def _normalize_project_optional(v: str | None) -> str | None:
+    return _norm_project(v)
+
+
+def _normalize_project_required(v: str) -> str:
+    normalized = _norm_project(v)
+    if not normalized:
+        raise ValueError("project name required")
+    return normalized
+
+
+ProjectName = Annotated[str | None, AfterValidator(_normalize_project_optional)]
+ProjectNameRequired = Annotated[str, AfterValidator(_normalize_project_required)]
 
 
 EntryType = Literal["memory", "doc", "directive"]
@@ -13,11 +30,12 @@ Scope = Literal["agent", "project"]
 TaskStatus = Literal["open", "claimed", "completed", "failed"]
 TaskCommentKind = Literal["comment", "claim", "unclaim", "complete", "fail"]
 Priority = Literal["low", "normal", "high"]
+LogLevel = Literal["info", "warning", "error"]
 
 
 class MemoryWrite(BaseModel):
     type: EntryType = "memory"
-    project: str | None = None
+    project: ProjectName = None
     scope: Scope = "project"
     content: str
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
@@ -32,7 +50,7 @@ class MemoryPatch(BaseModel):
     tags: list[str] | None = None
     scope: Scope | None = None
     type: EntryType | None = None
-    project: str | None = None
+    project: ProjectName = None
 
 
 class MemoryEntry(BaseModel):
@@ -49,13 +67,14 @@ class MemoryEntry(BaseModel):
     updated_at: str
     version: int
     expires_at: str | None = None
+    origin: str | None = None
 
 
 class TaskCreate(BaseModel):
     title: str
     description: str = ""
     expected_outcome: str = ""
-    project: str | None = None
+    project: ProjectName = None
     priority: Priority = "normal"
     assigned_to: str | None = None
     due_at: str | None = None
@@ -82,6 +101,7 @@ class TaskUpdate(BaseModel):
     title: str | None = None
     priority: Priority | None = None
     expected_outcome: str | None = None
+    project: ProjectName = None
 
 
 class TaskAction(BaseModel):
@@ -140,12 +160,12 @@ class Participant(BaseModel):
 
 class AgentRegister(BaseModel):
     agent_id: str
-    project: str | None = None
+    project: ProjectName = None
 
 
 class AgentSelfRegister(BaseModel):
     agent_id: str = "agent"
-    project: str | None = None
+    project: ProjectName = None
 
 
 class AgentRename(BaseModel):
@@ -158,6 +178,8 @@ class AgentCreated(BaseModel):
     project: str | None = None
     created_at: str
     role: str = "agent"
+    last_seen: str | None = None
+    active_task_id: str | None = None
     mcp_config: dict | None = None
 
 
@@ -172,7 +194,7 @@ class ProjectInfo(BaseModel):
 class FeedCreate(BaseModel):
     url: str
     name: str
-    project: str
+    project: ProjectNameRequired
     tags: list[str] = []
     interval_min: int = Field(default=30, ge=1, le=1440)
     max_per_poll: int = Field(default=20, ge=1, le=100)
@@ -191,6 +213,56 @@ class FeedEntry(BaseModel):
     created_at: str
 
 
+class FeedPatch(BaseModel):
+    name: str | None = None
+    tags: list[str] | None = None
+    interval_min: int | None = Field(default=None, ge=1, le=1440)
+    max_per_poll: int | None = Field(default=None, ge=1, le=100)
+
+
+class BulkMemoryDelete(BaseModel):
+    ids: list[str]
+
+
+class ProjectCreate(BaseModel):
+    name: ProjectNameRequired
+
+
+class MeshTokenCreate(BaseModel):
+    label: str | None = None
+    project: ProjectName = None
+
+
+class MeshTokenUpdate(BaseModel):
+    label: str | None = None
+    project: ProjectName = None
+
+
+class MeshToken(BaseModel):
+    id: str
+    token: str
+    label: str | None
+    project: str | None
+    created_by: str
+    created_at: str
+
+
+class PeerLinkCreate(BaseModel):
+    peer_url: str
+    peer_token: str
+    project: ProjectName = None
+
+
+class PeerLink(BaseModel):
+    id: str
+    peer_url: str
+    project: str | None
+    feed_id: str
+    created_by: str
+    created_at: str
+    last_fetched_at: str | None = None
+
+
 class HandoffPost(BaseModel):
     host: str = ""
     summary: str
@@ -202,3 +274,41 @@ class HandoffPost(BaseModel):
 class HandoffResponse(BaseModel):
     last_handoff: dict | None
     memory_delta: list[MemoryEntry]
+
+
+class LogWrite(BaseModel):
+    level: LogLevel = "info"
+    source: str
+    action: str
+    message: str
+    details: dict = {}
+
+
+class LogEntry(BaseModel):
+    id: str
+    created_at: str
+    level: LogLevel
+    source: str
+    action: str
+    message: str
+    details: dict
+
+
+class DiscoveredPeer(BaseModel):
+    instance_id: str
+    url: str
+
+
+class HandshakeRequest(BaseModel):
+    initiator_url: str
+    initiator_token: str
+    project: ProjectName = None
+
+
+class HandshakeResponse(BaseModel):
+    token: str
+
+
+class LinkDiscoveredRequest(BaseModel):
+    instance_id: str
+    project: ProjectName = None

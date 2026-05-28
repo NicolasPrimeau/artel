@@ -2,6 +2,7 @@ import asyncio
 import contextvars
 import json
 import logging
+import re
 import uuid
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
@@ -172,7 +173,7 @@ class ArtelMCP(FastMCP):
                 )
             raise RuntimeError(
                 "Artel rejected your API key (401). Credentials in .mcp.json are stale. "
-                f"Fix: curl {settings.artel_url.rstrip('/')}/onboard | sh  then /reload-plugins"
+                f"Fix: curl -fsSL {settings.artel_url.rstrip('/')}/onboard | sh  then restart Claude Code"
             )
         if has_session:
             await _flush_notifications(aid, _sessions[aid])
@@ -218,21 +219,43 @@ async def _sse_watcher():
             delay = min(delay * 2, 60.0)
 
 
+def _project_member_ids(project: str) -> list[str]:
+    try:
+        normalized = (project or "").strip().lower()
+        db = get_db()
+        rows = db.execute(
+            "SELECT agent_id FROM project_members WHERE project_id=?", (normalized,)
+        ).fetchall()
+        return [r["agent_id"] for r in rows]
+    except Exception as e:
+        log.debug("project member lookup failed for %s: %s", project, e)
+        return []
+
+
 async def _deliver_notification(to_agent: str, msg: str) -> None:
+    is_fanout = to_agent == "broadcast" or to_agent.startswith("project:")
     if to_agent == "broadcast":
-        targets = list(_sessions.items())
+        recipients = list(_sessions.keys())
+    elif to_agent.startswith("project:"):
+        recipients = _project_member_ids(to_agent[len("project:") :])
     else:
-        s = _sessions.get(to_agent)
-        targets = [(to_agent, s)] if s else []
-    delivered = False
-    for aid, session in targets:
+        recipients = [to_agent]
+    delivered_any = False
+    for aid in recipients:
+        session = _sessions.get(aid)
+        if session is None:
+            if not is_fanout:
+                _enqueue_notification(aid, msg)
+            continue
         try:
             await session.send_log_message("warning", msg)
-            delivered = True
+            delivered_any = True
         except Exception as e:
             log.debug("notification failed for %s, dropping session: %s", aid, e)
             _sessions.pop(aid, None)
-    if not delivered and to_agent != "broadcast":
+            if not is_fanout:
+                _enqueue_notification(aid, msg)
+    if not delivered_any and not is_fanout and not recipients:
         _enqueue_notification(to_agent, msg)
 
 
@@ -250,6 +273,7 @@ mcp = ArtelMCP(
     lifespan=_lifespan,
     host=settings.mcp_host,
     port=settings.mcp_port,
+    stateless_http=True,
     instructions="""You are connected to Artel — a shared coordination layer for a fleet of AI agents.
 
 SESSION LIFECYCLE (do these every session, no exceptions):
@@ -324,7 +348,7 @@ def _fmt_memory(e: dict, full_content: bool = False) -> str:
 # ── Session ──────────────────────────────────────────────────────────────────
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def session_context(agent_id: str | None = None) -> str:
     """CALL THIS FIRST at the start of every session, before doing any work.
 
@@ -335,16 +359,45 @@ async def session_context(agent_id: str | None = None) -> str:
     Args:
         agent_id: Whose context to load. Omit to load your own.
     """
-    target = agent_id or _agent_id.get(settings.mcp_agent_id)
     c = _http()
     try:
-        r = await c.get(f"/sessions/handoff/{target}")
+        r = await c.get("/sessions/handoff")
         r.raise_for_status()
     except _HTTPX_ERRORS as e:
         return _err(e)
     data = r.json()
 
-    parts: list[str] = [f"agent: {target}"]
+    own_id = agent_id or _agent_id.get(settings.mcp_agent_id)
+    parts: list[str] = [f"agent: {own_id}"]
+
+    project = settings.mcp_project
+    if project:
+        parts[0] += f"  project: {project}"
+        try:
+            brief_r = await c.get(
+                "/memory",
+                params={"project": project, "tag": "project-brief", "type": "doc", "limit": 1},
+            )
+            brief_r.raise_for_status()
+            briefs = brief_r.json()
+            if briefs:
+                parts.append(f"## Project brief — {project}\n{briefs[0]['content']}")
+        except _HTTPX_ERRORS:
+            pass
+        try:
+            tasks_r = await c.get("/tasks", params={"project": project, "limit": 10})
+            tasks_r.raise_for_status()
+            tasks = tasks_r.json()
+            if tasks:
+                task_lines = [
+                    f"[{t['id'][:8]}] [{t['status']}] {t['title']}"
+                    + (f" → {t['assigned_to']}" if t.get("assigned_to") else "")
+                    for t in tasks
+                ]
+                parts.append(f"## Tasks ({project})\n" + "\n".join(task_lines))
+        except _HTTPX_ERRORS:
+            pass
+
     h = data.get("last_handoff")
     if h:
         parts.append(f"## Last session ({h['created_at'][:16]})\n{h['summary']}")
@@ -369,7 +422,7 @@ async def session_context(agent_id: str | None = None) -> str:
     return "\n\n".join(parts)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def session_handoff(
     summary: str,
     next_steps: list[str] | None = None,
@@ -405,7 +458,7 @@ async def session_handoff(
 # ── Memory ───────────────────────────────────────────────────────────────────
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def memory_write(
     content: str,
     entry_type: str = "memory",
@@ -462,7 +515,7 @@ async def memory_write(
     return f"written [{entry['id']}] ({entry['type']}) {snippet!r}"
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def memory_search(
     q: str,
     project: str | None = None,
@@ -499,7 +552,7 @@ async def memory_search(
     return "\n\n".join(_fmt_memory(e) for e in entries)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def memory_list(
     entry_type: str | None = None,
     project: str | None = None,
@@ -544,12 +597,16 @@ async def memory_list(
     return "\n\n".join(_fmt_memory(e) for e in entries)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def memory_get(entry_id: str) -> str:
-    """Fetch a single memory entry by ID. Use when you have an ID and need the full content.
+    """Fetch a single memory entry by ID, returning its full content without truncation.
+
+    Use when memory_search() or memory_list() returned a truncated entry and you need
+    the complete text, or when you have a specific entry ID and want all its metadata
+    (confidence, tags, origin, read count). Read-only — no side effects.
 
     Args:
-        entry_id: The UUID of the entry.
+        entry_id: The UUID of the entry. Short prefixes (min 4 chars) are resolved if unambiguous.
     """
     c = _http()
     try:
@@ -560,7 +617,7 @@ async def memory_get(entry_id: str) -> str:
     return _fmt_memory(r.json(), full_content=True)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def memory_update(
     entry_id: str,
     content: str | None = None,
@@ -603,7 +660,7 @@ async def memory_update(
     return _fmt_memory(r.json(), full_content=False)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def memory_delete(entry_id: str) -> str:
     """Delete a memory entry. Only the entry's owner can delete it.
 
@@ -622,7 +679,7 @@ async def memory_delete(entry_id: str) -> str:
     return f"deleted [{entry_id}]"
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def memory_delta(since: str) -> str:
     """Get all memory written or updated after a timestamp.
 
@@ -648,7 +705,7 @@ async def memory_delta(since: str) -> str:
 # ── Projects & Agents ────────────────────────────────────────────────────────
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def project_list() -> str:
     """List all projects with their members, memory count, and last activity.
 
@@ -676,7 +733,7 @@ async def project_list() -> str:
     return "\n".join(lines)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def project_join(project_id: str) -> str:
     """Join a project so you can read and write its shared memories and tasks.
 
@@ -695,9 +752,13 @@ async def project_join(project_id: str) -> str:
     return f"joined project {project_id!r}"
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def project_leave(project_id: str) -> str:
-    """Leave a project. You will no longer see its project-scoped memories.
+    """Leave a project — removes you from its member list.
+
+    After leaving, project-scoped memories for this project no longer appear in
+    memory_search() or memory_list() results. Memory you already wrote to the project
+    is retained for other members. You can re-join at any time with project_join().
 
     Args:
         project_id: The project name to leave.
@@ -711,11 +772,13 @@ async def project_leave(project_id: str) -> str:
     return f"left project {project_id!r}"
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def project_members(project_id: str) -> str:
-    """List the agents that are members of a project.
+    """List the agents currently in a project, with their join timestamps.
 
-    You must be a member of the project to see its members.
+    Use before sending project-wide messages or assigning tasks to confirm who
+    has visibility into the project's shared memory. Returns each member's agent_id
+    and join timestamp. Requires membership — non-members cannot enumerate a project's members.
 
     Args:
         project_id: The project name to inspect.
@@ -732,7 +795,7 @@ async def project_members(project_id: str) -> str:
     return "\n".join(f"{m['agent_id']} (joined {m['joined_at'][:10]})" for m in members)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def agent_list() -> str:
     """List all registered agents and when they were last active.
 
@@ -741,7 +804,7 @@ async def agent_list() -> str:
     """
     c = _http()
     try:
-        r = await c.get("/participants")
+        r = await c.get("/agents")
         r.raise_for_status()
     except _HTTPX_ERRORS as e:
         return _err(e)
@@ -761,7 +824,7 @@ async def agent_list() -> str:
     return "\n".join(lines)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def agent_delete() -> str:
     """Deregister yourself from Artel.
 
@@ -782,7 +845,7 @@ async def agent_delete() -> str:
     )
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 def inbox_cron_setup() -> str:
     """Get instructions for scheduling automatic inbox checks via Claude Code cron.
 
@@ -808,7 +871,7 @@ def inbox_cron_setup() -> str:
     )
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def agent_rename(new_id: str) -> str:
     """Rename yourself. Cascades the new ID across all memory, tasks, messages, and sessions.
 
@@ -834,7 +897,7 @@ async def agent_rename(new_id: str) -> str:
 # ── Messages ─────────────────────────────────────────────────────────────────
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def message_inbox() -> str:
     """Read and clear your unread messages. Call this at session start.
 
@@ -843,17 +906,13 @@ async def message_inbox() -> str:
     """
     c = _http()
     try:
-        r = await c.get("/messages/inbox")
+        r = await c.post("/messages/inbox/consume")
         r.raise_for_status()
     except _HTTPX_ERRORS as e:
         return _err(e)
     messages = r.json()
     if not messages:
         return "No unread messages."
-    try:
-        await c.post("/messages/inbox/read-all")
-    except _HTTPX_ERRORS:
-        pass
     lines = []
     for m in messages:
         header = f"[{m['id']}] from {m['from_agent']} · {m['created_at'][:16]}"
@@ -863,7 +922,7 @@ async def message_inbox() -> str:
     return "\n\n".join(lines)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def message_send(to: str, body: str, subject: str = "") -> str:
     """Send a message to another agent's inbox.
 
@@ -872,7 +931,9 @@ async def message_send(to: str, body: str, subject: str = "") -> str:
     they call message_inbox().
 
     Args:
-        to: The agent_id to send to, or "broadcast" to reach all agents.
+        to: The agent_id to send to, "broadcast" to reach all agents, or
+            "project:<name>" to reach every agent in that project (sender must
+            be a member).
         body: Message body.
         subject: Optional subject line (helps the recipient triage).
     """
@@ -886,10 +947,43 @@ async def message_send(to: str, body: str, subject: str = "") -> str:
     return f"sent to {m['to_agent']} [{m['id']}]"
 
 
+@mcp.tool(structured_output=True)
+async def message_list(read: bool | None = None, limit: int = 50) -> str:
+    """List all messages sent to or from you (full history, not just unread).
+
+    Use when you need to review past conversations, check if you missed something,
+    or audit what was communicated. For unread-only, use message_inbox() instead.
+
+    Args:
+        read: True = read only, False = unread only, omit = all messages.
+        limit: Max messages to return (default 50, max 200).
+    """
+    c = _http()
+    params: dict = {"limit": limit}
+    if read is not None:
+        params["read"] = str(read).lower()
+    try:
+        r = await c.get("/messages", params=params)
+        r.raise_for_status()
+    except _HTTPX_ERRORS as e:
+        return _err(e)
+    messages = r.json()
+    if not messages:
+        return "No messages."
+    lines = []
+    for m in messages:
+        status = "read" if m["read"] else "unread"
+        subj = f" · {m['subject']}" if m.get("subject") else ""
+        lines.append(
+            f"[{m['id'][:8]}] {m['from_agent']}→{m['to_agent']}{subj} ({status}) {m['created_at'][:16]}\n{m['body']}"
+        )
+    return "\n\n".join(lines)
+
+
 # ── Tasks ────────────────────────────────────────────────────────────────────
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def task_list(status: str | None = None, project: str | None = None) -> str:
     """List tasks. Call with status="open" to find work that needs doing.
 
@@ -921,7 +1015,7 @@ async def task_list(status: str | None = None, project: str | None = None) -> st
     )
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def task_create(
     title: str,
     description: str = "",
@@ -961,7 +1055,7 @@ async def task_create(
     return f"created [{t['id']}] [{t['priority']}] {t['title']}"
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def task_claim(task_id: str, body: str = "") -> str:
     """Claim an open task — marks it as yours and sets status to 'claimed'.
 
@@ -982,7 +1076,7 @@ async def task_claim(task_id: str, body: str = "") -> str:
     return f"claimed [{t['id']}] {t['title']}"
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def task_unclaim(task_id: str, body: str = "") -> str:
     """Release your claim on a task — returns it to 'open' so others can pick it up.
 
@@ -1005,13 +1099,19 @@ async def task_unclaim(task_id: str, body: str = "") -> str:
     return f"unclaimed [{t['id']}] {t['title']}"
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def task_complete(task_id: str, body: str = "") -> str:
-    """Mark your claimed task as completed. Only the agent that claimed it can complete it.
+    """Mark your claimed task as completed. Only the claiming agent can complete it.
+
+    Call when the task's expected_outcome has been fully achieved. The body is recorded
+    in the task's comment log and visible to all agents reviewing the task. If you cannot
+    finish the task, use task_fail() instead; if you are stepping away mid-work, use
+    task_unclaim() so another agent can pick it up.
 
     Args:
         task_id: ID of a task you have claimed.
-        body: Optional note recorded on the task's comment log (e.g. result, links, follow-ups).
+        body: Summary of what was accomplished, including follow-up IDs or links.
+              Recommended — it is the only record future agents have of what was done.
     """
     c = _http()
     try:
@@ -1023,7 +1123,7 @@ async def task_complete(task_id: str, body: str = "") -> str:
     return f"completed [{t['id']}] {t['title']}"
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def task_fail(task_id: str, body: str = "") -> str:
     """Mark your claimed task as failed. Use when you cannot complete it.
 
@@ -1045,7 +1145,7 @@ async def task_fail(task_id: str, body: str = "") -> str:
     return f"failed [{t['id']}] {t['title']}"
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def task_comment(task_id: str, body: str) -> str:
     """Add a free-form comment to a task's chronological log.
 
@@ -1068,12 +1168,15 @@ async def task_comment(task_id: str, body: str) -> str:
     return f"commented [{cmt['id']}] on task {cmt['task_id']}"
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def task_get(task_id: str) -> str:
     """Fetch full details of a task by ID, including its chronological comment log.
 
+    Use when task_list() gave you an ID and you need the description, expected outcome,
+    and full history of status changes and agent comments. Read-only — no side effects.
+
     Args:
-        task_id: The UUID of the task.
+        task_id: The UUID of the task. Short prefixes (min 4 chars) are resolved if unambiguous.
     """
     c = _http()
     try:
@@ -1106,18 +1209,19 @@ async def task_get(task_id: str) -> str:
     return "\n".join(lines)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def task_update(
     task_id: str,
     description: str | None = None,
     append: bool = False,
     title: str | None = None,
     priority: str | None = None,
+    project: str | None = None,
 ) -> str:
-    """Update a task's description, title, or priority.
+    """Update a task's description, title, priority, or project.
 
-    Use to record progress notes on a task you're working on, or to correct metadata.
-    Any agent in the project can update a task, not just the assignee.
+    Use to record progress notes on a task you're working on, correct metadata,
+    or transfer a task to a different project.
 
     Args:
         task_id: ID of the task to update.
@@ -1126,6 +1230,7 @@ async def task_update(
                 If False (default), replaces entirely.
         title: New title. Omit to leave unchanged.
         priority: low, normal, or high. Omit to leave unchanged.
+        project: Move the task into this project. Omit to leave unchanged.
     """
     patch: dict = {}
     if description is not None:
@@ -1135,6 +1240,8 @@ async def task_update(
         patch["title"] = title
     if priority is not None:
         patch["priority"] = priority
+    if project is not None:
+        patch["project"] = project
     c = _http()
     try:
         r = await c.patch(f"/tasks/{task_id}", json=patch)
@@ -1148,7 +1255,7 @@ async def task_update(
 # ── Events ───────────────────────────────────────────────────────────────────
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def event_emit(event_type: str, payload: dict | None = None) -> str:
     """Emit a custom event to the Artel event bus.
 
@@ -1173,7 +1280,7 @@ async def event_emit(event_type: str, payload: dict | None = None) -> str:
 # ── Feeds ─────────────────────────────────────────────────────────────────────
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def feed_subscribe(
     url: str,
     name: str,
@@ -1218,9 +1325,13 @@ async def feed_subscribe(
     )
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def feed_list(project: str | None = None) -> str:
-    """List active feed subscriptions visible to you.
+    """List active RSS/Atom feed subscriptions visible to you.
+
+    Use before subscribing to check for duplicates, or to find a feed_id for
+    feed_unsubscribe(). Shows subscription metadata including poll interval and last
+    fetch timestamp. Does not trigger a fetch — the archivist polls on schedule.
 
     Args:
         project: Filter by project. Omit to list all accessible feeds.
@@ -1247,9 +1358,14 @@ async def feed_list(project: str | None = None) -> str:
     return "\n".join(lines)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def feed_unsubscribe(feed_id: str) -> str:
-    """Unsubscribe from a feed. Removes the subscription and its seen-item history.
+    """Unsubscribe from a feed and stop future polling.
+
+    Removes the subscription and its seen-item deduplication history. Memory entries
+    already written from this feed are NOT deleted — only the subscription is removed.
+    If the feed is re-subscribed later, previously seen items may be re-ingested.
+    Use feed_list() to find the feed_id.
 
     Args:
         feed_id: ID from feed_list().
@@ -1261,3 +1377,127 @@ async def feed_unsubscribe(feed_id: str) -> str:
     except _HTTPX_ERRORS as e:
         return _err(e)
     return f"unsubscribed [{feed_id}]"
+
+
+@mcp.prompt()
+def start_session() -> str:
+    """Begin a work session on the Artel mesh. Loads your prior handoff and
+    unread agent messages so you resume exactly where you (or another agent)
+    left off, with no re-explaining."""
+    return (
+        "Start this session: call session_context() to load your last handoff "
+        "and everything that changed in shared memory while you were gone, then "
+        "message_inbox() to read messages from other agents. Summarize what was "
+        "in progress and what to do next before taking any action."
+    )
+
+
+@mcp.prompt()
+def end_session(summary: str = "", next_steps: str = "") -> str:
+    """Close a work session by persisting state for the next session or agent.
+    Use this last so context is never lost across resets or machine switches.
+
+    Args:
+        summary: What you accomplished this session.
+        next_steps: What to do next, in priority order.
+    """
+    return (
+        "End this session: call session_handoff() with a thorough summary"
+        + (f" ('{summary}')" if summary else "")
+        + " of decisions made, blockers hit, and context that would otherwise be "
+        "lost, plus ordered next steps"
+        + (f" ('{next_steps}')" if next_steps else "")
+        + " and the IDs of any tasks still claimed."
+    )
+
+
+@mcp.prompt()
+def triage_backlog(project: str = "") -> str:
+    """Pull work from the shared task backlog: review open tasks, then claim
+    one before starting so two agents never duplicate effort.
+
+    Args:
+        project: Restrict to a project. Omit for all projects.
+    """
+    return (
+        "Triage the backlog: call task_list(status='open'"
+        + (f", project='{project}'" if project else "")
+        + "), pick the highest-value unclaimed task, task_claim() it, and "
+        "complete or fail it when done — never leave a task in limbo."
+    )
+
+
+@mcp.prompt()
+def capture_finding(topic: str = "") -> str:
+    """Persist a decision, bug, or discovery to shared memory so the whole
+    fleet — and future you — benefits instead of relearning it.
+
+    Args:
+        topic: What the finding is about.
+    """
+    return (
+        "Before writing, memory_search("
+        + (f"'{topic}'" if topic else "the topic")
+        + ") to avoid duplicating an existing entry. Then memory_write() the "
+        "decision/bug/fact with tags so it is findable, and message_send() any "
+        "agent who is blocked on it."
+    )
+
+
+@mcp.prompt()
+def audit_memory(topic: str = "") -> str:
+    """Check what the fleet already knows before starting non-trivial work,
+    avoiding duplicated effort across agents and sessions.
+
+    Args:
+        topic: Subject to search shared memory for.
+    """
+    return (
+        "Call memory_search("
+        + (f"'{topic}'" if topic else "your task topic")
+        + ") and review prior decisions and findings before acting. If another "
+        "agent already did this work, build on it instead of repeating it."
+    )
+
+
+_DOC_SECTION_END = re.compile(
+    r"^(Returns?|Raises?|Yields?|Notes?|Examples?|Attributes)\s*:",
+)
+_DOC_ARG = re.compile(r"^(\w+)\s*(?:\([^)]*\))?\s*:\s*(.*)$")
+
+
+def _parse_arg_docs(doc: str | None, valid: set[str]) -> dict[str, str]:
+    if not doc or "Args:" not in doc:
+        return {}
+    out: dict[str, str] = {}
+    in_args = False
+    current: str | None = None
+    for raw in doc.splitlines():
+        line = raw.strip()
+        if not in_args:
+            if line == "Args:":
+                in_args = True
+            continue
+        if not line:
+            continue
+        if _DOC_SECTION_END.match(line):
+            break
+        m = _DOC_ARG.match(line)
+        if m and m.group(1) in valid:
+            current = m.group(1)
+            out[current] = m.group(2).strip()
+        elif current:
+            out[current] = (out[current] + " " + line).strip()
+    return out
+
+
+def _enrich_tool_schemas() -> None:
+    for tool in mcp._tool_manager.list_tools():
+        props = tool.parameters.get("properties", {})
+        docs = _parse_arg_docs(tool.fn.__doc__, set(props))
+        for name, schema in props.items():
+            if isinstance(schema, dict) and not schema.get("description") and name in docs:
+                schema["description"] = docs[name]
+
+
+_enrich_tool_schemas()

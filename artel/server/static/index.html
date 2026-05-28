@@ -42,6 +42,10 @@
   --r:      4px;
   --hh:     44px;
   --nh:     36px;
+  --sb:     200px;
+  --dot:    rgba(215,153,33,.04);
+  --header-bg: rgba(7,15,23,.97);
+  --modal-bg:  rgba(7,15,23,.85);
   --shadow: 0 2px 12px rgba(0,0,0,.4);
   --shadow-hover: 0 4px 20px rgba(0,0,0,.5);
 }
@@ -52,7 +56,7 @@ body{
   background:var(--bg);
   color:var(--t1);
   min-height:100%;
-  background-image:radial-gradient(circle,rgba(215,153,33,.04) 1px,transparent 1px);
+  background-image:radial-gradient(circle,var(--dot) 1px,transparent 1px);
   background-size:24px 24px;
 }
 
@@ -60,20 +64,23 @@ body{
 header{
   display:flex;align-items:center;gap:12px;
   padding:0 18px;height:var(--hh);
-  background:rgba(7,15,23,.97);
+  background:var(--header-bg);
   border-bottom:1px solid var(--b1);
   position:sticky;top:0;z-index:200;
   backdrop-filter:blur(12px);
+  margin-left:var(--sb);
 }
 .logo{
+  display:none;
   font:600 15px var(--mono);
   color:var(--t1);
   letter-spacing:-.5px;
   flex-shrink:0;
-  display:flex;align-items:center;gap:8px;
+  align-items:center;gap:8px;
 }
 .logo-mark{color:var(--accent);width:22px;height:22px;flex-shrink:0;display:block}
-.h-div{color:var(--b2);font-size:10px;flex-shrink:0;user-select:none}
+.h-menu-btn{display:none}
+.h-div{display:none}
 .h-select{
   background:transparent;
   border:1px solid var(--b1);
@@ -81,7 +88,7 @@ header{
   font:12px var(--mono);
   padding:3px 7px;
   border-radius:var(--r);
-  min-width:0;max-width:160px;
+  min-width:100px;max-width:220px;
   cursor:pointer;
   transition:border-color .15s,color .15s;
   appearance:none;
@@ -145,30 +152,72 @@ header{
 }
 .h-copy-btn:hover{color:var(--accent);border-color:var(--accent);background:var(--a-bg)}
 
-/* ── Nav ──────────────────────────────── */
+/* ── Sidebar nav (desktop) ─────────────── */
 nav{
-  display:flex;
-  background:rgba(7,15,23,.93);
-  border-bottom:1px solid var(--b1);
-  overflow-x:auto;scrollbar-width:none;
-  position:sticky;top:var(--hh);z-index:199;
-  backdrop-filter:blur(12px);
-  padding:0 6px;
+  position:fixed;left:0;top:0;bottom:0;
+  width:var(--sb);
+  display:flex;flex-direction:column;align-items:stretch;
+  background:var(--s1);
+  border-right:1px solid var(--b1);
+  z-index:190;
+  overflow:hidden;
 }
-nav::-webkit-scrollbar{display:none}
+.nav-scroll{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+.nav-scroll::-webkit-scrollbar{display:none}
+.nav-footer{flex-shrink:0;border-top:1px solid var(--b1)}
+/* ── Side panel sections (shared by nav + drawer) ── */
+.panel-section{padding:12px 0;border-top:1px solid var(--b1)}
+.panel-section-lbl{
+  display:flex;align-items:center;justify-content:space-between;
+  font:10px var(--mono);color:var(--t4);
+  text-transform:uppercase;letter-spacing:.5px;
+  padding:0 18px;margin-bottom:8px;
+  cursor:pointer;user-select:none;width:100%;
+  transition:color .15s;
+}
+.panel-section-lbl:hover{color:var(--t2)}
+.panel-section-lbl::after{content:'▾';font-size:9px;transition:transform .2s}
+.panel-section.collapsed .panel-section-lbl::after{transform:rotate(-90deg)}
+.panel-section.collapsed .panel-section-body{display:none}
+.panel-proj-row{display:flex;gap:4px;padding:0 12px;margin-bottom:6px}
+.panel-proj-row input{flex:1;min-width:0;height:28px;padding:0 8px;font-size:11px}
+.panel-proj-row button{height:28px;padding:0 8px}
+.nav-pj{
+  display:flex;align-items:center;gap:4px;
+  padding:4px 12px;font:11px var(--mono);color:var(--t4);
+}
+.nav-pj.mine{color:var(--t2)}
+.nav-pj-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.nav-pj-name:hover{color:var(--accent)}
+.nav-pj-btn{height:20px;padding:0 6px;font-size:10px;flex-shrink:0}
+.panel-theme-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:6px;padding:0 14px;
+}
+.drawer .panel-theme-grid{grid-template-columns:repeat(4,1fr)}
+.drawer-scroll{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+.drawer-scroll::-webkit-scrollbar{display:none}
+.nav-logo{
+  display:flex;align-items:center;gap:8px;
+  padding:0 18px;height:var(--hh);
+  font:600 14px var(--mono);color:var(--t1);letter-spacing:-.5px;
+  border-bottom:1px solid var(--b1);flex-shrink:0;
+}
+.nav-logo svg{color:var(--accent);width:18px;height:18px;flex-shrink:0}
+.nav-items{flex:1;padding:8px 0}
 .nav-btn{
-  flex-shrink:0;border:none;background:none;
-  padding:0 14px;height:var(--nh);
+  display:block;width:100%;border:none;background:none;
+  padding:10px 18px;height:auto;
   font:500 11px var(--mono);
   color:var(--t4);
   letter-spacing:.6px;text-transform:uppercase;
-  cursor:pointer;white-space:nowrap;
+  cursor:pointer;white-space:nowrap;text-align:left;
   position:relative;
-  border-bottom:2px solid transparent;
-  transition:color .15s;
+  border-left:2px solid transparent;
+  transition:color .15s,background .15s;
 }
-.nav-btn:hover{color:var(--t2)}
-.nav-btn.on{color:var(--accent);border-bottom-color:var(--accent)}
+.nav-btn:hover{color:var(--t2);background:var(--s2)}
+.nav-btn.on{color:var(--accent);border-left-color:var(--accent);background:var(--a-bg)}
 .badge{
   position:absolute;top:5px;right:2px;
   background:var(--red);color:#fff;
@@ -177,7 +226,7 @@ nav::-webkit-scrollbar{display:none}
 }
 
 /* ── Panels ───────────────────────────── */
-.panel{display:none;padding:20px;max-width:1100px;margin:0 auto}
+.panel{display:none;padding:20px;max-width:960px;margin-left:max(var(--sb),calc((100vw - 960px)/2));margin-right:auto}
 .panel.on{display:block;animation:fadeIn .15s ease}
 
 /* ── Toolbar ──────────────────────────── */
@@ -185,6 +234,7 @@ nav::-webkit-scrollbar{display:none}
   display:flex;gap:8px;margin-bottom:14px;
   align-items:center;flex-wrap:wrap;
 }
+.toolbar-search{flex:1;min-width:120px}
 .toolbar-label{
   font:500 11px var(--mono);color:var(--t4);
   letter-spacing:.4px;margin-left:auto;
@@ -239,7 +289,7 @@ button.p{
   background:var(--a-bg);color:var(--accent);
   border-color:var(--a-bord);
 }
-button.p:hover{background:rgba(0,212,255,.14);border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,.08)}
+button.p:hover{background:var(--a-bg);border-color:var(--accent);box-shadow:0 0 0 3px var(--a-bord)}
 button.danger{color:var(--t4)}
 button.danger:hover{background:var(--r-bg);color:var(--red);border-color:var(--r-bord)}
 button.sm{height:24px;font-size:10px;padding:0 8px}
@@ -493,10 +543,33 @@ pre{
 .flash{color:var(--green);font:11px var(--mono);margin-left:4px;opacity:0;transition:opacity .3s}
 .flash.show{opacity:1}
 
+/* ── Log rows ─────────────────────────── */
+.log-row{
+  display:grid;
+  grid-template-columns:90px 64px 72px 120px 1fr;
+  gap:0 10px;
+  align-items:baseline;
+  padding:6px 10px;
+  border-bottom:1px solid var(--s2);
+  font:12px var(--mono);
+}
+.log-row:hover{background:var(--s1)}
+.log-ts{color:var(--t4);white-space:nowrap;font-size:11px}
+.log-level{font-weight:600;font-size:11px;text-transform:uppercase}
+.log-source{color:var(--blue);font-size:11px}
+.log-action{color:var(--accent);font-size:11px}
+.log-msg{color:var(--t2);word-break:break-word}
+.log-details{
+  grid-column:2/-1;
+  color:var(--t4);font-size:11px;
+  background:var(--s1);border-radius:var(--r);
+  padding:3px 6px;margin-top:3px;word-break:break-all;
+}
+
 /* ── Modal ────────────────────────────── */
 .modal-backdrop{
   display:none;position:fixed;inset:0;
-  background:rgba(7,15,23,.85);
+  background:var(--modal-bg);
   backdrop-filter:blur(4px);
   z-index:500;align-items:center;justify-content:center;
 }
@@ -525,34 +598,438 @@ pre{
 ::-webkit-scrollbar-thumb{background:var(--s3);border-radius:3px}
 ::-webkit-scrollbar-thumb:hover{background:var(--b2)}
 
+/* ── Drawer ───────────────────────────── */
+.h-menu-btn{display:none}
+.drawer-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.6);z-index:400;
+}
+.drawer-overlay.open{display:block}
+.drawer{
+  position:fixed;top:0;left:0;bottom:0;width:240px;
+  background:var(--s1);border-right:1px solid var(--b2);
+  z-index:401;transform:translateX(-100%);
+  transition:transform .25s ease;
+  display:flex;flex-direction:column;
+}
+.drawer.open{transform:translateX(0)}
+.drawer-header{
+  padding:16px 20px;border-bottom:1px solid var(--b1);
+  font:600 14px var(--mono);color:var(--t2);
+}
+.drawer-nav{flex:1;padding:8px 0;overflow-y:auto}
+.drawer-item{
+  display:flex;align-items:center;
+  width:100%;padding:14px 20px;
+  font:500 12px var(--mono);color:var(--t3);
+  background:none;border:none;border-radius:0;
+  text-align:left;cursor:pointer;height:auto;
+  text-transform:uppercase;letter-spacing:.6px;
+  transition:color .15s,background .15s;
+}
+.drawer-item:hover{background:var(--s2);color:var(--t1)}
+.drawer-item.on{color:var(--accent);background:var(--a-bg)}
+.drawer-footer{padding:8px 0;border-top:1px solid var(--b1)}
+
+/* ── Themes ───────────────────────────── */
+[data-theme="gruvbox-light"]{
+  --bg:#f9f5d7;--s1:#f2e5bc;--s2:#ebdbb2;--s3:#d5c4a1;
+  --b1:#bdae93;--b2:#a89984;
+  --t1:#3c3836;--t2:#504945;--t3:#665c54;--t4:#7c6f64;
+  --accent:#b57614;--a-bg:rgba(181,118,20,.12);--a-bord:rgba(181,118,20,.4);
+  --green:#79740e;--g-bg:rgba(121,116,14,.12);--g-bord:rgba(121,116,14,.4);
+  --red:#9d0006;--r-bg:rgba(157,0,6,.12);--r-bord:rgba(157,0,6,.4);
+  --orange:#af3a03;--o-bg:rgba(175,58,3,.12);--o-bord:rgba(175,58,3,.4);
+  --purple:#8f3f71;--p-bg:rgba(143,63,113,.12);--p-bord:rgba(143,63,113,.4);
+  --dot:rgba(181,118,20,.06);--header-bg:rgba(235,219,178,.97);--modal-bg:rgba(60,56,54,.75);
+}
+[data-theme="dracula"]{
+  --bg:#282a36;--s1:#21222c;--s2:#2a2c3e;--s3:#363847;
+  --b1:#44475a;--b2:#6272a4;
+  --t1:#f8f8f2;--t2:#e2dff5;--t3:#a8afc8;--t4:#6272a4;
+  --accent:#bd93f9;--a-bg:rgba(189,147,249,.1);--a-bord:rgba(189,147,249,.35);
+  --green:#50fa7b;--g-bg:rgba(80,250,123,.1);--g-bord:rgba(80,250,123,.35);
+  --red:#ff5555;--r-bg:rgba(255,85,85,.1);--r-bord:rgba(255,85,85,.35);
+  --orange:#ffb86c;--o-bg:rgba(255,184,108,.1);--o-bord:rgba(255,184,108,.35);
+  --purple:#ff79c6;--p-bg:rgba(255,121,198,.1);--p-bord:rgba(255,121,198,.35);
+  --dot:rgba(189,147,249,.04);--header-bg:rgba(17,18,25,.97);--modal-bg:rgba(17,18,25,.88);
+}
+[data-theme="nord"]{
+  --bg:#2e3440;--s1:#3b4252;--s2:#434c5e;--s3:#4c566a;
+  --b1:#4c566a;--b2:#616e88;
+  --t1:#eceff4;--t2:#e5e9f0;--t3:#d8dee9;--t4:#9099ae;
+  --accent:#88c0d0;--a-bg:rgba(136,192,208,.1);--a-bord:rgba(136,192,208,.35);
+  --green:#a3be8c;--g-bg:rgba(163,190,140,.1);--g-bord:rgba(163,190,140,.35);
+  --red:#bf616a;--r-bg:rgba(191,97,106,.1);--r-bord:rgba(191,97,106,.35);
+  --orange:#d08770;--o-bg:rgba(208,135,112,.1);--o-bord:rgba(208,135,112,.35);
+  --purple:#b48ead;--p-bg:rgba(180,142,173,.1);--p-bord:rgba(180,142,173,.35);
+  --dot:rgba(136,192,208,.04);--header-bg:rgba(30,35,45,.97);--modal-bg:rgba(30,35,45,.88);
+}
+[data-theme="tokyo-night"]{
+  --bg:#1a1b26;--s1:#1f2335;--s2:#24283b;--s3:#2f3548;
+  --b1:#3b4261;--b2:#545c7e;
+  --t1:#c0caf5;--t2:#a9b1d6;--t3:#787c99;--t4:#565f89;
+  --accent:#7aa2f7;--a-bg:rgba(122,162,247,.1);--a-bord:rgba(122,162,247,.35);
+  --green:#9ece6a;--g-bg:rgba(158,206,106,.1);--g-bord:rgba(158,206,106,.35);
+  --red:#f7768e;--r-bg:rgba(247,118,142,.1);--r-bord:rgba(247,118,142,.35);
+  --orange:#ff9e64;--o-bg:rgba(255,158,100,.1);--o-bord:rgba(255,158,100,.35);
+  --purple:#bb9af7;--p-bg:rgba(187,154,247,.1);--p-bord:rgba(187,154,247,.35);
+  --dot:rgba(122,162,247,.04);--header-bg:rgba(12,13,20,.97);--modal-bg:rgba(12,13,20,.88);
+}
+[data-theme="solarized"]{
+  --bg:#002b36;--s1:#073642;--s2:#0d3c47;--s3:#1a4855;
+  --b1:#2a5560;--b2:#3d6b78;
+  --t1:#fdf6e3;--t2:#eee8d5;--t3:#93a1a1;--t4:#657b83;
+  --accent:#268bd2;--a-bg:rgba(38,139,210,.1);--a-bord:rgba(38,139,210,.35);
+  --green:#859900;--g-bg:rgba(133,153,0,.1);--g-bord:rgba(133,153,0,.35);
+  --red:#dc322f;--r-bg:rgba(220,50,47,.1);--r-bord:rgba(220,50,47,.35);
+  --orange:#cb4b16;--o-bg:rgba(203,75,22,.1);--o-bord:rgba(203,75,22,.35);
+  --purple:#6c71c4;--p-bg:rgba(108,113,196,.1);--p-bord:rgba(108,113,196,.35);
+  --dot:rgba(38,139,210,.05);--header-bg:rgba(0,18,22,.97);--modal-bg:rgba(0,18,22,.88);
+}
+[data-theme="everforest"]{
+  --bg:#272e33;--s1:#1d2327;--s2:#2e383c;--s3:#374247;
+  --b1:#4a555b;--b2:#5c6a72;
+  --t1:#d3c6aa;--t2:#c2b89a;--t3:#859289;--t4:#6d7a75;
+  --accent:#a7c080;--a-bg:rgba(167,192,128,.1);--a-bord:rgba(167,192,128,.35);
+  --green:#a7c080;--g-bg:rgba(167,192,128,.1);--g-bord:rgba(167,192,128,.35);
+  --red:#e67e80;--r-bg:rgba(230,126,128,.1);--r-bord:rgba(230,126,128,.35);
+  --orange:#e69875;--o-bg:rgba(230,152,117,.1);--o-bord:rgba(230,152,117,.35);
+  --purple:#d699b6;--p-bg:rgba(214,153,182,.1);--p-bord:rgba(214,153,182,.35);
+  --dot:rgba(167,192,128,.05);--header-bg:rgba(13,17,18,.97);--modal-bg:rgba(13,17,18,.88);
+}
+[data-theme="mellow"]{
+  --bg:#1e1e1e;--s1:#191919;--s2:#242424;--s3:#2e2e2e;
+  --b1:#3a3a3a;--b2:#505050;
+  --t1:#c9c9c9;--t2:#aaaaaa;--t3:#787878;--t4:#555555;
+  --accent:#7c9b8a;--a-bg:rgba(124,155,138,.1);--a-bord:rgba(124,155,138,.35);
+  --green:#7c9b8a;--g-bg:rgba(124,155,138,.1);--g-bord:rgba(124,155,138,.35);
+  --red:#b87878;--r-bg:rgba(184,120,120,.1);--r-bord:rgba(184,120,120,.35);
+  --orange:#b89a78;--o-bg:rgba(184,154,120,.1);--o-bord:rgba(184,154,120,.35);
+  --purple:#8a7c9b;--p-bg:rgba(138,124,155,.1);--p-bord:rgba(138,124,155,.35);
+  --dot:rgba(124,155,138,.04);--header-bg:rgba(10,10,10,.97);--modal-bg:rgba(10,10,10,.88);
+}
+[data-theme="rose-pine"]{
+  --bg:#191724;--s1:#1f1d2e;--s2:#26233a;--s3:#2a2837;
+  --b1:#403d52;--b2:#524f67;
+  --t1:#e0def4;--t2:#c9c7da;--t3:#908caa;--t4:#6e6a86;
+  --accent:#c4a7e7;--a-bg:rgba(196,167,231,.1);--a-bord:rgba(196,167,231,.35);
+  --green:#9ccfd8;--g-bg:rgba(156,207,216,.1);--g-bord:rgba(156,207,216,.35);
+  --red:#eb6f92;--r-bg:rgba(235,111,146,.1);--r-bord:rgba(235,111,146,.35);
+  --orange:#f6c177;--o-bg:rgba(246,193,119,.1);--o-bord:rgba(246,193,119,.35);
+  --purple:#c4a7e7;--p-bg:rgba(196,167,231,.1);--p-bord:rgba(196,167,231,.35);
+  --dot:rgba(196,167,231,.04);--header-bg:rgba(10,9,16,.97);--modal-bg:rgba(10,9,16,.88);
+}
+[data-theme="hacker"]{
+  --bg:#0d0d0d;--s1:#0a0a0a;--s2:#111;--s3:#1a1a1a;
+  --b1:#1a2e1a;--b2:#255225;
+  --t1:#00ff41;--t2:#00cc33;--t3:#009926;--t4:#006617;
+  --accent:#00ff41;--a-bg:rgba(0,255,65,.08);--a-bord:rgba(0,255,65,.3);
+  --green:#00ff41;--g-bg:rgba(0,255,65,.08);--g-bord:rgba(0,255,65,.3);
+  --red:#ff0000;--r-bg:rgba(255,0,0,.1);--r-bord:rgba(255,0,0,.35);
+  --orange:#ffaa00;--o-bg:rgba(255,170,0,.1);--o-bord:rgba(255,170,0,.35);
+  --purple:#00ffff;--p-bg:rgba(0,255,255,.08);--p-bord:rgba(0,255,255,.3);
+  --dot:rgba(0,255,65,.03);--header-bg:rgba(0,0,0,.99);--modal-bg:rgba(0,0,0,.92);
+  --shadow:0 2px 12px rgba(0,255,65,.08);--shadow-hover:0 4px 20px rgba(0,255,65,.12);
+}
+[data-theme="monokai"]{
+  --bg:#272822;--s1:#1e1f1c;--s2:#2d2e2a;--s3:#3e3d32;
+  --b1:#49483e;--b2:#75715e;
+  --t1:#f8f8f2;--t2:#e2dfcc;--t3:#75715e;--t4:#5c5947;
+  --accent:#fd971f;--a-bg:rgba(253,151,31,.1);--a-bord:rgba(253,151,31,.35);
+  --green:#a6e22e;--g-bg:rgba(166,226,46,.1);--g-bord:rgba(166,226,46,.35);
+  --red:#f92672;--r-bg:rgba(249,38,114,.1);--r-bord:rgba(249,38,114,.35);
+  --orange:#fd971f;--o-bg:rgba(253,151,31,.1);--o-bord:rgba(253,151,31,.35);
+  --purple:#ae81ff;--p-bg:rgba(174,129,255,.1);--p-bord:rgba(174,129,255,.35);
+  --dot:rgba(253,151,31,.04);--header-bg:rgba(12,13,10,.97);--modal-bg:rgba(12,13,10,.88);
+}
+[data-theme="cobalt"]{
+  --bg:#193549;--s1:#0e2030;--s2:#1f4462;--s3:#255070;
+  --b1:#2d5879;--b2:#3d6d8a;
+  --t1:#ffffff;--t2:#e1efff;--t3:#8abfd8;--t4:#5a92b2;
+  --accent:#ffc600;--a-bg:rgba(255,198,0,.1);--a-bord:rgba(255,198,0,.35);
+  --green:#3ad900;--g-bg:rgba(58,217,0,.1);--g-bord:rgba(58,217,0,.35);
+  --red:#ff2600;--r-bg:rgba(255,38,0,.1);--r-bord:rgba(255,38,0,.35);
+  --orange:#ff9d00;--o-bg:rgba(255,157,0,.1);--o-bord:rgba(255,157,0,.35);
+  --purple:#e6beff;--p-bg:rgba(230,190,255,.1);--p-bord:rgba(230,190,255,.35);
+  --dot:rgba(255,198,0,.04);--header-bg:rgba(6,15,24,.97);--modal-bg:rgba(6,15,24,.9);
+}
+[data-theme="solarized-light"]{
+  --bg:#fdf6e3;--s1:#f5eedc;--s2:#eee8d5;--s3:#ddd8be;
+  --b1:rgba(0,43,54,.15);--b2:rgba(0,43,54,.25);
+  --t1:#073642;--t2:#586e75;--t3:#657b83;--t4:#839496;
+  --accent:#268bd2;--a-bg:rgba(38,139,210,.12);--a-bord:rgba(38,139,210,.4);
+  --green:#859900;--g-bg:rgba(133,153,0,.12);--g-bord:rgba(133,153,0,.4);
+  --red:#dc322f;--r-bg:rgba(220,50,47,.12);--r-bord:rgba(220,50,47,.4);
+  --orange:#cb4b16;--o-bg:rgba(203,75,22,.12);--o-bord:rgba(203,75,22,.4);
+  --purple:#6c71c4;--p-bg:rgba(108,113,196,.12);--p-bord:rgba(108,113,196,.4);
+  --dot:rgba(38,139,210,.06);--header-bg:rgba(238,232,213,.97);--modal-bg:rgba(7,54,66,.75);
+}
+[data-theme="rose-pine-dawn"]{
+  --bg:#faf4ed;--s1:#fffaf3;--s2:#f2e9e1;--s3:#dfdad9;
+  --b1:rgba(87,82,121,.15);--b2:rgba(87,82,121,.25);
+  --t1:#575279;--t2:#797593;--t3:#9893a5;--t4:#b4b0c8;
+  --accent:#d7827e;--a-bg:rgba(215,130,126,.12);--a-bord:rgba(215,130,126,.4);
+  --green:#286983;--g-bg:rgba(40,105,131,.12);--g-bord:rgba(40,105,131,.4);
+  --red:#b4637a;--r-bg:rgba(180,99,122,.12);--r-bord:rgba(180,99,122,.4);
+  --orange:#ea9d34;--o-bg:rgba(234,157,52,.12);--o-bord:rgba(234,157,52,.4);
+  --purple:#907aa9;--p-bg:rgba(144,122,169,.12);--p-bord:rgba(144,122,169,.4);
+  --dot:rgba(215,130,126,.06);--header-bg:rgba(242,233,225,.97);--modal-bg:rgba(87,82,121,.75);
+}
+[data-theme="volcano"]{
+  --bg:#1a1210;--s1:#221510;--s2:#2e1c12;--s3:#3d2418;
+  --b1:#4f2e18;--b2:#6b3e22;
+  --t1:#f0c8a0;--t2:#d4a878;--t3:#a87850;--t4:#7a5030;
+  --accent:#e8541a;--a-bg:rgba(232,84,26,.1);--a-bord:rgba(232,84,26,.35);
+  --green:#7a9b50;--g-bg:rgba(122,155,80,.1);--g-bord:rgba(122,155,80,.35);
+  --red:#e83a1a;--r-bg:rgba(232,58,26,.1);--r-bord:rgba(232,58,26,.35);
+  --orange:#e8841a;--o-bg:rgba(232,132,26,.1);--o-bord:rgba(232,132,26,.35);
+  --purple:#9a5070;--p-bg:rgba(154,80,112,.1);--p-bord:rgba(154,80,112,.35);
+  --dot:rgba(232,84,26,.05);--header-bg:rgba(8,4,2,.97);--modal-bg:rgba(8,4,2,.9);
+}
+[data-theme="kanagawa"]{
+  --bg:#1f1f28;--s1:#16161d;--s2:#2a2a37;--s3:#363646;
+  --b1:#3f3f52;--b2:#54546d;
+  --t1:#dcd7ba;--t2:#c8c093;--t3:#9cabca;--t4:#727169;
+  --accent:#7e9cd8;--a-bg:rgba(126,156,216,.1);--a-bord:rgba(126,156,216,.35);
+  --green:#76946a;--g-bg:rgba(118,148,106,.1);--g-bord:rgba(118,148,106,.35);
+  --red:#c34043;--r-bg:rgba(195,64,67,.1);--r-bord:rgba(195,64,67,.35);
+  --orange:#ffa066;--o-bg:rgba(255,160,102,.1);--o-bord:rgba(255,160,102,.35);
+  --purple:#957fb8;--p-bg:rgba(149,127,184,.1);--p-bord:rgba(149,127,184,.35);
+  --dot:rgba(126,156,216,.04);--header-bg:rgba(10,10,15,.97);--modal-bg:rgba(10,10,15,.88);
+}
+[data-theme="everforest-light"]{
+  --bg:#fff9ef;--s1:#f4eddb;--s2:#eae4ca;--s3:#d9d0ba;
+  --b1:rgba(92,106,114,.15);--b2:rgba(92,106,114,.25);
+  --t1:#272e33;--t2:#3c4841;--t3:#5c6a72;--t4:#859289;
+  --accent:#8da101;--a-bg:rgba(141,161,1,.12);--a-bord:rgba(141,161,1,.4);
+  --green:#8da101;--g-bg:rgba(141,161,1,.12);--g-bord:rgba(141,161,1,.4);
+  --red:#f85552;--r-bg:rgba(248,85,82,.12);--r-bord:rgba(248,85,82,.4);
+  --orange:#f57d26;--o-bg:rgba(245,125,38,.12);--o-bord:rgba(245,125,38,.4);
+  --purple:#df69ba;--p-bg:rgba(223,105,186,.12);--p-bord:rgba(223,105,186,.4);
+  --dot:rgba(141,161,1,.06);--header-bg:rgba(244,237,219,.97);--modal-bg:rgba(39,46,51,.75);
+}
+[data-theme="dracula-light"]{
+  --bg:#f8f8f2;--s1:#eeeeee;--s2:#e2e2e2;--s3:#d4d4d4;
+  --b1:rgba(98,114,164,.15);--b2:rgba(98,114,164,.25);
+  --t1:#282a36;--t2:#44475a;--t3:#6272a4;--t4:#8b94c1;
+  --accent:#6d28d9;--a-bg:rgba(109,40,217,.1);--a-bord:rgba(109,40,217,.35);
+  --green:#50a14f;--g-bg:rgba(80,161,79,.12);--g-bord:rgba(80,161,79,.4);
+  --red:#e45649;--r-bg:rgba(228,86,73,.12);--r-bord:rgba(228,86,73,.4);
+  --orange:#c18401;--o-bg:rgba(193,132,1,.12);--o-bord:rgba(193,132,1,.4);
+  --purple:#6d28d9;--p-bg:rgba(109,40,217,.12);--p-bord:rgba(109,40,217,.4);
+  --dot:rgba(109,40,217,.05);--header-bg:rgba(238,238,238,.97);--modal-bg:rgba(40,42,54,.75);
+}
+[data-theme="mellow-light"]{
+  --bg:#f5f5f0;--s1:#eeeeea;--s2:#e5e5e0;--s3:#d8d8d3;
+  --b1:rgba(42,42,42,.15);--b2:rgba(42,42,42,.25);
+  --t1:#2a2a2a;--t2:#444444;--t3:#666666;--t4:#888888;
+  --accent:#4a7060;--a-bg:rgba(74,112,96,.12);--a-bord:rgba(74,112,96,.4);
+  --green:#4a7060;--g-bg:rgba(74,112,96,.12);--g-bord:rgba(74,112,96,.4);
+  --red:#8c5050;--r-bg:rgba(140,80,80,.12);--r-bord:rgba(140,80,80,.4);
+  --orange:#7a6040;--o-bg:rgba(122,96,64,.12);--o-bord:rgba(122,96,64,.4);
+  --purple:#5a5070;--p-bg:rgba(90,80,112,.12);--p-bord:rgba(90,80,112,.4);
+  --dot:rgba(74,112,96,.06);--header-bg:rgba(238,238,234,.97);--modal-bg:rgba(42,42,42,.75);
+}
+[data-theme="nord-light"]{
+  --bg:#eceff4;--s1:#e5e9f0;--s2:#d8dee9;--s3:#c8d0df;
+  --b1:rgba(76,86,106,.15);--b2:rgba(76,86,106,.25);
+  --t1:#2e3440;--t2:#3b4252;--t3:#4c566a;--t4:#636e87;
+  --accent:#5e81ac;--a-bg:rgba(94,129,172,.12);--a-bord:rgba(94,129,172,.4);
+  --green:#a3be8c;--g-bg:rgba(163,190,140,.12);--g-bord:rgba(163,190,140,.4);
+  --red:#bf616a;--r-bg:rgba(191,97,106,.12);--r-bord:rgba(191,97,106,.4);
+  --orange:#d08770;--o-bg:rgba(208,135,112,.12);--o-bord:rgba(208,135,112,.4);
+  --purple:#b48ead;--p-bg:rgba(180,142,173,.12);--p-bord:rgba(180,142,173,.4);
+  --dot:rgba(94,129,172,.06);--header-bg:rgba(229,233,240,.97);--modal-bg:rgba(46,52,64,.75);
+}
+[data-theme="tokyo-night-light"]{
+  --bg:#e1e2e7;--s1:#d5d6db;--s2:#c4c8da;--s3:#b4b5be;
+  --b1:rgba(54,60,95,.15);--b2:rgba(54,60,95,.25);
+  --t1:#343b58;--t2:#3760bf;--t3:#6172b0;--t4:#828bb8;
+  --accent:#2e7de9;--a-bg:rgba(46,125,233,.12);--a-bord:rgba(46,125,233,.4);
+  --green:#587539;--g-bg:rgba(88,117,57,.12);--g-bord:rgba(88,117,57,.4);
+  --red:#f52a65;--r-bg:rgba(245,42,101,.12);--r-bord:rgba(245,42,101,.4);
+  --orange:#8c6c3e;--o-bg:rgba(140,108,62,.12);--o-bord:rgba(140,108,62,.4);
+  --purple:#7847bd;--p-bg:rgba(120,71,189,.12);--p-bord:rgba(120,71,189,.4);
+  --dot:rgba(46,125,233,.06);--header-bg:rgba(213,214,219,.97);--modal-bg:rgba(52,59,88,.75);
+}
+[data-theme="hacker-light"]{
+  --bg:#f0fff0;--s1:#e6ffe6;--s2:#d9f5d9;--s3:#c5eac5;
+  --b1:rgba(0,100,0,.15);--b2:rgba(0,100,0,.25);
+  --t1:#003300;--t2:#005500;--t3:#007700;--t4:#009900;
+  --accent:#007700;--a-bg:rgba(0,119,0,.12);--a-bord:rgba(0,119,0,.4);
+  --green:#007700;--g-bg:rgba(0,119,0,.12);--g-bord:rgba(0,119,0,.4);
+  --red:#cc0000;--r-bg:rgba(204,0,0,.12);--r-bord:rgba(204,0,0,.4);
+  --orange:#886600;--o-bg:rgba(136,102,0,.12);--o-bord:rgba(136,102,0,.4);
+  --purple:#006688;--p-bg:rgba(0,102,136,.12);--p-bord:rgba(0,102,136,.4);
+  --dot:rgba(0,119,0,.08);--header-bg:rgba(230,255,230,.97);--modal-bg:rgba(0,51,0,.75);
+}
+[data-theme="monokai-light"]{
+  --bg:#fafaf8;--s1:#f2f1ee;--s2:#e8e7e3;--s3:#dddcd7;
+  --b1:rgba(117,113,94,.15);--b2:rgba(117,113,94,.25);
+  --t1:#272822;--t2:#383830;--t3:#75715e;--t4:#9a9585;
+  --accent:#e6821e;--a-bg:rgba(230,130,30,.12);--a-bord:rgba(230,130,30,.4);
+  --green:#75a94a;--g-bg:rgba(117,169,74,.12);--g-bord:rgba(117,169,74,.4);
+  --red:#e8284a;--r-bg:rgba(232,40,74,.12);--r-bord:rgba(232,40,74,.4);
+  --orange:#e6821e;--o-bg:rgba(230,130,30,.12);--o-bord:rgba(230,130,30,.4);
+  --purple:#9c64fe;--p-bg:rgba(156,100,254,.12);--p-bord:rgba(156,100,254,.4);
+  --dot:rgba(230,130,30,.05);--header-bg:rgba(242,241,238,.97);--modal-bg:rgba(39,40,34,.75);
+}
+[data-theme="cobalt-light"]{
+  --bg:#e8f4fd;--s1:#d9ecf8;--s2:#c5e1f3;--s3:#aed3ec;
+  --b1:rgba(25,53,73,.15);--b2:rgba(25,53,73,.25);
+  --t1:#0e2030;--t2:#193549;--t3:#2d5879;--t4:#3d6d8a;
+  --accent:#1565c0;--a-bg:rgba(21,101,192,.12);--a-bord:rgba(21,101,192,.4);
+  --green:#2e7d32;--g-bg:rgba(46,125,50,.12);--g-bord:rgba(46,125,50,.4);
+  --red:#c62828;--r-bg:rgba(198,40,40,.12);--r-bord:rgba(198,40,40,.4);
+  --orange:#e65100;--o-bg:rgba(230,81,0,.12);--o-bord:rgba(230,81,0,.4);
+  --purple:#6a1b9a;--p-bg:rgba(106,27,154,.12);--p-bord:rgba(106,27,154,.4);
+  --dot:rgba(21,101,192,.06);--header-bg:rgba(217,236,248,.97);--modal-bg:rgba(14,32,48,.75);
+}
+[data-theme="volcano-light"]{
+  --bg:#fdf0e8;--s1:#f5e0cc;--s2:#ead0b4;--s3:#dfbf9c;
+  --b1:rgba(42,20,8,.15);--b2:rgba(42,20,8,.25);
+  --t1:#2a1408;--t2:#4a2818;--t3:#7a4828;--t4:#a07050;
+  --accent:#c04010;--a-bg:rgba(192,64,16,.12);--a-bord:rgba(192,64,16,.4);
+  --green:#3a6a28;--g-bg:rgba(58,106,40,.12);--g-bord:rgba(58,106,40,.4);
+  --red:#c04010;--r-bg:rgba(192,64,16,.12);--r-bord:rgba(192,64,16,.4);
+  --orange:#b05a10;--o-bg:rgba(176,90,16,.12);--o-bord:rgba(176,90,16,.4);
+  --purple:#7a3858;--p-bg:rgba(122,56,88,.12);--p-bord:rgba(122,56,88,.4);
+  --dot:rgba(192,64,16,.06);--header-bg:rgba(245,224,204,.97);--modal-bg:rgba(42,20,8,.75);
+}
+[data-theme="kanagawa-lotus"]{
+  --bg:#f2ecbc;--s1:#e5dcb0;--s2:#d8ceab;--s3:#c9bfa0;
+  --b1:rgba(84,84,100,.15);--b2:rgba(84,84,100,.25);
+  --t1:#43436c;--t2:#545464;--t3:#716b87;--t4:#9b8fa5;
+  --accent:#4d699b;--a-bg:rgba(77,105,155,.12);--a-bord:rgba(77,105,155,.4);
+  --green:#6f894e;--g-bg:rgba(111,137,78,.12);--g-bord:rgba(111,137,78,.4);
+  --red:#c84053;--r-bg:rgba(200,64,83,.12);--r-bord:rgba(200,64,83,.4);
+  --orange:#cc9837;--o-bg:rgba(204,152,55,.12);--o-bord:rgba(204,152,55,.4);
+  --purple:#5a6a9c;--p-bg:rgba(90,106,156,.12);--p-bord:rgba(90,106,156,.4);
+  --dot:rgba(77,105,155,.06);--header-bg:rgba(229,220,176,.97);--modal-bg:rgba(67,67,108,.75);
+}
+[data-theme="ayu"]{
+  --bg:#0a0e14;--s1:#0d1017;--s2:#111820;--s3:#1a2433;
+  --b1:#1f2b3a;--b2:#2d3f55;
+  --t1:#bfbdb6;--t2:#acb6bf;--t3:#8a9199;--t4:#636d76;
+  --accent:#ffb454;--a-bg:rgba(255,180,84,.1);--a-bord:rgba(255,180,84,.35);
+  --green:#7fd962;--g-bg:rgba(127,217,98,.1);--g-bord:rgba(127,217,98,.35);
+  --red:#ff3333;--r-bg:rgba(255,51,51,.1);--r-bord:rgba(255,51,51,.35);
+  --orange:#ffb454;--o-bg:rgba(255,180,84,.1);--o-bord:rgba(255,180,84,.35);
+  --purple:#d2a6ff;--p-bg:rgba(210,166,255,.1);--p-bord:rgba(210,166,255,.35);
+  --dot:rgba(255,180,84,.04);--header-bg:rgba(4,6,9,.97);--modal-bg:rgba(4,6,9,.9);
+}
+[data-theme="ayu-light"]{
+  --bg:#fafafa;--s1:#f3f3f3;--s2:#e7e7e7;--s3:#d9d9d9;
+  --b1:rgba(90,95,100,.15);--b2:rgba(90,95,100,.25);
+  --t1:#5c6166;--t2:#6b7279;--t3:#8a9199;--t4:#abb0b6;
+  --accent:#ff9940;--a-bg:rgba(255,153,64,.12);--a-bord:rgba(255,153,64,.4);
+  --green:#86b300;--g-bg:rgba(134,179,0,.12);--g-bord:rgba(134,179,0,.4);
+  --red:#f07171;--r-bg:rgba(240,113,113,.12);--r-bord:rgba(240,113,113,.4);
+  --orange:#ff9940;--o-bg:rgba(255,153,64,.12);--o-bord:rgba(255,153,64,.4);
+  --purple:#a37acc;--p-bg:rgba(163,122,204,.12);--p-bord:rgba(163,122,204,.4);
+  --dot:rgba(255,153,64,.06);--header-bg:rgba(243,243,243,.97);--modal-bg:rgba(92,97,102,.75);
+}
+[data-theme="flexoki"]{
+  --bg:#100f0f;--s1:#1c1b1a;--s2:#282726;--s3:#343331;
+  --b1:#403e3c;--b2:#575653;
+  --t1:#cecdc3;--t2:#b7b5ac;--t3:#878580;--t4:#6f6e69;
+  --accent:#d14d41;--a-bg:rgba(209,77,65,.1);--a-bord:rgba(209,77,65,.35);
+  --green:#879a39;--g-bg:rgba(135,154,57,.1);--g-bord:rgba(135,154,57,.35);
+  --red:#d14d41;--r-bg:rgba(209,77,65,.1);--r-bord:rgba(209,77,65,.35);
+  --orange:#da702c;--o-bg:rgba(218,112,44,.1);--o-bord:rgba(218,112,44,.35);
+  --purple:#8b7ec8;--p-bg:rgba(139,126,200,.1);--p-bord:rgba(139,126,200,.35);
+  --dot:rgba(209,77,65,.04);--header-bg:rgba(6,5,5,.97);--modal-bg:rgba(6,5,5,.9);
+}
+[data-theme="flexoki-light"]{
+  --bg:#fffcf0;--s1:#f2f0e5;--s2:#e6e4d9;--s3:#dad8ce;
+  --b1:rgba(16,15,15,.15);--b2:rgba(16,15,15,.25);
+  --t1:#100f0f;--t2:#282726;--t3:#6f6e69;--t4:#878580;
+  --accent:#d14d41;--a-bg:rgba(209,77,65,.12);--a-bord:rgba(209,77,65,.4);
+  --green:#879a39;--g-bg:rgba(135,154,57,.12);--g-bord:rgba(135,154,57,.4);
+  --red:#d14d41;--r-bg:rgba(209,77,65,.12);--r-bord:rgba(209,77,65,.4);
+  --orange:#da702c;--o-bg:rgba(218,112,44,.12);--o-bord:rgba(218,112,44,.4);
+  --purple:#8b7ec8;--p-bg:rgba(139,126,200,.12);--p-bord:rgba(139,126,200,.4);
+  --dot:rgba(209,77,65,.06);--header-bg:rgba(242,240,229,.97);--modal-bg:rgba(16,15,15,.75);
+}
+[data-theme="oxocarbon"]{
+  --bg:#161616;--s1:#1c1c1c;--s2:#262626;--s3:#393939;
+  --b1:#525252;--b2:#6f6f6f;
+  --t1:#f4f4f4;--t2:#dde1e6;--t3:#a8b1be;--t4:#697077;
+  --accent:#08bdba;--a-bg:rgba(8,189,186,.1);--a-bord:rgba(8,189,186,.35);
+  --green:#42be65;--g-bg:rgba(66,190,101,.1);--g-bord:rgba(66,190,101,.35);
+  --red:#ee5396;--r-bg:rgba(238,83,150,.1);--r-bord:rgba(238,83,150,.35);
+  --orange:#ff832b;--o-bg:rgba(255,131,43,.1);--o-bord:rgba(255,131,43,.35);
+  --purple:#be95ff;--p-bg:rgba(190,149,255,.1);--p-bord:rgba(190,149,255,.35);
+  --dot:rgba(8,189,186,.04);--header-bg:rgba(8,8,8,.97);--modal-bg:rgba(8,8,8,.9);
+}
+[data-theme="oxocarbon-light"]{
+  --bg:#ffffff;--s1:#f4f4f4;--s2:#e0e0e0;--s3:#c6c6c6;
+  --b1:rgba(22,22,22,.15);--b2:rgba(22,22,22,.25);
+  --t1:#161616;--t2:#393939;--t3:#6f6f6f;--t4:#a8b1be;
+  --accent:#0f62fe;--a-bg:rgba(15,98,254,.1);--a-bord:rgba(15,98,254,.35);
+  --green:#198038;--g-bg:rgba(25,128,56,.12);--g-bord:rgba(25,128,56,.4);
+  --red:#da1e28;--r-bg:rgba(218,30,40,.12);--r-bord:rgba(218,30,40,.4);
+  --orange:#8a3800;--o-bg:rgba(138,56,0,.12);--o-bord:rgba(138,56,0,.4);
+  --purple:#6929c4;--p-bg:rgba(105,41,196,.12);--p-bord:rgba(105,41,196,.4);
+  --dot:rgba(15,98,254,.05);--header-bg:rgba(244,244,244,.97);--modal-bg:rgba(22,22,22,.75);
+}
+/* ── Theme picker ─────────────────────── */
+.theme-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px 6px}
+.theme-swatch{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:8px 4px;border-radius:6px;cursor:pointer;
+  border:1px solid transparent;background:transparent;
+  overflow:hidden;height:auto;
+  transition:background .15s,border-color .15s;
+}
+.theme-swatch:hover{background:var(--s3);border-color:var(--b1)}
+.theme-swatch.active{background:var(--a-bg);border-color:var(--a-bord)}
+.swatch-dots{display:flex;gap:3px;justify-content:center;margin-bottom:2px}
+.sd{width:11px;height:11px;border-radius:50%;border:2px solid;flex-shrink:0}
+.swatch-label{font:10px var(--mono);color:var(--t3);white-space:nowrap;letter-spacing:0;text-align:center;overflow:hidden;text-overflow:ellipsis;width:100%}
+.mode-toggle{display:flex;gap:4px;margin-bottom:10px}
+.mode-btn{flex:1;padding:4px 0;font:11px var(--mono);border:1px solid var(--b1);border-radius:var(--r);background:transparent;color:var(--t3);cursor:pointer;transition:all .15s;height:auto;min-height:auto}
+.mode-btn.on{background:var(--a-bg);color:var(--accent);border-color:var(--a-bord)}
+.mode-btn:hover:not(.on){color:var(--t1);border-color:var(--b2)}
+
 /* ── Mobile ───────────────────────────── */
 @media(max-width:600px){
-  header{
-    flex-wrap:wrap;height:auto;
-    padding:6px 12px;gap:6px;
-  }
+  /* Undo sidebar offsets */
+  header{margin-left:0;flex-wrap:wrap;height:auto;padding:6px 12px;gap:6px}
+  .panel{margin-left:0;padding:12px 14px}
+  /* Restore logo in header */
+  .logo{display:flex}
+  nav{display:none}
+  /* Row 1: ☰ · logo · stat · connect · ⚙ */
+  .h-menu-btn{order:0;display:flex;flex-shrink:0}
+  .logo{order:1;flex-shrink:0}
   .h-div{display:none}
-  .h-select{max-width:none;flex:1;min-width:0}
+  .h-stat{order:2;margin-left:auto;flex-shrink:0}
+  .h-connect{order:3;flex-shrink:0}
+  .h-icon-btn:not(.h-menu-btn){order:4;flex-shrink:0}
+  /* Force line break before selects */
+  header::after{content:'';order:5;flex-basis:100%;height:0}
+  /* Row 2: selects full width */
+  #h-agent-sel{order:6;flex:1;min-width:0;max-width:none}
+  #h-project{order:7;flex:1;min-width:0;max-width:none}
   .spacer{display:none}
-  .h-stat{order:10}
-  .h-connect{order:11}
-  .h-icon-btn{order:12}
-  .logo,.h-div,#h-agent-sel,#h-project{width:auto}
-  #h-agent-sel,#h-project{flex:1 1 120px}
-  .h-stat,.h-connect,.h-icon-btn{flex-shrink:0}
-  .logo{flex-shrink:0}
-  .nav{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .nav-btn{flex-shrink:0}
-  .panel{padding:12px 14px}
   .agent-grid,.proj-grid{grid-template-columns:1fr}
-  input,select,textarea,button{font-size:14px}
-  button{height:38px}
-  button.sm{height:28px}
+  body{font-size:12px}
+  /* 16px prevents iOS auto-zoom on input focus */
+  input,select,textarea{font-size:16px}
+  button{font-size:12px;height:36px}
+  button.sm{height:28px;min-width:36px}
+  button.icon-btn{width:36px;height:36px}
+  .h-icon-btn{min-width:44px;min-height:44px}
   .meta-time{margin-left:0;white-space:normal}
   .pill{flex-shrink:1;min-width:0}
   .pill.owner,.pill.directive{flex-shrink:0}
   #toast-stack{right:12px;left:12px;align-items:stretch}
   .toast{max-width:100%}
+  .toolbar-search{flex-basis:100%;min-width:0}
+  .write-row > input,.write-row > select{min-width:0}
+  pre{overflow-x:auto;font-size:13px}
 }
 </style>
 </head>
@@ -583,16 +1060,83 @@ pre{
       </div>
     </div>
   </div>
-  <button class="h-icon-btn" onclick="openProjectsModal()" title="manage projects" aria-label="manage projects">⚙</button>
+  <button class="h-icon-btn h-menu-btn" onclick="openDrawer()" title="menu" aria-label="menu">☰</button>
 </header>
 
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">artel</div>
+  <div class="drawer-scroll">
+    <div class="drawer-nav">
+      <button class="drawer-item on" onclick="drawerTab('memory')">memory</button>
+      <button class="drawer-item" onclick="drawerTab('tasks')">tasks</button>
+      <button class="drawer-item" id="drawer-btn-messages" onclick="drawerTab('messages')">messages</button>
+      <button class="drawer-item" onclick="drawerTab('events')">events</button>
+      <button class="drawer-item" onclick="drawerTab('agents')">agents</button>
+      <button class="drawer-item" onclick="drawerTab('sessions')">sessions</button>
+      <button class="drawer-item" onclick="drawerTab('logs')">logs</button>
+      <button class="drawer-item" onclick="drawerTab('mesh')">mesh</button>
+    </div>
+    <div class="panel-section" id="ps-projects-drawer">
+      <span class="panel-section-lbl" onclick="toggleSection('ps-projects-drawer')">projects</span>
+      <div class="panel-section-body">
+        <div class="panel-proj-row">
+          <input id="drawer-proj-input" placeholder="join or create…" onkeydown="if(event.key==='Enter')panelJoinProject('drawer-proj-input')">
+          <button class="sm p" onclick="panelJoinProject('drawer-proj-input')">+</button>
+        </div>
+        <div id="drawer-pjlist"></div>
+      </div>
+    </div>
+    <div class="panel-section" id="ps-appearance-drawer">
+      <span class="panel-section-lbl" onclick="toggleSection('ps-appearance-drawer')">appearance</span>
+      <div class="panel-section-body">
+        <div class="mode-toggle" id="drawer-mode-toggle"></div>
+        <div class="panel-theme-grid" id="drawer-theme-row"></div>
+      </div>
+    </div>
+  </div>
+  <div class="drawer-footer">
+    <a class="drawer-item" href="/ui/logout" style="text-decoration:none">logout</a>
+  </div>
+</div>
+
 <nav>
-  <button class="nav-btn on" onclick="tab('memory',this)">memory</button>
-  <button class="nav-btn" onclick="tab('tasks',this)">tasks</button>
-  <button class="nav-btn" onclick="tab('messages',this)" id="btn-messages">messages</button>
-  <button class="nav-btn" onclick="tab('events',this)">events</button>
-  <button class="nav-btn" onclick="tab('agents',this)">agents</button>
-  <button class="nav-btn" onclick="tab('sessions',this)">sessions</button>
+  <div class="nav-logo">
+    <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><polygon points="32,4 60,32 32,60 4,32" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/><circle cx="32" cy="32" r="6" fill="currentColor"/></svg>
+    artel
+  </div>
+  <div class="nav-scroll">
+    <div class="nav-items">
+      <button class="nav-btn on" onclick="tab('memory',this)">memory</button>
+      <button class="nav-btn" onclick="tab('tasks',this)">tasks</button>
+      <button class="nav-btn" onclick="tab('messages',this)" id="btn-messages">messages</button>
+      <button class="nav-btn" onclick="tab('events',this)">events</button>
+      <button class="nav-btn" onclick="tab('agents',this)">agents</button>
+      <button class="nav-btn" onclick="tab('sessions',this)">sessions</button>
+      <button class="nav-btn" onclick="tab('logs',this)">logs</button>
+      <button class="nav-btn" onclick="tab('mesh',this)">mesh</button>
+    </div>
+    <div class="panel-section" id="ps-projects-sidebar">
+      <span class="panel-section-lbl" onclick="toggleSection('ps-projects-sidebar')">projects</span>
+      <div class="panel-section-body">
+        <div class="panel-proj-row">
+          <input id="sidebar-proj-input" placeholder="join or create…" onkeydown="if(event.key==='Enter')panelJoinProject('sidebar-proj-input')">
+          <button class="sm p" onclick="panelJoinProject('sidebar-proj-input')">+</button>
+        </div>
+        <div id="sidebar-pjlist"></div>
+      </div>
+    </div>
+    <div class="panel-section" id="ps-appearance-sidebar">
+      <span class="panel-section-lbl" onclick="toggleSection('ps-appearance-sidebar')">appearance</span>
+      <div class="panel-section-body">
+        <div class="mode-toggle" id="sidebar-mode-toggle"></div>
+        <div class="panel-theme-grid" id="sidebar-theme-row"></div>
+      </div>
+    </div>
+  </div>
+  <div class="nav-footer">
+    <a class="nav-btn" href="/ui/logout" style="text-decoration:none">logout</a>
+  </div>
 </nav>
 
 <div id="toast-stack"></div>
@@ -600,7 +1144,7 @@ pre{
 <!-- MEMORY -->
 <div id="panel-memory" class="panel on">
   <div class="toolbar">
-    <input id="q" placeholder="semantic search…" style="flex:1;min-width:120px" onkeydown="if(event.key==='Enter')search()">
+    <input id="q" class="toolbar-search" placeholder="semantic search…" onkeydown="if(event.key==='Enter')search()">
     <select id="q-type" style="width:110px" onchange="search()">
       <option value="">all types</option>
       <option>memory</option>
@@ -691,25 +1235,6 @@ pre{
   <div id="alist"></div>
 </div>
 
-<!-- PROJECTS -->
-<!-- PROJECTS / SETTINGS MODAL -->
-<div id="projects-modal" class="modal-backdrop">
-  <div class="modal" style="max-width:720px;width:90vw">
-    <div class="modal-header">
-      <span class="modal-title">manage projects</span>
-      <button class="modal-close" onclick="closeProjectsModal()" title="close">✕</button>
-    </div>
-    <div class="toolbar" style="margin-bottom:12px">
-      <input id="new-proj" placeholder="create or join project…" style="flex:1;min-width:0" onkeydown="if(event.key==='Enter')joinProjectByInput()">
-      <button class="p" onclick="joinProjectByInput()">join / create</button>
-      <button onclick="loadProjects()">refresh</button>
-    </div>
-    <div id="pjlist"></div>
-    <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--b1);display:flex;justify-content:flex-end">
-      <a class="h-logout" href="/ui/logout">logout</a>
-    </div>
-  </div>
-</div>
 
 <!-- SESSIONS -->
 <div id="panel-sessions" class="panel">
@@ -732,6 +1257,73 @@ pre{
       <button class="p" onclick="saveHandoff()">save handoff</button>
     </div>
   </div>
+</div>
+
+<!-- LOGS -->
+<div id="panel-logs" class="panel">
+  <div class="toolbar">
+    <select id="log-level" onchange="loadLogs()" style="width:120px">
+      <option value="">all levels</option>
+      <option value="info">info</option>
+      <option value="warning">warning</option>
+      <option value="error">error</option>
+    </select>
+    <select id="log-source" onchange="loadLogs()" style="width:120px">
+      <option value="">all sources</option>
+      <option value="archivist">archivist</option>
+      <option value="poller">poller</option>
+    </select>
+    <select id="log-action" onchange="loadLogs()" style="width:140px">
+      <option value="">all actions</option>
+      <option value="synthesis">synthesis</option>
+      <option value="triage">triage</option>
+      <option value="fact_extraction">fact_extraction</option>
+      <option value="decay">decay</option>
+      <option value="promotion">promotion</option>
+      <option value="feed_poll">feed_poll</option>
+    </select>
+    <button onclick="loadLogs()">refresh</button>
+    <div class="spacer"></div>
+    <span class="toolbar-label" id="log-count"></span>
+  </div>
+  <div id="log-list"></div>
+</div>
+
+<div id="panel-mesh" class="panel">
+  <div class="toolbar" style="margin-bottom:16px">
+    <span style="font-size:13px;font-weight:600">Mesh Network</span>
+    <div class="spacer"></div>
+    <button onclick="loadMesh()">refresh</button>
+  </div>
+
+  <!-- discovered on LAN -->
+  <div id="mesh-discovered-section"></div>
+
+  <!-- linked peers -->
+  <div class="section-header" style="margin-top:4px">
+    <span class="section-label">linked peers</span>
+  </div>
+  <div id="mesh-list" style="margin-bottom:20px"></div>
+
+  <!-- manual link (collapsed by default) -->
+  <details style="margin-bottom:20px">
+    <summary style="font:500 11px var(--mono);color:var(--t3);text-transform:uppercase;letter-spacing:.8px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px">
+      <span>▸</span> link manually
+    </summary>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px">
+      <input id="mesh-url" placeholder="peer Artel URL  e.g. http://host:8000" style="width:100%;box-sizing:border-box">
+      <input id="mesh-token" placeholder="peer's mesh token" style="width:100%;box-sizing:border-box">
+      <input id="mesh-proj" placeholder="project scope (leave blank for all)" style="width:100%;box-sizing:border-box">
+      <button class="p" onclick="addPeer()" style="align-self:flex-start">link peer</button>
+    </div>
+  </details>
+
+  <!-- inbound tokens -->
+  <div class="section-header">
+    <span class="section-label">my tokens</span>
+    <span style="font-size:11px;color:var(--t4)">— share with peers so they can pull from you</span>
+  </div>
+  <div id="mesh-token-section"></div>
 </div>
 
 <!-- TASK EDIT MODAL -->
@@ -765,7 +1357,9 @@ pre{
 <script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-const hdrs=()=>({'content-type':'application/json','x-agent-id':window._aid,'x-api-key':window._akey});
+const hdrs=()=>window._akey
+  ?{'content-type':'application/json','x-agent-id':window._aid,'x-api-key':window._akey}
+  :{'content-type':'application/json','x-ui-session':'1'};
 let _sseAbort=null, _agents=[], _projects=[], _myProjects=new Set(), _editTaskId=null, _taskData={};
 
 // ── Toast system ──────────────────────────────────────────────────────
@@ -797,18 +1391,20 @@ async function parseErr(r){
   try{const j=await r.json();return j.detail||JSON.stringify(j);}catch{return await r.text();}
 }
 async function adminReq(method,path,body){
-  const r=await fetch(path,{method,headers:{'content-type':'application/json','x-registration-key':window._regkey},body:body?JSON.stringify(body):undefined});
+  if(window._agent_role!=='owner')throw new Error('read-only: log in as owner to make changes');
+  const r=await fetch(path,{method,headers:hdrs(),credentials:'same-origin',body:body?JSON.stringify(body):undefined});
   if(!r.ok)throw new Error(await parseErr(r));
-  return method==='DELETE'?null:r.json();
+  return (method==='DELETE'||r.status===204)?null:r.json();
 }
 
 function activeProject(){return $('h-project').value||null}
 function activeAgent(){return $('h-agent-sel').value||null}
 
 async function req(method,path,body){
-  const r=await fetch(path,{method,headers:hdrs(),body:body?JSON.stringify(body):undefined});
+  if(window._agent_role==='viewer'&&method!=='GET')throw new Error('read-only: log in as owner to make changes');
+  const r=await fetch(path,{method,headers:hdrs(),credentials:'same-origin',body:body?JSON.stringify(body):undefined});
   if(!r.ok)throw new Error(await parseErr(r));
-  return method==='DELETE'?null:r.json();
+  return (method==='DELETE'||r.status===204)?null:r.json();
 }
 
 function flash(id){const el=$(id);el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2000)}
@@ -833,15 +1429,98 @@ function tab(name,btn){
   if(name==='events'&&!_sseAbort)startSSE();
   if(name==='agents')loadAgents();
   if(name==='sessions'){populateSessionAgents();loadSession();}
+  if(name==='logs')loadLogs();
+  if(name==='mesh')loadMesh();
 }
 
-function openProjectsModal(){
-  $('projects-modal').classList.add('open');
-  loadProjects();
+function toggleSection(id){
+  const el=$(id);if(!el)return;
+  el.classList.toggle('collapsed');
+  try{localStorage.setItem('artel-ps-'+id,el.classList.contains('collapsed')?'1':'0');}catch(e){}
 }
-function closeProjectsModal(){
-  $('projects-modal').classList.remove('open');
+(function(){['ps-appearance-sidebar','ps-appearance-drawer','ps-projects-sidebar','ps-projects-drawer'].forEach(id=>{
+  try{if(localStorage.getItem('artel-ps-'+id)==='1'&&$(id))$(id).classList.add('collapsed');}catch(e){}
+});}());
+function openDrawer(){
+  $('drawer').classList.add('open');
+  $('drawer-overlay').classList.add('open');
 }
+function closeDrawer(){
+  $('drawer').classList.remove('open');
+  $('drawer-overlay').classList.remove('open');
+}
+function drawerTab(name){
+  closeDrawer();
+  const navBtn=document.querySelector(`nav button[onclick*="'${name}'"]`);
+  if(navBtn)tab(name,navBtn);
+  else{
+    const prev=document.querySelector('.panel.on');
+    if(prev?.id==='panel-events'&&name!=='events')stopSSE();
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+    document.querySelectorAll('.drawer-item').forEach(b=>b.classList.remove('on'));
+    $('panel-'+name).classList.add('on');
+    document.querySelector(`.drawer-item[onclick*="'${name}'"]`)?.classList.add('on');
+    if(name==='memory')loadMem();
+    if(name==='tasks')loadTasks();
+    if(name==='messages')loadInbox();
+    if(name==='events'&&!_sseAbort)startSSE();
+    if(name==='agents')loadAgents();
+    if(name==='sessions'){populateSessionAgents();loadSession();}
+    if(name==='logs')loadLogs();
+    if(name==='mesh')loadMesh();
+  }
+}
+const _THEMES=[
+  {id:'gruvbox',     label:'Gruvbox',     dark:'',               light:'gruvbox-light',    bd:'#1d2021',ad:'#d79921',bl:'#f9f5d7',al:'#b57614'},
+  {id:'everforest',  label:'Everforest',  dark:'everforest',     light:'everforest-light', bd:'#272e33',ad:'#a7c080',bl:'#fff9ef',al:'#8da101'},
+  {id:'dracula',     label:'Dracula',     dark:'dracula',        light:'dracula-light',    bd:'#282a36',ad:'#bd93f9',bl:'#f8f8f2',al:'#6d28d9'},
+  {id:'mellow',      label:'Mellow',      dark:'mellow',         light:'mellow-light',     bd:'#1e1e1e',ad:'#7c9b8a',bl:'#f5f5f0',al:'#4a7060'},
+  {id:'rose-pine',   label:'Rosé Pine',   dark:'rose-pine',      light:'rose-pine-dawn',   bd:'#191724',ad:'#c4a7e7',bl:'#faf4ed',al:'#d7827e'},
+  {id:'nord',        label:'Nord',        dark:'nord',           light:'nord-light',       bd:'#2e3440',ad:'#88c0d0',bl:'#eceff4',al:'#5e81ac'},
+  {id:'tokyo-night', label:'Tokyo Night', dark:'tokyo-night',    light:'tokyo-night-light',bd:'#1a1b26',ad:'#7aa2f7',bl:'#e1e2e7',al:'#2e7de9'},
+  {id:'solarized',   label:'Solarized',   dark:'solarized',      light:'solarized-light',  bd:'#002b36',ad:'#268bd2',bl:'#fdf6e3',al:'#268bd2'},
+  {id:'hacker',      label:'Hacker',      dark:'hacker',         light:'hacker-light',     bd:'#0d0d0d',ad:'#00ff41',bl:'#f0fff0',al:'#007700'},
+  {id:'monokai',     label:'Monokai',     dark:'monokai',        light:'monokai-light',    bd:'#272822',ad:'#fd971f',bl:'#fafaf8',al:'#e6821e'},
+  {id:'cobalt',      label:'Cobalt',      dark:'cobalt',         light:'cobalt-light',     bd:'#193549',ad:'#ffc600',bl:'#e8f4fd',al:'#1565c0'},
+  {id:'volcano',     label:'Volcano',     dark:'volcano',        light:'volcano-light',    bd:'#1a1210',ad:'#e8541a',bl:'#fdf0e8',al:'#c04010'},
+  {id:'kanagawa',    label:'Kanagawa',    dark:'kanagawa',       light:'kanagawa-lotus',   bd:'#1f1f28',ad:'#7e9cd8',bl:'#f2ecbc',al:'#4d699b'},
+  {id:'ayu',         label:'Ayu',         dark:'ayu',            light:'ayu-light',        bd:'#0a0e14',ad:'#ffb454',bl:'#fafafa', al:'#ff9940'},
+  {id:'flexoki',     label:'Flexoki',     dark:'flexoki',        light:'flexoki-light',    bd:'#100f0f',ad:'#d14d41',bl:'#fffcf0',al:'#d14d41'},
+  {id:'oxocarbon',   label:'Oxocarbon',   dark:'oxocarbon',      light:'oxocarbon-light',  bd:'#161616',ad:'#08bdba',bl:'#ffffff', al:'#0f62fe'},
+];
+let _curTheme=localStorage.getItem('artel-theme-id')||'gruvbox';
+let _curMode=localStorage.getItem('artel-mode')||'dark';
+(function(){
+  const css=localStorage.getItem('artel-theme-css');
+  if(css!==null){if(css)document.documentElement.setAttribute('data-theme',css);}
+  else{const t=localStorage.getItem('artel-theme');if(t&&t!=='gruvbox-dark')document.documentElement.setAttribute('data-theme',t);}
+}());
+function _resolveAndApply(){
+  const t=_THEMES.find(x=>x.id===_curTheme)||_THEMES[0];
+  const css=_curMode==='light'?t.light:t.dark;
+  if(css)document.documentElement.setAttribute('data-theme',css);
+  else document.documentElement.removeAttribute('data-theme');
+  localStorage.setItem('artel-theme-css',css||'');
+  localStorage.setItem('artel-theme-id',_curTheme);
+  localStorage.setItem('artel-mode',_curMode);
+}
+function setTheme(id){_curTheme=id;_resolveAndApply();renderThemePickers();}
+function setMode(m){_curMode=m;_resolveAndApply();renderThemePickers();}
+function renderThemePickers(){
+  const swatches=_THEMES.map(t=>`<button class="theme-swatch${t.id===_curTheme?' active':''}" onclick="setTheme('${t.id}')" title="${t.label}"><span class="swatch-dots"><span class="sd" style="background:${t.bd};border-color:${t.ad}"></span><span class="sd" style="background:${t.bl};border-color:${t.al}"></span></span><span class="swatch-label">${esc(t.label)}</span></button>`).join('');
+  const toggle=`<button class="mode-btn${_curMode==='dark'?' on':''}" onclick="setMode('dark')">dark</button><button class="mode-btn${_curMode==='light'?' on':''}" onclick="setMode('light')">light</button>`;
+  ['sidebar','drawer'].forEach(p=>{
+    const tr=$(p+'-theme-row');if(tr)tr.innerHTML=swatches;
+    const mt=$(p+'-mode-toggle');if(mt)mt.innerHTML=toggle;
+  });
+}
+async function panelJoinProject(inputId){
+  const name=$(inputId).value.trim();if(!name)return;
+  await joinProject(name);$(inputId).value='';
+}
+document.addEventListener('click',e=>{
+  if($('drawer').classList.contains('open')&&!e.target.closest('#drawer')&&!e.target.closest('.h-menu-btn'))closeDrawer();
+});
 
 function onProjectChange(){
   const p=document.querySelector('.panel.on');if(!p)return;
@@ -871,6 +1550,7 @@ async function init(){
   }
   await Promise.all([loadProjectsHeader(),loadAgentsGlobal()]);
   loadMem();checkInbox();setInterval(checkInbox,30000);
+  loadProjects();renderThemePickers();
 }
 
 async function loadProjectsHeader(){
@@ -892,7 +1572,7 @@ async function loadProjectsHeader(){
 
 async function loadAgentsGlobal(){
   try{
-    _agents=await req('GET','/participants');
+    _agents=await req('GET','/agents');
     const dl=$('agent-list-dl'),sa=$('sess-agent'),ha=$('h-agent-sel');
     dl.innerHTML='';
     sa.innerHTML='<option value="">select agent…</option>';
@@ -1230,7 +1910,7 @@ function startSSE(){
   const url='/events/stream'+(agent?'?agent='+encodeURIComponent(agent):'');
   (async()=>{
     try{
-      const r=await fetch(url,{headers:hdrs(),signal:_sseAbort.signal});
+      const r=await fetch(url,{headers:hdrs(),credentials:'same-origin',signal:_sseAbort.signal});
       if(!r.ok){setSseStatus(false,'error '+r.status);return;}
       setSseStatus(true,'connected');
       $('ev-log').innerHTML='';
@@ -1265,7 +1945,7 @@ async function loadAgents(){
   loading('alist',4);
   try{
     const [participants,projects]=await Promise.all([
-      req('GET','/participants'),
+      req('GET','/agents'),
       req('GET','/projects').catch(()=>[]),
     ]);
     const agentProjects={};
@@ -1294,10 +1974,10 @@ async function loadAgents(){
           <span title="${p.last_seen||''}">last seen ${relTime(p.last_seen)}</span>
           ${projs?`<span style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap">${projs}</span>`:''}
         </div>
-        <div class="card-actions" style="margin-top:0">
+        ${window._agent_role==='owner'?`<div class="card-actions" style="margin-top:0">
           <button class="sm" onclick="renameAgent('${esc(p.agent_id)}')">rename</button>
           <button class="sm danger" onclick="deleteAgent('${esc(p.agent_id)}')">delete</button>
-        </div>
+        </div>`:''}
       </div>`;
     }).join('')+'</div>';
   }catch(e){$('alist').innerHTML=emptyState('⚠','Error: '+e.message);}
@@ -1323,39 +2003,24 @@ async function renameAgent(id){
 // ── Projects ─────────────────────────────────────────────────────────
 
 async function loadProjects(){
-  loading('pjlist',3);
   try{
     const [ps,mine]=await Promise.all([
       req('GET','/projects'),
       req('GET','/projects/mine').catch(()=>[]),
     ]);
     _myProjects=new Set(mine.map(p=>p.project_id));
-    if(!ps.length&&!mine.length){
-      $('pjlist').innerHTML=emptyState('◫','no projects — type a name above and join');return;
-    }
-    const byName=Object.fromEntries(ps.map(p=>[p.name,p]));
-    const rows=[...mine.map(p=>p.project_id),...ps.map(p=>p.name).filter(n=>!_myProjects.has(n))];
-    $('pjlist').innerHTML='<div class="proj-grid">'+[...new Set(rows)].map(name=>{
-      const p=byName[name],isMine=_myProjects.has(name);
-      const last=p?.last_activity?relTime(p.last_activity):'—';
-      const lastFull=p?.last_activity?p.last_activity.slice(0,16):'';
-      return `<div class="pj${isMine?' mine':''}">
-        <div class="pj-name">${esc(name)}${isMine?` <span style="color:var(--green);font-size:10px">●</span>`:''}</div>
-        <div class="pj-agents">${(p?.agents||[]).join(', ')||'no members yet'}</div>
-        <div class="pj-stats">
-          <span><span class="pj-stat-val">${p?.memory_count??0}</span> mem</span>
-          <span><span class="pj-stat-val">${p?.task_count??0}</span> tasks</span>
-          <span title="${lastFull}">last <span class="pj-stat-val">${last}</span></span>
-        </div>
-        <div class="card-actions" style="margin-top:10px">
-          <button class="sm" onclick="selectProject('${esc(name)}')">set active</button>
-          ${isMine
-            ?`<button class="sm danger" onclick="leaveProject('${esc(name)}')">leave</button>`
-            :`<button class="sm p" onclick="joinProject('${esc(name)}')">join</button>`}
-        </div>
+    const rows=[...new Set([...mine.map(p=>p.project_id),...ps.map(p=>p.name)])];
+    const html=rows.length?rows.map(name=>{
+      const isMine=_myProjects.has(name);
+      return `<div class="nav-pj${isMine?' mine':''}">
+        <span class="nav-pj-name" title="${esc(name)}" onclick="selectProject('${esc(name)}')">${esc(name)}</span>
+        ${isMine
+          ?`<button class="nav-pj-btn sm danger" onclick="leaveProject('${esc(name)}')">×</button>`
+          :`<button class="nav-pj-btn sm p" onclick="joinProject('${esc(name)}')">join</button>`}
       </div>`;
-    }).join('')+'</div>';
-  }catch(e){$('pjlist').innerHTML=emptyState('⚠','Error: '+e.message);}
+    }).join(''):`<div style="padding:2px 18px;font:10px var(--mono);color:var(--t4)">none yet</div>`;
+    ['sidebar-pjlist','drawer-pjlist'].forEach(id=>{if($(id))$(id).innerHTML=html;});
+  }catch(e){['sidebar-pjlist','drawer-pjlist'].forEach(id=>{if($(id))$(id).innerHTML=`<div style="padding:2px 18px;font:10px var(--mono);color:var(--red)">${esc(e.message)}</div>`;});}
 }
 
 function selectProject(name){$('h-project').value=name;onProjectChange()}
@@ -1376,8 +2041,8 @@ async function leaveProject(name){
   }catch(e){toast('Failed: '+e.message,'err');}
 }
 async function joinProjectByInput(){
-  const name=$('new-proj').value.trim();if(!name)return;
-  await joinProject(name);$('new-proj').value='';
+  const name=($('sidebar-proj-input')||$('drawer-proj-input'))?.value.trim();if(!name)return;
+  await joinProject(name);
 }
 
 // ── Sessions ─────────────────────────────────────────────────────────
@@ -1444,12 +2109,177 @@ async function saveHandoff(){
   }catch(e){toast('Save failed: '+e.message,'err');}
 }
 
+// ── Logs ─────────────────────────────────────────────────────────────
+const _LOG_LEVEL_COLOR={info:'var(--t3)',warning:'var(--orange)',error:'var(--red)'};
+async function loadLogs(){
+  loading('log-list');
+  const level=$('log-level').value;
+  const source=$('log-source').value;
+  const action=$('log-action').value;
+  const params=new URLSearchParams({limit:'200'});
+  if(level)params.set('level',level);
+  if(source)params.set('source',source);
+  if(action)params.set('action',action);
+  try{
+    const rows=await req('GET',`/logs?${params}`);
+    $('log-count').textContent=rows.length+' entr'+(rows.length===1?'y':'ies');
+    if(!rows.length){$('log-list').innerHTML=emptyState('📋','no log entries');return;}
+    $('log-list').innerHTML=rows.map(r=>{
+      const color=_LOG_LEVEL_COLOR[r.level]||'var(--t3)';
+      const det=r.details&&Object.keys(r.details).length?`<div class="log-details">${esc(JSON.stringify(r.details))}</div>`:'';
+      return `<div class="log-row">
+        <span class="log-ts">${relTime(r.created_at)}</span>
+        <span class="log-level" style="color:${color}">${esc(r.level)}</span>
+        <span class="log-source">${esc(r.source)}</span>
+        <span class="log-action">${esc(r.action)}</span>
+        <span class="log-msg">${esc(r.message)}</span>
+        ${det}
+      </div>`;
+    }).join('');
+  }catch(e){$('log-list').innerHTML=`<div class="err-msg">${esc(e.message)}</div>`;}
+}
+
+async function loadMesh(){
+  loading('mesh-list');
+  loading('mesh-token-section');
+  loading('mesh-discovered-section');
+  try{
+    const [tokens,peers,discovered]=await Promise.all([
+      req('GET','/mesh/tokens'),
+      req('GET','/mesh/peers'),
+      req('GET','/mesh/discovered').catch(()=>[]),
+    ]);
+    const base=window.location.origin;
+    if(discovered.length){
+      $('mesh-discovered-section').innerHTML=`
+        <div class="section-header">
+          <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0"></span>
+          <span class="section-label" style="margin-bottom:0">discovered on LAN</span>
+        </div>`+
+        discovered.map(p=>`<div class="card green" style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+          <span style="flex:1;font-size:12px;font-family:var(--mono)">${esc(p.url)}</span>
+          <button class="p sm" onclick="linkDiscovered('${esc(p.instance_id)}')">link</button>
+        </div>`).join('')+`<div style="margin-bottom:16px"></div>`;
+    } else {
+      $('mesh-discovered-section').innerHTML='';
+    }
+    if(!tokens.length){
+      $('mesh-token-section').innerHTML=`
+        <div style="color:var(--t4);font-size:12px;margin-bottom:8px">No tokens yet. Generate one to let another Artel pull your memory.</div>
+        <button class="p sm" onclick="createMeshToken()">generate token</button>`;
+    } else {
+      $('mesh-token-section').innerHTML=tokens.map(t=>{
+        const scope=t.project?`project: ${esc(t.project)}`:'all projects';
+        const feedUrl=`${base}/memory/feed.json?mesh_token=${encodeURIComponent(t.token)}${t.project?'&project='+encodeURIComponent(t.project):''}`;
+        return `<div class="card accent">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+            <span style="font-size:12px;font-weight:600">${esc(t.label||'token')}</span>
+            <span class="tag">${scope}</span>
+            <div class="spacer"></div>
+            <button class="sm" onclick="revokeMeshToken('${esc(t.id)}')">revoke</button>
+          </div>
+          <div style="font-size:11px;color:var(--t3);margin-bottom:3px">token</div>
+          <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
+            <code style="font-size:11px;word-break:break-all;flex:1;color:var(--accent);opacity:.85">${esc(t.token)}</code>
+            <button class="sm" onclick="navigator.clipboard.writeText('${esc(t.token)}').then(()=>toast('copied','info'))">copy</button>
+          </div>
+          <div style="font-size:11px;color:var(--t3);margin-bottom:3px">feed URL</div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <code style="font-size:11px;word-break:break-all;flex:1;color:var(--t3)">${esc(feedUrl)}</code>
+            <button class="sm" onclick="navigator.clipboard.writeText('${esc(feedUrl)}').then(()=>toast('URL copied','info'))">copy</button>
+          </div>
+        </div>`;
+      }).join('')+`<button class="sm" style="margin-top:4px" onclick="createMeshToken()">+ new token</button>`;
+    }
+    if(!peers.length){$('mesh-list').innerHTML=emptyState('🕸','no linked peers');return;}
+    $('mesh-list').innerHTML=peers.map(r=>{
+      const synced=r.last_fetched_at?'synced '+relTime(r.last_fetched_at):'never synced';
+      return `<div class="card blue">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:12px;font-weight:600;font-family:var(--mono);flex:1;word-break:break-all">${esc(r.peer_url)}</span>
+          <button class="sm p" onclick="syncPeer('${esc(r.id)}')">sync</button>
+          <button class="sm" onclick="detachPeer('${esc(r.id)}')">detach</button>
+        </div>
+        <div class="meta">
+          <span>scope: ${esc(r.project||'all projects')}</span>
+          <span>·</span>
+          <span>${synced}</span>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    $('mesh-list').innerHTML=`<div class="err-msg">${esc(e.message)}</div>`;
+    $('mesh-token-section').innerHTML=`<div class="err-msg">${esc(e.message)}</div>`;
+  }
+}
+
+async function createMeshToken(){
+  const label=prompt('Token label (optional):','');
+  if(label===null)return;
+  const project=prompt('Project scope (leave blank for all projects):','');
+  if(project===null)return;
+  try{
+    await req('POST','/mesh/tokens',{label:label||null,project:project||null});
+    toast('token created','info');
+    loadMesh();
+  }catch(e){toast(e.message,'error');}
+}
+
+async function revokeMeshToken(id){
+  if(!confirm('Revoke this token? Peers using it will stop syncing.'))return;
+  try{
+    await req('DELETE','/mesh/tokens/'+id);
+    toast('token revoked','info');
+    loadMesh();
+  }catch(e){toast(e.message,'error');}
+}
+
+async function addPeer(){
+  const peer_url=$('mesh-url').value.trim();
+  const peer_token=$('mesh-token').value.trim();
+  const project=$('mesh-proj').value.trim()||null;
+  if(!peer_url||!peer_token){toast('URL and token required','error');return;}
+  try{
+    await req('POST','/mesh/peers',{peer_url,peer_token,project});
+    $('mesh-url').value=$('mesh-token').value=$('mesh-proj').value='';
+    toast('peer linked','info');
+    loadMesh();
+  }catch(e){toast(e.message,'error');}
+}
+
+async function linkDiscovered(instanceId){
+  const project=prompt('Project scope (leave blank for all projects):','');
+  if(project===null)return;
+  try{
+    await req('POST','/mesh/link-discovered',{instance_id:instanceId,project:project||null});
+    toast('peer linked via handshake','info');
+    loadMesh();
+  }catch(e){toast(e.message,'error');}
+}
+
+async function syncPeer(id){
+  try{
+    await req('POST',`/mesh/peers/${id}/sync`);
+    toast('synced','info');
+    loadMesh();
+  }catch(e){toast(e.message,'error');}
+}
+
+async function detachPeer(id){
+  if(!confirm('Detach this peer? Memory will stop syncing.'))return;
+  try{
+    await req('DELETE','/mesh/peers/'+id);
+    toast('peer detached','info');
+    loadMesh();
+  }catch(e){toast(e.message,'error');}
+}
+
 // ── Connect dropdown ──────────────────────────────────────────────────
 function _connectCmd(){
   const base=window.location.origin;
   return window._regkey
-    ?`curl ${base}/onboard | ARTEL_REG_KEY=${window._regkey} sh`
-    :`curl ${base}/onboard | sh`;
+    ?`curl -fsSL ${base}/onboard | ARTEL_REG_KEY=${window._regkey} sh`
+    :`curl -fsSL ${base}/onboard | sh`;
 }
 function toggleConnect(e){
   e.stopPropagation();

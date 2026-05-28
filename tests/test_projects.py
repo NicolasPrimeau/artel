@@ -100,3 +100,86 @@ async def test_project_list_includes_members(client):
     projects = {p["name"]: p for p in r.json()}
     assert "alpha" in projects
     assert TEST_AGENT in projects["alpha"]["agents"]
+
+
+async def test_create_project(client):
+    r = await client.post("/projects", json={"name": "my-new-project"}, headers=HEADERS)
+    assert r.status_code == 204
+
+    r2 = await client.get("/projects/mine", headers=HEADERS)
+    ids = [p["project_id"] for p in r2.json()]
+    assert "my-new-project" in ids
+
+
+async def test_create_project_idempotent(client):
+    await client.post("/projects", json={"name": "dup-project"}, headers=HEADERS)
+    r = await client.post("/projects", json={"name": "dup-project"}, headers=HEADERS)
+    assert r.status_code == 204
+
+
+async def test_project_name_case_insensitive_join(client):
+    await client.post("/projects/Nimbus/join", headers=HEADERS)
+    r = await client.get("/projects/mine", headers=HEADERS)
+    ids = [p["project_id"] for p in r.json()]
+    assert "nimbus" in ids
+    assert "Nimbus" not in ids
+
+
+async def test_project_case_variants_resolve_to_same_project(client):
+    await client.post("/projects/Nimbus/join", headers=HEADERS)
+    await client.post("/projects/NIMBUS/join", headers=HEADERS2)
+
+    r = await client.get("/projects/nimbus/members", headers=HEADERS)
+    assert r.status_code == 200
+    agent_ids = sorted(m["agent_id"] for m in r.json())
+    assert agent_ids == sorted([TEST_AGENT, AGENT2])
+
+
+async def test_memory_project_case_normalized(client):
+    await client.post("/projects/Nimbus/join", headers=HEADERS)
+    await client.post("/projects/Nimbus/join", headers=HEADERS2)
+
+    await client.post(
+        "/memory",
+        json={
+            "content": "shared nimbus note",
+            "type": "memory",
+            "scope": "project",
+            "project": "NIMBUS",
+            "tags": [],
+            "parents": [],
+            "confidence": 1.0,
+        },
+        headers=HEADERS,
+    )
+
+    r = await client.get("/memory?project=nimbus", headers=HEADERS2)
+    assert r.status_code == 200
+    contents = [e["content"] for e in r.json()]
+    assert "shared nimbus note" in contents
+
+
+async def test_task_project_case_normalized(client):
+    await client.post("/projects/MyProj/join", headers=HEADERS)
+
+    r = await client.post(
+        "/tasks",
+        json={"title": "T", "project": "MYPROJ"},
+        headers=HEADERS,
+    )
+    assert r.status_code == 201
+    assert r.json()["project"] == "myproj"
+
+    r2 = await client.get("/tasks?project=myproj", headers=HEADERS)
+    assert any(t["title"] == "T" for t in r2.json())
+
+
+async def test_project_list_case_normalized(client):
+    await client.post("/projects/Foo/join", headers=HEADERS)
+    await client.post("/projects/FOO/join", headers=HEADERS2)
+
+    r = await client.get("/projects", headers=HEADERS)
+    names = [p["name"] for p in r.json()]
+    assert "foo" in names
+    assert "Foo" not in names
+    assert "FOO" not in names

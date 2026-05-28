@@ -54,6 +54,11 @@ class AgentHandle:
         r.raise_for_status()
         return r.json()
 
+    async def list_messages(self, **kwargs) -> list[dict]:
+        r = await self._http.get("/messages", params=kwargs)
+        r.raise_for_status()
+        return r.json()
+
     async def create_task(self, title: str, **kwargs) -> dict:
         r = await self._http.post("/tasks", json={"title": title, **kwargs})
         r.raise_for_status()
@@ -95,7 +100,7 @@ class AgentHandle:
         return r.json()
 
     async def load_handoff(self) -> dict:
-        r = await self._http.get(f"/sessions/handoff/{self.id}")
+        r = await self._http.get("/sessions/handoff")
         r.raise_for_status()
         return r.json()
 
@@ -118,7 +123,7 @@ class AgentHandle:
         return r.json()
 
     async def participants(self) -> list[dict]:
-        r = await self._http.get("/participants")
+        r = await self._http.get("/agents")
         r.raise_for_status()
         return r.json()
 

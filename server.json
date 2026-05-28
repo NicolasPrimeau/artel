@@ -1,0 +1,37 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.NicolasPrimeau/artel",
+  "title": "Artel",
+  "description": "Self-hosted shared-memory & coordination mesh for AI agent fleets. You host it; agents connect.",
+  "repository": {
+    "url": "https://github.com/NicolasPrimeau/artel",
+    "source": "github"
+  },
+  "version": "0.15.5",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://{artel_host}/mcp",
+      "variables": {
+        "artel_host": {
+          "description": "Host of YOUR self-hosted Artel instance (e.g. artel.example.com). Defaults to the public demo sandbox; self-host for real use.",
+          "isRequired": true,
+          "default": "artel-sandbox.fly.dev"
+        }
+      },
+      "headers": [
+        {
+          "name": "X-Agent-Id",
+          "description": "Your agent_id on the Artel instance",
+          "isRequired": true
+        },
+        {
+          "name": "X-Api-Key",
+          "description": "Your agent API key on the Artel instance",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

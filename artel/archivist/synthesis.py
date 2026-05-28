@@ -2,8 +2,10 @@ import asyncio
 import json
 import logging
 import math
+import secrets
 from datetime import UTC, datetime, timedelta
 
+from ..store.db import get_db, instance_id
 from .client import ArtelClient
 from .config import settings
 from .llm import complete, is_configured
@@ -266,27 +268,110 @@ async def on_task_completed(task_id: str, agent_id: str, client: ArtelClient) ->
         return
 
     query = f"{task['title']} {task.get('description') or ''}"
-    related = await client.search_memory(query, limit=5)
-    if not related:
+    related = await client.search_memory(query, limit=8)
+
+    if not is_configured():
+        if not related:
+            return
+        snippet_lines = [
+            f"- [{r['id'][:8]}] {r['content'][:120].replace(chr(10), ' ')}" for r in related[:3]
+        ]
+        content = (
+            f'Task completed: "{task["title"]}" (by {agent_id}).\n'
+            f"Expected outcome: {task.get('expected_outcome') or 'not specified'}\n\n"
+            f"Related knowledge at completion:\n" + "\n".join(snippet_lines)
+        )
+        try:
+            await client.write_memory(
+                content=content,
+                type="memory",
+                tags=["task-completion"],
+                project=task.get("project"),
+            )
+        except Exception as e:
+            log.warning("could not write task completion observation for %s: %s", task_id, e)
         return
 
-    snippet_lines = [
-        f"- [{r['id'][:8]}] {r['content'][:120].replace(chr(10), ' ')}" for r in related[:3]
-    ]
-    content = (
-        f'Task completed: "{task["title"]}" (by {agent_id}).\n'
-        f"Expected outcome: {task.get('expected_outcome') or 'not specified'}\n\n"
-        f"Related knowledge at completion:\n" + "\n".join(snippet_lines)
-    )
-    try:
-        await client.write_memory(
-            content=content,
-            type="memory",
-            tags=["task-completion"],
-            project=task.get("project"),
+    memory_block = ""
+    if related:
+        memory_block = "\n\n".join(
+            f"[{r['id']}] {r['content'][:300].replace(chr(10), ' ')}" for r in related
         )
+
+    try:
+        text = await complete(
+            system='You are the Artel archivist. A task just completed. Extract any generalizable facts that should be written or updated in project memory. Output a JSON object with keys: facts (list of strings, each a standalone memory entry to write), update_ids (list of memory entry IDs to update with new content, format: [{"id": "<id>", "content": "<new content>"}]). Be conservative — only extract facts that apply project-wide and will still be true in a week. If nothing meaningful, output {"facts": [], "update_ids": []}.',
+            user=(
+                f'Task: "{task["title"]}"\n'
+                f"Description: {task.get('description') or 'none'}\n"
+                f"Expected outcome: {task.get('expected_outcome') or 'none'}\n"
+                f"Completed by: {agent_id}\n\n"
+                + (f"Existing related memory:\n{memory_block}\n\n" if memory_block else "")
+                + "What project-wide facts, if any, does this completion establish or update?"
+            ),
+            max_tokens=1024,
+        )
+    except asyncio.CancelledError:
+        raise
     except Exception as e:
-        log.warning("could not write task completion observation for %s: %s", task_id, e)
+        log.warning("task completion LLM call failed for %s: %s", task_id, e)
+        return
+
+    stripped = text.strip()
+    if stripped.startswith("```"):
+        lines = stripped.splitlines()
+        end = len(lines) - 1
+        while end > 0 and not lines[end].strip().startswith("```"):
+            end -= 1
+        stripped = "\n".join(lines[1:end]).strip()
+    try:
+        result = json.loads(stripped)
+    except Exception:
+        log.warning("task completion LLM returned unparseable JSON for %s", task_id)
+        return
+
+    valid_ids = {r["id"] for r in related}
+    facts_written = 0
+    updates_applied = 0
+    for fact in result.get("facts", []):
+        if not isinstance(fact, str) or not fact.strip():
+            continue
+        try:
+            await client.write_memory(
+                content=fact,
+                type="memory",
+                tags=["task-completion", "archivist-extracted"],
+                project=task.get("project"),
+            )
+            facts_written += 1
+            log.info("archivist extracted fact from task %s", task_id[:8])
+        except Exception as e:
+            log.warning("could not write extracted fact for task %s: %s", task_id, e)
+
+    for update in result.get("update_ids", []):
+        if not isinstance(update, dict):
+            continue
+        uid = update.get("id", "")
+        new_content = update.get("content", "")
+        if uid not in valid_ids or not new_content.strip():
+            log.warning("task completion update references unknown or empty id: %s", uid)
+            continue
+        try:
+            await client.patch_memory(uid, content=new_content)
+            updates_applied += 1
+            log.info("archivist updated memory %s from task completion %s", uid[:8], task_id[:8])
+        except Exception as e:
+            log.warning("could not update memory %s from task %s: %s", uid, task_id, e)
+
+    await client.log(
+        action="fact_extraction",
+        message=f'task "{task["title"][:60]}" completed: {facts_written} fact(s) written, {updates_applied} memor{"y" if updates_applied == 1 else "ies"} updated',
+        details={
+            "task_id": task_id,
+            "facts_written": facts_written,
+            "updates_applied": updates_applied,
+        },
+    )
 
 
 async def on_task_failed(task_id: str, agent_id: str, client: ArtelClient) -> None:
@@ -333,7 +418,7 @@ async def on_task_failed(task_id: str, agent_id: str, client: ArtelClient) -> No
             log.warning("could not create investigation task for repeated failure: %s", e)
 
 
-async def run_synthesis(client: ArtelClient) -> None:
+async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
     if not is_configured():
         return
 
@@ -350,17 +435,20 @@ async def run_synthesis(client: ArtelClient) -> None:
         except Exception as e:
             log.warning("directive conflict check failed: %s", e)
 
-    entries = await client.get_delta(_utc_ago(24))
+    local_id = instance_id()
+    entries = await client.get_delta(_utc_ago(since_hours))
     entries = [
         e
         for e in entries
-        if e["agent_id"] != settings.archivist_id and e.get("type") != "directive"
+        if e.get("type") not in ("directive", "doc")
+        and (e.get("origin") is None or e.get("origin") == local_id)
     ]
 
     if len(entries) < 2:
         return
 
     recently_completed = []
+    open_tasks: list[dict] = []
     try:
         all_tasks = await client.list_tasks(status="completed", limit=20)
         cutoff = datetime.now(UTC) - timedelta(hours=24)
@@ -371,6 +459,10 @@ async def run_synthesis(client: ArtelClient) -> None:
         ]
     except Exception as e:
         log.warning("could not fetch recent tasks for synthesis: %s", e)
+    try:
+        open_tasks = await client.list_tasks(status="open", limit=50)
+    except Exception as e:
+        log.warning("could not fetch open tasks for synthesis: %s", e)
 
     memory_block = "\n\n".join(
         f"[{e['id']}] agent={e['agent_id']} type={e['type']} conf={e.get('confidence', 1.0)} tags={e.get('tags', [])}\n{e['content']}"
@@ -385,6 +477,9 @@ async def run_synthesis(client: ArtelClient) -> None:
             for t in recently_completed
         ]
         task_block = "\n\nCompleted tasks (last 24h):\n" + "\n".join(task_lines)
+    if open_tasks:
+        open_lines = [f'- "{t["title"]}"' for t in open_tasks]
+        task_block += "\n\nAlready-open tasks (do NOT create duplicates):\n" + "\n".join(open_lines)
 
     preamble = _build_directive_preamble(directives)
     if conflict_warning:
@@ -418,7 +513,7 @@ async def run_synthesis(client: ArtelClient) -> None:
                     "- Promote entries that are stable, high-signal, and likely to remain true.\n"
                     "- Prune entries that are superseded, duplicated, or low-signal. If confidence is already at floor, they will be deleted. Otherwise they are flagged for decay.\n"
                     "- Split entries that cover multiple unrelated topics into focused entries. Each part must be self-contained. Minimum 2 parts.\n"
-                    "- Extract a segment from one entry and fold it into another when partial content belongs with a different entry. Set remaining_content to empty string to delete the source after extraction.\n"
+                    "- Extract a segment from one entry and fold it into another when partial content belongs with a different entry. Set remaining_content to empty string to delete the source after extraction. from and into must be different IDs.\n"
                     "- Use tag/adjust_confidence to surface connections or correct signal strength.\n"
                     "- Create tasks ONLY for work requiring an external agent — never for memory operations.\n"
                     "- When in doubt about an operation, omit it. Conservatism is correct.\n"
@@ -440,28 +535,187 @@ async def run_synthesis(client: ArtelClient) -> None:
 
     ops = _parse_operations(text)
     await _execute_operations(ops, client, entries)
+    op_counts: dict = {}
+    for o in ops:
+        op_counts[o.get("op")] = op_counts.get(o.get("op"), 0) + 1
+    await client.log(
+        action="synthesis",
+        message=f"synthesis pass complete: {len(ops)} op(s) on {len(entries)} entr{'y' if len(entries) == 1 else 'ies'}",
+        details={
+            "ops": len(ops),
+            "entries": len(entries),
+            "op_types": list(op_counts.keys()),
+            "op_counts": op_counts,
+        },
+    )
 
 
 async def decay_confidence(client: ArtelClient) -> None:
+    from ..store.db import get_db
+
     cutoff = (datetime.now(UTC) - timedelta(days=settings.decay_window_days)).strftime(
         "%Y-%m-%dT%H:%M:%S.000Z"
     )
+    local_id = instance_id()
     entries = await client.list_entries(updated_before=cutoff)
     entries = [
         e
         for e in entries
-        if e["agent_id"] != settings.archivist_id and e.get("type") != "directive"
+        if e.get("type") != "directive" and (e.get("origin") is None or e.get("origin") == local_id)
     ]
 
+    db = get_db()
+    entry_ids = [e["id"] for e in entries]
+    heat_map: dict = {}
+    if entry_ids:
+        placeholders = ",".join("?" * len(entry_ids))
+        heat_rows = db.execute(
+            f"SELECT id, read_count, last_read_at FROM memory WHERE id IN ({placeholders})",
+            entry_ids,
+        ).fetchall()
+        for r in heat_rows:
+            heat_map[r["id"]] = (r["read_count"] or 0, r["last_read_at"])
+
+    now = datetime.now(UTC)
+    decayed = 0
+    heat_skipped = 0
     for entry in entries:
         current = entry["confidence"]
         if current <= settings.decay_floor:
             continue
+        rc, last_read_str = heat_map.get(entry["id"], (0, None))
+        if rc > 0 and last_read_str:
+            try:
+                last_read = datetime.fromisoformat(last_read_str.replace("Z", "+00:00"))
+                age_weeks = (now - last_read).total_seconds() / (7 * 86400)
+                heat = rc * (0.9**age_weeks)
+                if heat >= 1.0:
+                    heat_skipped += 1
+                    continue
+            except Exception:
+                pass
         new_conf = max(settings.decay_floor, current * settings.decay_rate)
         try:
             await client.patch_memory(entry["id"], confidence=new_conf)
+            decayed += 1
         except Exception as e:
             log.warning("decay failed for %s: %s", entry["id"], e)
+    if decayed or heat_skipped:
+        await client.log(
+            action="decay",
+            message=f"decayed confidence on {decayed} entr{'y' if decayed == 1 else 'ies'}, skipped {heat_skipped} heat-protected",
+            details={"decayed": decayed, "candidates": len(entries), "heat_skipped": heat_skipped},
+        )
+
+
+async def run_task_triage(client: ArtelClient) -> None:
+    try:
+        all_tasks = await client.list_tasks(status="open", limit=50)
+    except Exception as e:
+        log.warning("task triage could not fetch open tasks: %s", e)
+        return
+
+    unclaimed = [t for t in all_tasks if not t.get("assigned_to")]
+    if not unclaimed:
+        return
+
+    triaged = 0
+    for task in unclaimed:
+        try:
+            await _triage_task(task, client)
+            triaged += 1
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            log.warning("task triage failed for %s: %s", task["id"], e)
+    if triaged:
+        await client.log(
+            action="triage",
+            message=f"triaged {triaged} open task{'s' if triaged != 1 else ''}",
+            details={"triaged": triaged, "open_unclaimed": len(unclaimed)},
+        )
+
+
+async def _triage_task(task: dict, client: ArtelClient) -> None:
+    query = f"{task['title']} {task.get('description') or ''}"
+    related = await client.search_memory(query, limit=8, max_distance=0.5)
+    if not related:
+        return
+
+    memory_block = "\n\n".join(
+        f"[{r['id']}] conf={r.get('confidence', 1.0):.2f} tags={r.get('tags', [])}\n{r['content'][:300].replace(chr(10), ' ')}"
+        for r in related
+    )
+
+    if not is_configured():
+        if related:
+            snippet = "; ".join(r["content"][:80].replace("\n", " ") for r in related[:3])
+            await client.add_task_comment(
+                task["id"],
+                f"[archivist] Related memory entries found:\n{snippet}",
+            )
+        return
+
+    try:
+        text = await complete(
+            system="You are the Artel archivist triaging an open task. Output a JSON object with keys: link_comment (string or null — a comment noting relevant memory entries by ID and how they relate, null if nothing useful), duplicate_of (string or null — task title hint if this looks like a duplicate of known work, null if not), already_done (bool — true only if memory strongly suggests this work is complete). Be conservative: only flag duplicates if very confident, only flag already_done if memory explicitly describes the outcome.",
+            user=(
+                f'Task: "{task["title"]}"\n'
+                f"Description: {task.get('description') or 'none'}\n"
+                f"Expected outcome: {task.get('expected_outcome') or 'none'}\n\n"
+                f"Related memory:\n{memory_block}"
+            ),
+            max_tokens=512,
+        )
+    except asyncio.CancelledError:
+        raise
+    except Exception as e:
+        log.warning("task triage LLM call failed for %s: %s", task["id"], e)
+        return
+
+    stripped = text.strip()
+    if stripped.startswith("```"):
+        lines = stripped.splitlines()
+        end = len(lines) - 1
+        while end > 0 and not lines[end].strip().startswith("```"):
+            end -= 1
+        stripped = "\n".join(lines[1:end]).strip()
+    try:
+        result = json.loads(stripped)
+    except Exception:
+        log.warning("task triage LLM returned unparseable JSON for %s", task["id"])
+        return
+
+    link_comment = result.get("link_comment")
+    duplicate_of = result.get("duplicate_of")
+    already_done = result.get("already_done", False)
+
+    if link_comment and isinstance(link_comment, str) and link_comment.strip():
+        try:
+            await client.add_task_comment(task["id"], f"[archivist] {link_comment.strip()}")
+            log.info("archivist linked memory to task %s", task["id"][:8])
+        except Exception as e:
+            log.warning("could not add link comment to task %s: %s", task["id"], e)
+
+    if duplicate_of and isinstance(duplicate_of, str) and duplicate_of.strip():
+        try:
+            await client.close_task_as_duplicate(
+                task["id"],
+                f"[archivist] Closed as duplicate of: {duplicate_of.strip()}",
+            )
+            log.info("archivist closed duplicate task %s", task["id"][:8])
+        except Exception as e:
+            log.warning("could not close duplicate task %s: %s", task["id"], e)
+
+    if already_done:
+        try:
+            await client.add_task_comment(
+                task["id"],
+                "[archivist] Project memory suggests this work may already be complete. Verify before claiming.",
+            )
+            log.info("archivist flagged possible completion for task %s", task["id"][:8])
+        except Exception as e:
+            log.warning("could not add already_done comment to task %s: %s", task["id"], e)
 
 
 async def run_promotion(client: ArtelClient) -> None:
@@ -473,12 +727,186 @@ async def run_promotion(client: ArtelClient) -> None:
         min_version=settings.promotion_memory_min_version,
         updated_before=cutoff,
     )
+    local_id = instance_id()
+    promoted = 0
     for entry in memory_entries:
-        if entry["agent_id"] == settings.archivist_id:
-            continue
         if entry.get("type") == "directive":
+            continue
+        if entry.get("origin") is not None and entry.get("origin") != local_id:
+            continue
+        if {"feed-item", "unprocessed"} & set(entry.get("tags") or []):
             continue
         try:
             await client.patch_memory(entry["id"], type="doc")
+            promoted += 1
         except Exception as e:
             log.warning("memory promotion failed for %s: %s", entry["id"], e)
+    if promoted:
+        await client.log(
+            action="promotion",
+            message=f"promoted {promoted} memor{'y' if promoted == 1 else 'ies'} to doc",
+            details={"promoted": promoted},
+        )
+
+
+async def run_brief(client: ArtelClient) -> None:
+    if not is_configured():
+        return
+    try:
+        r = await client._request("GET", "/projects")
+        projects = r.json()
+    except Exception as e:
+        log.warning("run_brief: could not list projects: %s", e)
+        return
+    for p in projects:
+        name = p.get("name")
+        if not name:
+            continue
+        try:
+            await _refresh_project_brief(name, client)
+        except Exception as e:
+            log.warning("run_brief: failed for project %s: %s", name, e)
+
+
+async def _refresh_project_brief(project: str, client: ArtelClient) -> None:
+    docs_r = await client._request(
+        "GET", "/memory", params={"project": project, "type": "doc", "limit": 50}
+    )
+    docs = [d for d in docs_r.json() if "project-brief" not in (d.get("tags") or [])]
+
+    tasks_r = await client._request("GET", "/tasks", params={"project": project, "limit": 50})
+    tasks = tasks_r.json()
+
+    if not docs and not tasks:
+        return
+
+    existing_r = await client._request(
+        "GET", "/memory", params={"project": project, "tag": "project-brief", "limit": 1}
+    )
+    existing = existing_r.json()
+    existing_id = existing[0]["id"] if existing else None
+
+    doc_block = "\n".join(f"- {d['content'][:400]}" for d in docs[:30]) or "(none)"
+    open_tasks = [t for t in tasks if t["status"] in ("open", "claimed")]
+    done_tasks = [t for t in tasks if t["status"] == "completed"]
+    task_block = (
+        "\n".join(
+            f"- [{t['status']}] {t['title']}"
+            + (f" ({t['assigned_to']})" if t.get("assigned_to") else "")
+            for t in (open_tasks + done_tasks[:5])
+        )
+        or "(none)"
+    )
+
+    text = await complete(
+        system=(
+            "You are the Artel archivist. Write a concise project brief (4-6 sentences) for a new agent "
+            "to read at session start. Cover: what this project is, its current state, active work, and key "
+            "decisions. Be factual. No headers, no bullet points — flowing prose only."
+        ),
+        user=(f"Project: {project}\n\nKnowledge docs:\n{doc_block}\n\nTasks:\n{task_block}"),
+        max_tokens=300,
+    )
+    if not text:
+        return
+
+    if existing_id:
+        await client.patch_memory(existing_id, content=text)
+    else:
+        await client.write_memory(
+            content=text,
+            type="doc",
+            tags=["project-brief"],
+            project=project,
+        )
+    log.info("run_brief: updated brief for project %s", project)
+
+
+async def capture_metrics(project: str | None = None) -> None:
+    db = get_db()
+    cycle_window_hours = max(1, settings.synthesis_interval // 3600) + 1
+    cycle_cutoff = _utc_ago(cycle_window_hours)
+
+    proj_filter = "AND project = ?" if project else ""
+    proj_params: tuple = (project,) if project else ()
+
+    active = f"deleted_at IS NULL AND type != 'directive' {proj_filter}"
+
+    total = db.execute(f"SELECT COUNT(*) FROM memory WHERE {active}", proj_params).fetchone()[0]
+    utilized = db.execute(
+        f"SELECT COUNT(*) FROM memory WHERE {active} AND read_count > 0", proj_params
+    ).fetchone()[0]
+    utilization_rate = utilized / total if total > 0 else 0.0
+
+    decay_regret = db.execute(
+        f"""SELECT COUNT(*) FROM memory WHERE {active}
+            AND read_count > 0 AND confidence < 0.7
+            AND EXISTS (SELECT 1 FROM json_each(tags) WHERE value = 'archivist-flagged')""",
+        proj_params,
+    ).fetchone()[0]
+
+    contradiction_filter = "deleted_at IS NULL" + (" AND project = ?" if project else "")
+    contradictions = db.execute(
+        f"""SELECT COUNT(*) FROM memory WHERE {contradiction_filter}
+            AND EXISTS (SELECT 1 FROM json_each(tags) WHERE value = 'archivist-conflict')""",
+        proj_params,
+    ).fetchone()[0]
+
+    created = db.execute(
+        f"SELECT COUNT(*) FROM memory WHERE created_at > ? {proj_filter}",
+        (cycle_cutoff, *proj_params),
+    ).fetchone()[0]
+    deleted = db.execute(
+        f"SELECT COUNT(*) FROM memory WHERE deleted_at > ? {proj_filter}",
+        (cycle_cutoff, *proj_params),
+    ).fetchone()[0]
+    net_growth = created - deleted
+
+    synthesis_count = 0
+    merge_count = 0
+    decay_count = 0
+    log_rows = db.execute(
+        "SELECT action, details FROM archivist_logs WHERE created_at > ? AND source = 'archivist'",
+        (cycle_cutoff,),
+    ).fetchall()
+    for row in log_rows:
+        try:
+            d = json.loads(row["details"])
+        except Exception:
+            continue
+        if row["action"] == "synthesis":
+            synthesis_count += d.get("ops", 0)
+            merge_count += d.get("op_counts", {}).get("merge", 0)
+        elif row["action"] == "decay":
+            decay_count += d.get("decayed", 0)
+
+    params_json = json.dumps(
+        {
+            "decay_rate": settings.decay_rate,
+            "decay_window_days": settings.decay_window_days,
+            "synthesis_interval": settings.synthesis_interval,
+        }
+    )
+    mid = secrets.token_hex(16)
+    with db:
+        db.execute(
+            """INSERT INTO archivist_metrics
+               (id, project, total_entries, utilization_rate, decay_regret_count,
+                synthesis_count, synthesis_uptake_rate, contradiction_count,
+                net_growth, merge_count, decay_count, params)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (
+                mid,
+                project,
+                total,
+                utilization_rate,
+                decay_regret,
+                synthesis_count,
+                0.0,
+                contradictions,
+                net_growth,
+                merge_count,
+                decay_count,
+                params_json,
+            ),
+        )

@@ -154,6 +154,14 @@ class ArtelClient:
         )
         return r.json()
 
+    async def add_task_comment(self, task_id: str, body: str) -> dict:
+        r = await self._request("POST", f"/tasks/{task_id}/comments", json={"body": body})
+        return r.json()
+
+    async def close_task_as_duplicate(self, task_id: str, reason: str) -> None:
+        await self._request("POST", f"/tasks/{task_id}/claim")
+        await self._request("POST", f"/tasks/{task_id}/fail", json={"body": reason})
+
     async def send_message(self, to: str, subject: str, body: str) -> dict:
         r = await self._request(
             "POST",
@@ -162,11 +170,37 @@ class ArtelClient:
         )
         return r.json()
 
+    async def log(
+        self,
+        action: str,
+        message: str,
+        level: str = "info",
+        source: str = "archivist",
+        details: dict | None = None,
+    ) -> None:
+        try:
+            await self._request(
+                "POST",
+                "/logs",
+                json={
+                    "level": level,
+                    "source": source,
+                    "action": action,
+                    "message": message,
+                    "details": details or {},
+                },
+            )
+        except Exception as e:
+            log.warning("could not write archivist log: %s", e)
+
     async def stream_events(self, event_type: str | None = None):
         params = {}
         if event_type:
             params["type"] = event_type
-        async with self._http.stream("GET", "/events/stream", params=params) as response:
+        stream_timeout = httpx.Timeout(30.0, read=None)
+        async with self._http.stream(
+            "GET", "/events/stream", params=params, timeout=stream_timeout
+        ) as response:
             response.raise_for_status()
             async for line in response.aiter_lines():
                 if line.startswith("data: "):

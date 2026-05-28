@@ -8,7 +8,10 @@ services:
   archivist:
     build: .
     volumes:
+      - artel-data:/data
       - ./artel:/app/artel
+    environment:
+      - DB_PATH=/data/artel.db
 
   mdns:
     build: .

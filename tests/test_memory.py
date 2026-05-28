@@ -39,22 +39,20 @@ async def test_patch_content(client, mem_payload):
     assert r2.json()["version"] == 2
 
 
-async def test_patch_confidence_by_other_agent_allowed(client, mem_payload):
+async def test_patch_confidence_by_other_agent_forbidden(client, mem_payload):
     r = await client.post("/memory", json=mem_payload, headers=HEADERS)
     eid = r.json()["id"]
 
     r2 = await client.patch(f"/memory/{eid}", json={"confidence": 0.5}, headers=HEADERS2)
-    assert r2.status_code == 200
-    assert r2.json()["confidence"] == 0.5
+    assert r2.status_code == 403
 
 
-async def test_patch_type_by_other_agent_allowed(client, mem_payload):
+async def test_patch_type_by_other_agent_forbidden(client, mem_payload):
     r = await client.post("/memory", json=mem_payload, headers=HEADERS)
     eid = r.json()["id"]
 
     r2 = await client.patch(f"/memory/{eid}", json={"type": "doc"}, headers=HEADERS2)
-    assert r2.status_code == 200
-    assert r2.json()["type"] == "doc"
+    assert r2.status_code == 403
 
 
 async def test_patch_content_by_other_agent_forbidden(client, mem_payload):
@@ -398,3 +396,56 @@ async def test_soft_delete_not_in_list(client, mem_payload):
 
     r2 = await client.get("/memory", headers=HEADERS)
     assert not any(e["id"] == eid for e in r2.json())
+
+
+async def test_get_memory_by_id_prefix(client):
+    from tests.conftest import HEADERS
+
+    r = await client.post(
+        "/memory", json={"content": "prefix-resolvable memory entry"}, headers=HEADERS
+    )
+    eid = r.json()["id"]
+
+    r2 = await client.get(f"/memory/{eid[:8]}", headers=HEADERS)
+    assert r2.status_code == 200
+    assert r2.json()["id"] == eid
+
+
+async def test_get_memory_unknown_prefix_404(client):
+    from tests.conftest import HEADERS
+
+    r = await client.get("/memory/nosuchid", headers=HEADERS)
+    assert r.status_code == 404
+
+
+async def test_bulk_delete(client, mem_payload):
+    r1 = await client.post("/memory", json=mem_payload, headers=HEADERS)
+    r2 = await client.post(
+        "/memory", json={**mem_payload, "content": "second entry"}, headers=HEADERS
+    )
+    id1, id2 = r1.json()["id"], r2.json()["id"]
+
+    r = await client.request("DELETE", "/memory", json={"ids": [id1, id2]}, headers=HEADERS)
+    assert r.status_code == 204
+
+    assert (await client.get(f"/memory/{id1}", headers=HEADERS)).status_code == 404
+    assert (await client.get(f"/memory/{id2}", headers=HEADERS)).status_code == 404
+
+
+async def test_bulk_delete_skips_unauthorized(client, mem_payload):
+    r = await client.post("/memory", json=mem_payload, headers=HEADERS)
+    eid = r.json()["id"]
+
+    await client.request("DELETE", "/memory", json={"ids": [eid]}, headers=HEADERS2)
+
+    assert (await client.get(f"/memory/{eid}", headers=HEADERS)).status_code == 200
+
+
+async def test_bulk_delete_ignores_unknown_ids(client):
+    r = await client.request(
+        "DELETE",
+        "/memory",
+        json={"ids": ["00000000-0000-0000-0000-000000000000"]},
+        headers=HEADERS,
+    )
+    assert r.status_code == 204

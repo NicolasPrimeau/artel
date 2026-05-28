@@ -7,11 +7,14 @@ from .config import settings
 from .conflict import check_and_merge
 from .llm import is_configured
 from .synthesis import (
+    capture_metrics,
     decay_confidence,
     on_task_completed,
     on_task_failed,
+    run_brief,
     run_promotion,
     run_synthesis,
+    run_task_triage,
 )
 
 log = logging.getLogger(__name__)
@@ -53,7 +56,7 @@ async def _event_watcher(client: ArtelClient) -> None:
         except asyncio.CancelledError:
             raise
         except Exception as e:
-            log.error("event stream disconnected: %s, retrying in %.0fs", e, delay)
+            log.error("event stream disconnected: %r, retrying in %.0fs", e, delay)
             await asyncio.sleep(delay)
             delay = min(delay * 2, 60.0)
 
@@ -64,6 +67,8 @@ async def _scheduler(client: ArtelClient) -> None:
             (run_synthesis, "synthesis"),
             (decay_confidence, "decay"),
             (run_promotion, "promotion"),
+            (run_task_triage, "task_triage"),
+            (run_brief, "brief"),
         ):
             try:
                 await asyncio.wait_for(fn(client), timeout=300.0)
@@ -73,6 +78,10 @@ async def _scheduler(client: ArtelClient) -> None:
                 raise
             except Exception as e:
                 log.error("%s failed: %s", name, e)
+        try:
+            await capture_metrics()
+        except Exception as e:
+            log.error("capture_metrics failed: %s", e)
         _HEARTBEAT.touch()
         await asyncio.sleep(settings.synthesis_interval)
 
