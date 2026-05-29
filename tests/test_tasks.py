@@ -391,3 +391,95 @@ async def test_update_task_project_non_member_forbidden(client):
 
     r2 = await client.patch(f"/tasks/{tid}", json={"project": "members-only"}, headers=HEADERS2)
     assert r2.status_code == 403
+
+
+# ── task tags ─────────────────────────────────────────────────────────────────
+
+
+async def test_create_task_with_tags(client):
+    r = await client.post(
+        "/tasks",
+        json={"title": "tagged task", "tags": ["writing", "infra"]},
+        headers=HEADERS,
+    )
+    assert r.status_code == 201
+    assert r.json()["tags"] == ["writing", "infra"]
+
+
+async def test_create_task_without_tags_returns_empty_list(client):
+    r = await client.post("/tasks", json={"title": "no tags"}, headers=HEADERS)
+    assert r.status_code == 201
+    assert r.json()["tags"] == []
+
+
+async def test_update_task_tags(client):
+    r = await client.post("/tasks", json={"title": "task"}, headers=HEADERS)
+    tid = r.json()["id"]
+
+    r2 = await client.patch(f"/tasks/{tid}", json={"tags": ["blog", "writing"]}, headers=HEADERS)
+    assert r2.status_code == 200
+    assert r2.json()["tags"] == ["blog", "writing"]
+
+
+async def test_update_task_tags_replaces_existing(client):
+    r = await client.post("/tasks", json={"title": "task", "tags": ["old-tag"]}, headers=HEADERS)
+    tid = r.json()["id"]
+
+    r2 = await client.patch(f"/tasks/{tid}", json={"tags": ["new-tag"]}, headers=HEADERS)
+    assert r2.json()["tags"] == ["new-tag"]
+
+
+async def test_filter_tasks_by_tag(client):
+    await client.post(
+        "/tasks", json={"title": "writing task", "tags": ["writing"]}, headers=HEADERS
+    )
+    await client.post("/tasks", json={"title": "infra task", "tags": ["infra"]}, headers=HEADERS)
+    await client.post("/tasks", json={"title": "untagged"}, headers=HEADERS)
+
+    r = await client.get("/tasks", params={"tag": "writing"}, headers=HEADERS)
+    assert r.status_code == 200
+    tasks = r.json()
+    assert len(tasks) == 1
+    assert tasks[0]["title"] == "writing task"
+
+
+async def test_filter_tasks_by_tag_returns_empty_when_no_match(client):
+    await client.post("/tasks", json={"title": "task", "tags": ["other"]}, headers=HEADERS)
+
+    r = await client.get("/tasks", params={"tag": "nonexistent"}, headers=HEADERS)
+    assert r.status_code == 200
+    assert r.json() == []
+
+
+async def test_project_member_can_update_tags_on_others_task(client):
+    await client.post("/projects/shared/join", headers=HEADERS)
+    await client.post("/projects/shared/join", headers=HEADERS2)
+
+    r = await client.post(
+        "/tasks", json={"title": "shared task", "project": "shared"}, headers=HEADERS
+    )
+    tid = r.json()["id"]
+
+    r2 = await client.patch(f"/tasks/{tid}", json={"tags": ["triaged"]}, headers=HEADERS2)
+    assert r2.status_code == 200
+    assert "triaged" in r2.json()["tags"]
+
+
+async def test_non_member_cannot_update_tags_on_project_task(client):
+    await client.post("/projects/private/join", headers=HEADERS)
+
+    r = await client.post(
+        "/tasks", json={"title": "private task", "project": "private"}, headers=HEADERS
+    )
+    tid = r.json()["id"]
+
+    r2 = await client.patch(f"/tasks/{tid}", json={"tags": ["intruder"]}, headers=HEADERS2)
+    assert r2.status_code == 403
+
+
+async def test_non_owner_cannot_update_non_tag_fields_on_others_task(client):
+    r = await client.post("/tasks", json={"title": "owned task"}, headers=HEADERS)
+    tid = r.json()["id"]
+
+    r2 = await client.patch(f"/tasks/{tid}", json={"title": "hijacked"}, headers=HEADERS2)
+    assert r2.status_code == 403

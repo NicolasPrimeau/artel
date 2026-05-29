@@ -412,11 +412,12 @@ async def test_curator_directives_loaded_as_preamble(arch_scenario):
         mock_settings.directive_conflict_threshold = 0.85
         await run_synthesis(arch_client)
 
-    assert len(captured_system) == 1
-    system_prompt = captured_system[0]
-    assert "--- STANDING DIRECTIVES ---" in system_prompt
-    assert "always tag security findings with sec-critical" in system_prompt
-    assert "--- END DIRECTIVES ---" in system_prompt
+    # synthesis now makes two LLM calls (cleanup pass + insight pass)
+    assert len(captured_system) == 2
+    for system_prompt in captured_system:
+        assert "--- STANDING DIRECTIVES ---" in system_prompt
+        assert "always tag security findings with sec-critical" in system_prompt
+        assert "--- END DIRECTIVES ---" in system_prompt
 
 
 async def test_curator_split_op(arch_scenario):
