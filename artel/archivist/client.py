@@ -154,6 +154,10 @@ class ArtelClient:
         )
         return r.json()
 
+    async def patch_task(self, task_id: str, **fields) -> dict:
+        r = await self._request("PATCH", f"/tasks/{task_id}", json=fields)
+        return r.json()
+
     async def add_task_comment(self, task_id: str, body: str) -> dict:
         r = await self._request("POST", f"/tasks/{task_id}/comments", json={"body": body})
         return r.json()

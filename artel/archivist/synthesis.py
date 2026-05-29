@@ -14,6 +14,8 @@ from .llm import complete, is_configured
 log = logging.getLogger(__name__)
 
 _CARRY_BLOCKED_TAGS = {"archivist-flagged"}
+_TRIAGE_STALE_DAYS = 7
+_MAX_MERGED_TAGS = 20
 
 _KNOWN_OPS = {
     "merge",
@@ -169,9 +171,14 @@ async def _execute_operations(
                 source_entries = [entries_by_id[eid] for eid in ids]
                 primary = max(source_entries, key=lambda e: e.get("confidence", 1.0))
                 entry_type = primary.get("type", "memory")
-                merged_tags = list(
-                    {tag for e in source_entries for tag in e.get("tags", [])} - _CARRY_BLOCKED_TAGS
-                )
+                tag_freq: dict[str, int] = {}
+                for e in source_entries:
+                    for tag in e.get("tags", []):
+                        tag_freq[tag] = tag_freq.get(tag, 0) + 1
+                merged_tags = sorted(
+                    (t for t in tag_freq if t not in _CARRY_BLOCKED_TAGS),
+                    key=lambda t: -tag_freq[t],
+                )[:_MAX_MERGED_TAGS]
                 projects = {e.get("project") for e in source_entries}
                 merged_project = projects.pop() if len(projects) == 1 else None
                 await client.write_memory(
@@ -699,20 +706,52 @@ async def run_task_triage(client: ArtelClient) -> None:
     if not unclaimed:
         return
 
+    now = datetime.now(UTC)
     triaged = 0
+    stale_flagged = 0
+
     for task in unclaimed:
+        tags = set(task.get("tags") or [])
         try:
-            await _triage_task(task, client)
-            triaged += 1
-        except asyncio.CancelledError:
-            raise
-        except Exception as e:
-            log.warning("task triage failed for %s: %s", task["id"], e)
-    if triaged:
+            created_at = datetime.fromisoformat(task["created_at"].replace("Z", "+00:00"))
+            age_days = (now - created_at).total_seconds() / 86400
+        except Exception:
+            age_days = 0
+
+        if age_days > _TRIAGE_STALE_DAYS and "archivist-stale-flagged" not in tags:
+            try:
+                await client.add_task_comment(
+                    task["id"],
+                    f"[archivist] Open and unclaimed for {int(age_days)} days. Consider claiming, reassigning, or closing if no longer relevant.",
+                )
+                await client.patch_task(task["id"], tags=list(tags | {"archivist-stale-flagged"}))
+                tags.add("archivist-stale-flagged")
+                stale_flagged += 1
+                log.info(
+                    "archivist stale-flagged task %s (%dd open)", task["id"][:8], int(age_days)
+                )
+            except Exception as e:
+                log.warning("could not stale-flag task %s: %s", task["id"], e)
+
+        if "archivist-triaged" not in tags:
+            try:
+                await _triage_task(task, client)
+                await client.patch_task(task["id"], tags=list(tags | {"archivist-triaged"}))
+                triaged += 1
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                log.warning("task triage failed for %s: %s", task["id"], e)
+
+    if triaged or stale_flagged:
         await client.log(
             action="triage",
-            message=f"triaged {triaged} open task{'s' if triaged != 1 else ''}",
-            details={"triaged": triaged, "open_unclaimed": len(unclaimed)},
+            message=f"triaged {triaged} new task{'s' if triaged != 1 else ''}, flagged {stale_flagged} stale",
+            details={
+                "triaged": triaged,
+                "stale_flagged": stale_flagged,
+                "open_unclaimed": len(unclaimed),
+            },
         )
 
 
