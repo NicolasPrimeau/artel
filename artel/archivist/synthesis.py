@@ -495,6 +495,36 @@ async def on_task_failed(task_id: str, agent_id: str, client: ArtelClient) -> No
             log.warning("could not create investigation task for repeated failure: %s", e)
 
 
+_CLEANUP_OPS = {"merge", "prune", "split", "extract"}
+_INSIGHT_OPS = {"promote", "tag", "adjust_confidence", "task", "close_task"}
+
+
+async def _llm_ops_pass(
+    system_prompt: str,
+    user_prompt: str,
+    pass_name: str,
+) -> list[dict]:
+    text = None
+    for attempt in range(3):
+        try:
+            text = await complete(
+                system=system_prompt,
+                user=user_prompt,
+                max_tokens=2048,
+            )
+            break
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            if attempt == 2:
+                log.error("synthesis %s LLM call failed after 3 attempts: %s", pass_name, e)
+                return []
+            await asyncio.sleep(2.0**attempt)
+    if not text:
+        return []
+    return _parse_operations(text)
+
+
 async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
     if not is_configured():
         return
@@ -566,75 +596,412 @@ async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
     if conflict_warning:
         preamble = conflict_warning + "\n\n" + preamble if preamble else conflict_warning
 
-    system_prompt = "You are the Artel archivist — an invisible curator of project memory. Your only job is to keep the memory store clean, non-redundant, and high-signal by issuing precise operations. You do not write reports. You act."
+    cleanup_system = "You are the Artel archivist running a cleanup pass. Your only job is to deduplicate and consolidate memory. Merge redundant entries, prune obsolete ones, split overloaded entries, extract misplaced segments. Do not promote, tag, or create tasks."
     if preamble:
-        system_prompt = preamble + "\n\n" + system_prompt
+        cleanup_system = preamble + "\n\n" + cleanup_system
 
-    text = None
-    for attempt in range(3):
-        try:
-            text = await complete(
-                system=system_prompt,
-                user=(
-                    f"Memory entries written or updated in the last 24h:\n\n{memory_block}"
-                    f"{task_block}\n\n"
-                    "Directives are in the system prompt. Follow them above all else.\n\n"
-                    "Issue a JSON array of operations to perform on this memory. Available ops: merge, promote, prune, tag, adjust_confidence, task, split, extract.\n\n"
-                    "Op schemas:\n"
-                    '- {"op": "merge", "entries": ["<id>", "<id>", ...], "merged_content": "<synthesized text>"}\n'
-                    '- {"op": "promote", "entry": "<id>"}\n'
-                    '- {"op": "prune", "entry": "<id>"}\n'
-                    '- {"op": "tag", "entry": "<id>", "add_tags": ["<tag>", ...]}\n'
-                    '- {"op": "adjust_confidence", "entry": "<id>", "confidence": <0.0-1.0>}\n'
-                    '- {"op": "task", "title": "<title>", "description": "<desc>", "priority": "low|normal|high", "project": "<project|null>"}\n'
-                    '- {"op": "split", "entry": "<id>", "parts": [{"content": "...", "tags": [...]}, ...]}\n'
-                    '- {"op": "extract", "from": "<id>", "into": "<id>", "extracted_content": "<segment moved>", "remaining_content": "<what stays in from, empty to delete>", "merged_content": "<into rewritten with extracted segment>"}\n'
-                    '- {"op": "close_task", "task_id": "<open task id from the Already-open tasks list>", "reason": "<which memory entry/IDs evidence completion>"}\n\n'
-                    "Rules:\n"
-                    "- Merge entries that are redundant or say the same thing from different agents. Write merged_content that synthesizes both.\n"
-                    "- Promote entries that are stable, high-signal, and likely to remain true.\n"
-                    "- Prune entries that are superseded, duplicated, or low-signal. If confidence is already at floor, they will be deleted. Otherwise they are flagged for decay.\n"
-                    "- Split entries that cover multiple unrelated topics into focused entries. Each part must be self-contained. Minimum 2 parts.\n"
-                    "- Extract a segment from one entry and fold it into another when partial content belongs with a different entry. Set remaining_content to empty string to delete the source after extraction. from and into must be different IDs.\n"
-                    "- Use tag/adjust_confidence to surface connections or correct signal strength.\n"
-                    "- Create tasks ONLY for work requiring an external agent — never for memory operations. Do memory cleanup yourself with merge/prune/promote/split/extract.\n"
-                    "- close_task only when the recent memory entries clearly evidence the task's outcome was achieved (cite the entry ID in reason). Do not close based on guesswork.\n"
-                    "- When in doubt about an operation, omit it. Conservatism is correct.\n"
-                    "- Output ONLY the JSON array. No prose, no explanation, no markdown fences."
-                ),
-                max_tokens=2048,
-            )
-            break
-        except asyncio.CancelledError:
-            raise
-        except Exception as e:
-            if attempt == 2:
-                log.error("synthesis LLM call failed after 3 attempts: %s", e)
-                return
-            await asyncio.sleep(2.0**attempt)
+    cleanup_user = (
+        f"Memory entries written or updated in the last 24h:\n\n{memory_block}\n\n"
+        "Directives are in the system prompt. Follow them above all else.\n\n"
+        "Issue a JSON array of cleanup operations. Available ops: merge, prune, split, extract.\n\n"
+        "Op schemas:\n"
+        '- {"op": "merge", "entries": ["<id>", "<id>", ...], "merged_content": "<synthesized text>"}\n'
+        '- {"op": "prune", "entry": "<id>"}\n'
+        '- {"op": "split", "entry": "<id>", "parts": [{"content": "...", "tags": [...]}, ...]}\n'
+        '- {"op": "extract", "from": "<id>", "into": "<id>", "extracted_content": "<segment moved>", "remaining_content": "<what stays in from, empty to delete>", "merged_content": "<into rewritten with extracted segment>"}\n\n'
+        "Rules:\n"
+        "- Merge entries that are redundant or say the same thing from different agents. Write merged_content that synthesizes both.\n"
+        "- Prune entries that are superseded, duplicated, or low-signal. If confidence is already at floor, they will be deleted. Otherwise they are flagged for decay.\n"
+        "- Split entries that cover multiple unrelated topics into focused entries. Each part must be self-contained. Minimum 2 parts.\n"
+        "- Extract a segment from one entry and fold it into another when partial content belongs with a different entry. Set remaining_content to empty string to delete the source after extraction. from and into must be different IDs.\n"
+        "- When in doubt about an operation, omit it. Conservatism is correct.\n"
+        "- Output ONLY the JSON array. No prose, no explanation, no markdown fences."
+    )
 
-    if not text:
-        return
+    raw_cleanup_ops = await _llm_ops_pass(cleanup_system, cleanup_user, "cleanup")
+    cleanup_ops = [o for o in raw_cleanup_ops if o.get("op") in _CLEANUP_OPS]
 
-    ops = _parse_operations(text)
     open_titles = {t["title"] for t in open_tasks if t.get("title")}
     open_ids = {t["id"] for t in open_tasks if t.get("id")}
     await _execute_operations(
-        ops, client, entries, open_task_titles=open_titles, open_task_ids=open_ids
+        cleanup_ops, client, entries, open_task_titles=open_titles, open_task_ids=open_ids
     )
+
+    insight_system = "You are the Artel archivist running an insight pass. Promote stable knowledge to docs, improve tag discoverability, adjust confidence where appropriate, create tasks for work requiring an external agent, and close tasks where memory evidences completion."
+    if preamble:
+        insight_system = preamble + "\n\n" + insight_system
+
+    insight_user = (
+        f"Memory entries written or updated in the last 24h:\n\n{memory_block}"
+        f"{task_block}\n\n"
+        "Directives are in the system prompt. Follow them above all else.\n\n"
+        "Issue a JSON array of insight operations. Available ops: promote, tag, adjust_confidence, task, close_task.\n\n"
+        "Op schemas:\n"
+        '- {"op": "promote", "entry": "<id>"}\n'
+        '- {"op": "tag", "entry": "<id>", "add_tags": ["<tag>", ...]}\n'
+        '- {"op": "adjust_confidence", "entry": "<id>", "confidence": <0.0-1.0>}\n'
+        '- {"op": "task", "title": "<title>", "description": "<desc>", "priority": "low|normal|high", "project": "<project|null>"}\n'
+        '- {"op": "close_task", "task_id": "<open task id from the Already-open tasks list>", "reason": "<which memory entry/IDs evidence completion>"}\n\n'
+        "Rules:\n"
+        "- Promote entries that are stable, high-signal, and likely to remain true.\n"
+        "- Use tag/adjust_confidence to surface connections or correct signal strength.\n"
+        "- Create tasks ONLY for work requiring an external agent — never for memory operations.\n"
+        "- close_task only when the recent memory entries clearly evidence the task's outcome was achieved (cite the entry ID in reason). Do not close based on guesswork.\n"
+        "- When in doubt about an operation, omit it. Conservatism is correct.\n"
+        "- Output ONLY the JSON array. No prose, no explanation, no markdown fences."
+    )
+
+    raw_insight_ops = await _llm_ops_pass(insight_system, insight_user, "insight")
+    insight_ops = [o for o in raw_insight_ops if o.get("op") in _INSIGHT_OPS]
+
+    await _execute_operations(
+        insight_ops, client, entries, open_task_titles=open_titles, open_task_ids=open_ids
+    )
+
+    all_ops = cleanup_ops + insight_ops
     op_counts: dict = {}
-    for o in ops:
+    for o in all_ops:
         op_counts[o.get("op")] = op_counts.get(o.get("op"), 0) + 1
     await client.log(
         action="synthesis",
-        message=f"synthesis pass complete: {len(ops)} op(s) on {len(entries)} entr{'y' if len(entries) == 1 else 'ies'}",
+        message=f"synthesis pass complete: {len(all_ops)} op(s) on {len(entries)} entr{'y' if len(entries) == 1 else 'ies'} (cleanup={len(cleanup_ops)}, insight={len(insight_ops)})",
         details={
-            "ops": len(ops),
+            "ops": len(all_ops),
+            "cleanup_ops": len(cleanup_ops),
+            "insight_ops": len(insight_ops),
             "entries": len(entries),
             "op_types": list(op_counts.keys()),
             "op_counts": op_counts,
         },
     )
+
+
+async def run_deep_synthesis(client: ArtelClient) -> None:
+    if not is_configured():
+        return
+
+    local_id = instance_id()
+    all_entries = await client.list_entries(limit=200)
+    entries = [
+        e
+        for e in all_entries
+        if e.get("type") not in ("directive",)
+        and e.get("type") in ("memory", "doc")
+        and (e.get("origin") is None or e.get("origin") == local_id)
+    ]
+
+    if len(entries) < 5:
+        return
+
+    recently_completed = []
+    open_tasks: list[dict] = []
+    try:
+        all_tasks = await client.list_tasks(status="completed", limit=20)
+        cutoff = datetime.now(UTC) - timedelta(hours=24)
+        recently_completed = [
+            t
+            for t in all_tasks
+            if datetime.fromisoformat(t["updated_at"].replace("Z", "+00:00")) > cutoff
+        ]
+    except Exception as e:
+        log.warning("could not fetch recent tasks for deep synthesis: %s", e)
+    try:
+        open_tasks = await client.list_tasks(status="open", limit=50)
+    except Exception as e:
+        log.warning("could not fetch open tasks for deep synthesis: %s", e)
+
+    directives: list[dict] = []
+    try:
+        directives = await client.get_directives()
+    except Exception as e:
+        log.warning("could not load directives for deep synthesis: %s", e)
+
+    memory_block = "\n\n".join(
+        f"[{e['id']}] agent={e['agent_id']} type={e['type']} conf={e.get('confidence', 1.0)} tags={e.get('tags', [])}\n{e['content']}"
+        for e in entries
+    )
+
+    task_block = ""
+    if recently_completed:
+        task_lines = [
+            f'- "{t["title"]}" completed by {t["assigned_to"] or t["created_by"]}'
+            + (f" — outcome: {t['expected_outcome']}" if t.get("expected_outcome") else "")
+            for t in recently_completed
+        ]
+        task_block = "\n\nCompleted tasks (last 24h):\n" + "\n".join(task_lines)
+    if open_tasks:
+        open_lines = [f'- [{t["id"]}] "{t["title"]}"' for t in open_tasks]
+        task_block += (
+            "\n\nAlready-open tasks (do NOT create duplicates; "
+            "use close_task with the bracketed id when memory clearly shows the work is done):\n"
+            + "\n".join(open_lines)
+        )
+
+    preamble = _build_directive_preamble(directives)
+
+    cleanup_system = "You are the Artel archivist running a cleanup pass. Your only job is to deduplicate and consolidate memory. Merge redundant entries, prune obsolete ones, split overloaded entries, extract misplaced segments. Do not promote, tag, or create tasks."
+    if preamble:
+        cleanup_system = preamble + "\n\n" + cleanup_system
+
+    cleanup_user = (
+        f"Full memory store ({len(entries)} entries):\n\n{memory_block}\n\n"
+        "Issue a JSON array of cleanup operations. Available ops: merge, prune, split, extract.\n\n"
+        "Op schemas:\n"
+        '- {"op": "merge", "entries": ["<id>", "<id>", ...], "merged_content": "<synthesized text>"}\n'
+        '- {"op": "prune", "entry": "<id>"}\n'
+        '- {"op": "split", "entry": "<id>", "parts": [{"content": "...", "tags": [...]}, ...]}\n'
+        '- {"op": "extract", "from": "<id>", "into": "<id>", "extracted_content": "<segment moved>", "remaining_content": "<what stays in from, empty to delete>", "merged_content": "<into rewritten with extracted segment>"}\n\n'
+        "Rules:\n"
+        "- Merge entries that are redundant or say the same thing from different agents. Write merged_content that synthesizes both.\n"
+        "- Prune entries that are superseded, duplicated, or low-signal.\n"
+        "- Split entries that cover multiple unrelated topics into focused entries. Minimum 2 parts.\n"
+        "- Extract a segment from one entry and fold it into another when partial content belongs elsewhere.\n"
+        "- When in doubt, omit. Conservatism is correct.\n"
+        "- Output ONLY the JSON array. No prose, no explanation, no markdown fences."
+    )
+
+    raw_cleanup_ops = await _llm_ops_pass(cleanup_system, cleanup_user, "deep_cleanup")
+    cleanup_ops = [o for o in raw_cleanup_ops if o.get("op") in _CLEANUP_OPS]
+
+    open_titles = {t["title"] for t in open_tasks if t.get("title")}
+    open_ids = {t["id"] for t in open_tasks if t.get("id")}
+    await _execute_operations(
+        cleanup_ops, client, entries, open_task_titles=open_titles, open_task_ids=open_ids
+    )
+
+    insight_system = (
+        "You are the Artel archivist running an insight pass on the full memory store. "
+        "Promote stable knowledge to docs, improve tag discoverability, adjust confidence where appropriate, "
+        "create tasks for work requiring an external agent, and close tasks where memory evidences completion. "
+        "Flag any doc entries that appear stale or superseded based on their content relative to other entries."
+    )
+    if preamble:
+        insight_system = preamble + "\n\n" + insight_system
+
+    insight_user = (
+        f"Full memory store ({len(entries)} entries):\n\n{memory_block}"
+        f"{task_block}\n\n"
+        "Issue a JSON array of insight operations. Available ops: promote, tag, adjust_confidence, task, close_task.\n\n"
+        "Op schemas:\n"
+        '- {"op": "promote", "entry": "<id>"}\n'
+        '- {"op": "tag", "entry": "<id>", "add_tags": ["<tag>", ...]}\n'
+        '- {"op": "adjust_confidence", "entry": "<id>", "confidence": <0.0-1.0>}\n'
+        '- {"op": "task", "title": "<title>", "description": "<desc>", "priority": "low|normal|high", "project": "<project|null>"}\n'
+        '- {"op": "close_task", "task_id": "<open task id from the Already-open tasks list>", "reason": "<which memory entry/IDs evidence completion>"}\n\n'
+        "Rules:\n"
+        "- Promote entries that are stable, high-signal, and likely to remain true.\n"
+        "- Use tag/adjust_confidence to surface connections or correct signal strength. Tag stale/superseded doc entries with 'archivist-stale'.\n"
+        "- Create tasks ONLY for work requiring an external agent — never for memory operations.\n"
+        "- close_task only when memory clearly evidences the task outcome was achieved.\n"
+        "- When in doubt, omit. Conservatism is correct.\n"
+        "- Output ONLY the JSON array. No prose, no explanation, no markdown fences."
+    )
+
+    raw_insight_ops = await _llm_ops_pass(insight_system, insight_user, "deep_insight")
+    insight_ops = [o for o in raw_insight_ops if o.get("op") in _INSIGHT_OPS]
+
+    await _execute_operations(
+        insight_ops, client, entries, open_task_titles=open_titles, open_task_ids=open_ids
+    )
+
+    all_ops = cleanup_ops + insight_ops
+    op_counts: dict = {}
+    for o in all_ops:
+        op_counts[o.get("op")] = op_counts.get(o.get("op"), 0) + 1
+    await client.log(
+        action="deep_synthesis",
+        message=f"deep synthesis complete: {len(all_ops)} op(s) on {len(entries)} entr{'y' if len(entries) == 1 else 'ies'} (cleanup={len(cleanup_ops)}, insight={len(insight_ops)})",
+        details={
+            "ops": len(all_ops),
+            "cleanup_ops": len(cleanup_ops),
+            "insight_ops": len(insight_ops),
+            "entries": len(entries),
+            "op_types": list(op_counts.keys()),
+            "op_counts": op_counts,
+        },
+    )
+
+
+async def run_deep_synthesis_if_due(client: ArtelClient) -> None:
+    try:
+        db = get_db()
+        row = db.execute(
+            "SELECT value FROM kv WHERE key = 'archivist_last_deep_synthesis'"
+        ).fetchone()
+        if row:
+            last_run = datetime.fromisoformat(row["value"].replace("Z", "+00:00"))
+            if datetime.now(UTC) - last_run < timedelta(days=7):
+                return
+        await run_deep_synthesis(client)
+        now_str = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+        with db:
+            db.execute(
+                "INSERT INTO kv (key, value) VALUES ('archivist_last_deep_synthesis', ?) "
+                "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                (now_str,),
+            )
+    except Exception as e:
+        log.warning("run_deep_synthesis_if_due failed: %s", e)
+
+
+async def suggest_task_assignment(task_id: str, client: ArtelClient) -> None:
+    try:
+        if not is_configured():
+            return
+        try:
+            task = await client.get_task(task_id)
+        except Exception as e:
+            log.warning("suggest_task_assignment: could not fetch task %s: %s", task_id, e)
+            return
+        if task.get("assigned_to"):
+            return
+        try:
+            agents = await client.list_agents()
+        except Exception as e:
+            log.warning("suggest_task_assignment: could not list agents: %s", e)
+            return
+        now = datetime.now(UTC)
+        cutoff_48h = now - timedelta(hours=48)
+        active_agents = [
+            a
+            for a in agents
+            if a.get("last_seen_at")
+            and datetime.fromisoformat(a["last_seen_at"].replace("Z", "+00:00")) >= cutoff_48h
+        ]
+        if len(active_agents) < 2:
+            return
+        completed_tasks: list[dict] = []
+        claimed_tasks: list[dict] = []
+        try:
+            completed_tasks = await client.list_tasks(status="completed", limit=20)
+        except Exception as e:
+            log.warning("suggest_task_assignment: could not fetch completed tasks: %s", e)
+        try:
+            claimed_tasks = await client.list_tasks(status="claimed", limit=10)
+        except Exception as e:
+            log.warning("suggest_task_assignment: could not fetch claimed tasks: %s", e)
+        recent_tasks = completed_tasks + claimed_tasks
+        active_ids = {a["id"] for a in active_agents}
+        agent_work: dict[str, list[str]] = {a["id"]: [] for a in active_agents}
+        for t in recent_tasks:
+            assignee = t.get("assigned_to")
+            if assignee and assignee in agent_work:
+                agent_work[assignee].append(t["title"][:80])
+        agent_block_lines = []
+        for a in active_agents:
+            work = agent_work.get(a["id"], [])
+            work_str = ("; ".join(work[:5])) if work else "no recent work"
+            agent_block_lines.append(f"- {a['id']}: {work_str}")
+        agent_block = "\n".join(agent_block_lines)
+        try:
+            text = await complete(
+                system="You are the Artel archivist routing a new task to the best available agent. Output only a JSON object with keys: agent_id (string or null — the agent ID best suited for this task, null if you cannot determine), rationale (string — one sentence explaining your choice).",
+                user=(
+                    f'New task: "{task["title"]}"\n'
+                    f"Description: {task.get('description') or 'none'}\n\n"
+                    f"Active agents and recent work:\n{agent_block}\n\n"
+                    "Which agent is best suited for this task? Output only the JSON object."
+                ),
+                max_tokens=256,
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            log.warning("suggest_task_assignment: LLM call failed for %s: %s", task_id, e)
+            return
+        stripped = text.strip()
+        if stripped.startswith("```"):
+            lines = stripped.splitlines()
+            end = len(lines) - 1
+            while end > 0 and not lines[end].strip().startswith("```"):
+                end -= 1
+            stripped = "\n".join(lines[1:end]).strip()
+        try:
+            result = json.loads(stripped)
+        except Exception:
+            log.warning("suggest_task_assignment: LLM returned unparseable JSON for %s", task_id)
+            return
+        suggested_id = result.get("agent_id")
+        rationale = (result.get("rationale") or "").strip()
+        if suggested_id and suggested_id in active_ids:
+            try:
+                await client.add_task_comment(
+                    task_id,
+                    f"[archivist] Suggested: {suggested_id} — {rationale}",
+                )
+                log.info("archivist suggested %s for task %s", suggested_id, task_id[:8])
+            except Exception as e:
+                log.warning("suggest_task_assignment: could not add comment to %s: %s", task_id, e)
+    except asyncio.CancelledError:
+        raise
+    except Exception as e:
+        log.warning("suggest_task_assignment failed for %s: %s", task_id, e)
+
+
+async def run_utilization_prune(client: ArtelClient) -> None:
+    local_id = instance_id()
+    all_entries = await client.list_entries(limit=500)
+    now = datetime.now(UTC)
+    cutoff_30d = now - timedelta(days=30)
+    candidates = [
+        e
+        for e in all_entries
+        if e.get("type") == "memory"
+        and e.get("type") != "directive"
+        and (e.get("origin") is None or e.get("origin") == local_id)
+        and datetime.fromisoformat(e["created_at"].replace("Z", "+00:00")) < cutoff_30d
+    ]
+    if not candidates:
+        return
+    candidate_ids = [e["id"] for e in candidates]
+    db = get_db()
+    placeholders = ",".join("?" * len(candidate_ids))
+    heat_rows = db.execute(
+        f"SELECT id, read_count FROM memory WHERE id IN ({placeholders})",
+        candidate_ids,
+    ).fetchall()
+    read_counts = {r["id"]: (r["read_count"] or 0) for r in heat_rows}
+    zero_read = [e for e in candidates if read_counts.get(e["id"], 0) == 0]
+    to_prune = zero_read[:20]
+    if not to_prune:
+        return
+    adjusted = 0
+    for entry in to_prune:
+        current_conf = entry.get("confidence", 1.0)
+        new_conf = max(settings.decay_floor, current_conf * 0.7)
+        try:
+            await client.patch_memory(entry["id"], confidence=new_conf)
+            adjusted += 1
+        except Exception as e:
+            log.warning("utilization_prune: patch failed for %s: %s", entry["id"], e)
+    if adjusted:
+        await client.log(
+            action="utilization_prune",
+            message=f"utilization prune: adjusted confidence on {adjusted} unread entr{'y' if adjusted == 1 else 'ies'} older than 30 days",
+            details={"adjusted": adjusted, "candidates": len(zero_read)},
+        )
+
+
+async def run_utilization_prune_if_due(client: ArtelClient) -> None:
+    try:
+        db = get_db()
+        row = db.execute(
+            "SELECT value FROM kv WHERE key = 'archivist_last_utilization_prune'"
+        ).fetchone()
+        if row:
+            last_run = datetime.fromisoformat(row["value"].replace("Z", "+00:00"))
+            if datetime.now(UTC) - last_run < timedelta(days=7):
+                return
+        await run_utilization_prune(client)
+        now_str = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+        with db:
+            db.execute(
+                "INSERT INTO kv (key, value) VALUES ('archivist_last_utilization_prune', ?) "
+                "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                (now_str,),
+            )
+    except Exception as e:
+        log.warning("run_utilization_prune_if_due failed: %s", e)
 
 
 async def decay_confidence(client: ArtelClient) -> None:
@@ -908,6 +1275,15 @@ async def _refresh_project_brief(project: str, client: ArtelClient) -> None:
     if not local_briefs and all_briefs:
         return
     existing_id = local_briefs[0]["id"] if local_briefs else None
+
+    if existing_id:
+        brief_updated_at = local_briefs[0].get("updated_at", "")
+        latest_content_at = max(
+            [d.get("updated_at", "") for d in docs] + [t.get("updated_at", "") for t in tasks],
+            default="",
+        )
+        if brief_updated_at and brief_updated_at >= latest_content_at:
+            return
 
     doc_block = "\n".join(f"- {d['content'][:400]}" for d in docs[:30]) or "(none)"
     open_tasks = [t for t in tasks if t["status"] in ("open", "claimed")]

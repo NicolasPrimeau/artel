@@ -201,6 +201,10 @@ class ArtelClient:
         except Exception as e:
             log.warning("could not write archivist log: %s", e)
 
+    async def list_agents(self) -> list[dict]:
+        r = await self._request("GET", "/agents")
+        return r.json()
+
     async def stream_events(self, event_type: str | None = None):
         params = {}
         if event_type:
