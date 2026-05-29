@@ -12,10 +12,13 @@ from .synthesis import (
     on_task_completed,
     on_task_failed,
     run_brief,
+    run_deep_synthesis_if_due,
     run_feed_triage,
     run_promotion,
     run_synthesis,
     run_task_triage,
+    run_utilization_prune_if_due,
+    suggest_task_assignment,
 )
 
 log = logging.getLogger(__name__)
@@ -37,6 +40,11 @@ async def _dispatch(event: dict, client: ArtelClient) -> None:
         task_id = payload.get("task_id")
         if task_id:
             await on_task_completed(task_id, agent_id, client)
+
+    elif event_type == "task.created":
+        task_id = payload.get("task_id")
+        if task_id:
+            await suggest_task_assignment(task_id, client)
 
     elif event_type == "task.failed":
         task_id = payload.get("task_id")
@@ -71,6 +79,8 @@ async def _scheduler(client: ArtelClient) -> None:
             (run_promotion, "promotion"),
             (run_task_triage, "task_triage"),
             (run_brief, "brief"),
+            (run_deep_synthesis_if_due, "deep_synthesis"),
+            (run_utilization_prune_if_due, "utilization_prune"),
         ):
             try:
                 await asyncio.wait_for(fn(client), timeout=300.0)
