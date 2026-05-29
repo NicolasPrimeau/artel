@@ -1178,6 +1178,7 @@ pre{
       <option value="">all</option>
       <option>open</option><option>claimed</option><option>completed</option><option>failed</option>
     </select>
+    <input id="tag-filter" placeholder="tag filter" style="width:100px" oninput="loadTasks()">
     <button onclick="loadTasks()">refresh</button>
     <span class="toolbar-label" id="task-count" style="display:none"></span>
   </div>
@@ -1186,9 +1187,12 @@ pre{
       <input id="ttitle" placeholder="title" style="flex:2">
       <input id="tdesc" placeholder="description (optional)" style="flex:3">
     </div>
-    <div class="write-row">
+    <div class="write-row" style="margin-bottom:8px">
       <input id="toutcome" placeholder="expected outcome" style="flex:1">
       <select id="tpri" style="width:100px"><option>normal</option><option>low</option><option>high</option></select>
+    </div>
+    <div class="write-row">
+      <input id="ttags" placeholder="tags (comma-separated)" style="flex:1">
       <button class="p" onclick="createTask()">create</button>
     </div>
   </div>
@@ -1209,6 +1213,12 @@ pre{
       <button id="mark-all-read-btn" onclick="markAllRead()" class="sm" style="display:none">mark all read</button>
       <button class="p" onclick="sendMsg()">send</button>
     </div>
+  </div>
+  <div class="toolbar" style="margin-bottom:0;padding:8px 0 0">
+    <div class="spacer"></div>
+    <label style="font-size:12px;color:var(--t3);cursor:pointer">
+      <input type="checkbox" id="msg-show-all" onchange="loadInbox()" style="margin-right:4px">show all
+    </label>
   </div>
   <div class="section-label" id="inbox-label" style="display:none">inbox</div>
   <div id="msglist"></div>
@@ -1335,9 +1345,12 @@ pre{
     </div>
     <input id="et-title" placeholder="title" style="width:100%;margin-bottom:8px">
     <textarea id="et-desc" placeholder="description" rows="3" style="width:100%;margin-bottom:8px"></textarea>
-    <input id="et-outcome" placeholder="expected outcome" style="width:100%;margin-bottom:12px">
-    <div class="write-row">
+    <input id="et-outcome" placeholder="expected outcome" style="width:100%;margin-bottom:8px">
+    <div class="write-row" style="margin-bottom:12px">
       <select id="et-pri" style="width:100px"><option>normal</option><option>low</option><option>high</option></select>
+      <input id="et-tags" placeholder="tags (comma-separated)" style="flex:1;margin-left:8px">
+    </div>
+    <div class="write-row">
       <div class="spacer"></div>
       <button onclick="closeTaskModal()">cancel</button>
       <button class="p" onclick="saveTaskEdit()">save</button>
@@ -1719,11 +1732,12 @@ function taskColor(status){
 }
 
 async function loadTasks(){
-  const s=$('tf').value,proj=activeProject(),agent=activeAgent();
+  const s=$('tf').value,proj=activeProject(),agent=activeAgent(),tag=($('tag-filter')?.value||'').trim();
   let url='/tasks';const params=[];
   if(s)params.push('status='+s);
   if(proj)params.push('project='+encodeURIComponent(proj));
   if(agent)params.push('agent='+encodeURIComponent(agent));
+  if(tag)params.push('tag='+encodeURIComponent(tag));
   if(params.length)url+='?'+params.join('&');
   loading('tlist');
   try{
@@ -1733,13 +1747,14 @@ async function loadTasks(){
     else lbl.style.display='none';
     if(!ts.length){$('tlist').innerHTML=emptyState('◻','no tasks');return;}
     _taskData={};
-    ts.forEach(t=>{_taskData[t.id]={title:t.title,desc:t.description||'',outcome:t.expected_outcome||'',pri:t.priority};});
+    ts.forEach(t=>{_taskData[t.id]={title:t.title,desc:t.description||'',outcome:t.expected_outcome||'',pri:t.priority,tags:t.tags||[]};});
     $('tlist').innerHTML=ts.map(t=>`
       <div class="card ${taskColor(t.status)}">
         <div class="meta">
           <span class="s ${t.status}">${t.status}</span>
           ${t.priority!=='normal'?`<span class="pri ${t.priority}">${t.priority}</span>`:''}
           ${t.project?`<span class="pill project">${esc(t.project)}</span>`:''}
+          ${(t.tags||[]).map(tg=>`<span class="pill" style="background:var(--s3);color:var(--t3);cursor:pointer" onclick="$('tag-filter').value='${esc(tg)}';loadTasks()">${esc(tg)}</span>`).join('')}
           <span style="color:var(--t4)">by <span class="meta-agent">${esc(t.created_by)}</span></span>
           ${t.assigned_to?`<span style="color:var(--t3)">→ <span style="color:var(--accent)">${esc(t.assigned_to)}</span></span>`:''}
           <span class="meta-time" title="${t.created_at}">${relTime(t.created_at)}</span>
@@ -1758,9 +1773,11 @@ async function loadTasks(){
 
 async function createTask(){
   const title=$('ttitle').value.trim();if(!title)return;
+  const rawTags=$('ttags').value.trim();
+  const tags=rawTags?rawTags.split(',').map(t=>t.trim()).filter(Boolean):[];
   try{
-    await req('POST','/tasks',{title,description:$('tdesc').value,expected_outcome:$('toutcome').value,project:activeProject(),priority:$('tpri').value});
-    $('ttitle').value='';$('tdesc').value='';$('toutcome').value='';
+    await req('POST','/tasks',{title,description:$('tdesc').value,expected_outcome:$('toutcome').value,project:activeProject(),priority:$('tpri').value,tags});
+    $('ttitle').value='';$('tdesc').value='';$('toutcome').value='';$('ttags').value='';
     toast('Task created','ok');loadTasks();
   }catch(e){toast('Create failed: '+e.message,'err');}
 }
@@ -1785,6 +1802,7 @@ function openTaskEdit(id){
   $('et-desc').value=d.desc||'';
   $('et-outcome').value=d.outcome||'';
   $('et-pri').value=d.pri||'normal';
+  $('et-tags').value=(d.tags||[]).join(', ');
   $('et-cmtbody').value='';
   $('et-comments').innerHTML='<span style="color:var(--t4)">loading...</span>';
   $('task-modal').classList.add('open');
@@ -1793,7 +1811,9 @@ function openTaskEdit(id){
 function closeTaskModal(){$('task-modal').classList.remove('open');_editTaskId=null}
 async function saveTaskEdit(){
   if(!_editTaskId)return;
-  const body={title:$('et-title').value.trim()||undefined,description:$('et-desc').value||undefined,expected_outcome:$('et-outcome').value||undefined,priority:$('et-pri').value};
+  const rawTags=$('et-tags').value.trim();
+  const tags=rawTags?rawTags.split(',').map(t=>t.trim()).filter(Boolean):[];
+  const body={title:$('et-title').value.trim()||undefined,description:$('et-desc').value||undefined,expected_outcome:$('et-outcome').value||undefined,priority:$('et-pri').value,tags};
   try{
     await req('PATCH',`/tasks/${_editTaskId}`,body);
     toast('Task updated','ok');loadTasks();
@@ -1835,24 +1855,28 @@ $('task-modal').addEventListener('click',e=>{if(e.target===$('task-modal'))close
 
 async function loadInbox(){
   $('btn-messages').querySelector('.badge')?.remove();
-  const agent=activeAgent();
-  const url='/messages/inbox'+(agent?'?agent='+encodeURIComponent(agent):'');
+  const showAll=$('msg-show-all')?.checked;
+  const url=showAll?'/messages':'/messages/inbox';
   loading('msglist',2);
   try{
     const ms=await req('GET',url);
-    $('mark-all-read-btn').style.display=ms.length?'':'none';
+    const unread=ms.filter(m=>!m.read);
+    $('mark-all-read-btn').style.display=unread.length?'':'none';
     $('inbox-label').style.display=ms.length?'':'none';
-    if(!ms.length){$('msglist').innerHTML=emptyState('✉','no unread messages');return;}
+    $('inbox-label').textContent=showAll?'all messages':'inbox';
+    if(!ms.length){$('msglist').innerHTML=emptyState('✉',showAll?'no messages':'no unread messages');return;}
     $('msglist').innerHTML=ms.map(m=>`
-      <div class="card accent">
+      <div class="card ${m.read?'':'accent'}" style="${m.read?'opacity:0.7':''}">
         <div class="meta">
           <span class="meta-agent">${esc(m.from_agent)}</span>
+          ${m.to_agent&&m.to_agent!==window._aid?`<span style="color:var(--t4)">→ ${esc(m.to_agent)}</span>`:''}
           ${m.subject?`<span style="color:var(--t3)">${esc(m.subject)}</span>`:''}
+          ${m.read?`<span style="color:var(--t4);font-size:11px">read</span>`:''}
           <span class="meta-time" title="${m.created_at}">${relTime(m.created_at)}</span>
         </div>
         <pre>${esc(m.body)}</pre>
         <div class="card-actions">
-          <button class="sm" onclick="markRead('${m.id}')">mark read</button>
+          ${!m.read?`<button class="sm" onclick="markRead('${m.id}')">mark read</button>`:''}
           <button class="sm p" onclick="replyTo('${esc(m.from_agent)}')">reply</button>
         </div>
       </div>`).join('');
@@ -1880,11 +1904,11 @@ async function sendMsg(){
 }
 async function markRead(id){
   try{await req('POST',`/messages/${id}/read`);loadInbox();}
-  catch(_){}
+  catch(e){toast('Could not mark read: '+e.message,'err');}
 }
 async function markAllRead(){
-  try{await req('POST','/messages/inbox/read-all');}catch(_){}
-  loadInbox();checkInbox();
+  try{await req('POST','/messages/inbox/read-all');loadInbox();checkInbox();}
+  catch(e){toast('Could not mark all read: '+e.message,'err');}
 }
 function replyTo(agent){
   $('mto').value=agent;$('mbody').focus();
