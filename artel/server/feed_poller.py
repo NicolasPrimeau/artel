@@ -64,10 +64,11 @@ def _write_memory(agent_id: str, project: str, content: str, tags: list[str]) ->
                 now,
             ),
         )
-        db.execute(
-            "INSERT INTO memory_vec (id, embedding) VALUES (?, ?)",
-            (entry_id, json.dumps(vec)),
-        )
+        if vec is not None:
+            db.execute(
+                "INSERT INTO memory_vec (id, embedding) VALUES (?, ?)",
+                (entry_id, json.dumps(vec)),
+            )
         db.execute(
             "INSERT INTO events (id, type, agent_id, payload) VALUES (?,?,?,?)",
             (event_id, "memory.written", agent_id, json.dumps({"memory_id": entry_id})),
@@ -277,6 +278,7 @@ async def _poll_feed(feed: dict) -> None:
                     break
                 if not guid or guid in seen:
                     continue
+                seen.add(guid)
                 _write_memory(feed["agent_id"], feed["project"], content, tags)
                 new_guids.append(guid)
                 count += 1
@@ -288,6 +290,7 @@ async def _poll_feed(feed: dict) -> None:
             guid = _item_guid(entry)
             if not guid or guid in seen:
                 continue
+            seen.add(guid)
             content = _item_content(feed["name"], entry)
             _write_memory(feed["agent_id"], feed["project"], content, tags)
             new_guids.append(guid)

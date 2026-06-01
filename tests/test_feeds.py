@@ -422,6 +422,47 @@ async def test_poller_deduplicates_json_feed_items(client):
     assert count == 0
 
 
+async def test_poller_deduplicates_within_single_poll(client):
+    import artel.store.db as db_mod
+    from artel.server import feed_poller
+
+    await _subscribe(client)
+    db = db_mod.get_db()
+    feed = dict(db.execute("SELECT * FROM feed_subscriptions").fetchone())
+
+    json_payload = json.dumps(
+        {
+            "version": "https://jsonfeed.org/version/1.1",
+            "title": "Artel Memory / artel",
+            "items": [
+                {
+                    "id": "https://other.artel/memory/dup",
+                    "title": "Duplicated entry",
+                    "content_text": "first copy",
+                },
+                {
+                    "id": "https://other.artel/memory/dup",
+                    "title": "Duplicated entry",
+                    "content_text": "second copy",
+                },
+            ],
+        }
+    )
+
+    with patch("httpx.AsyncClient.get") as mock_get:
+        mock_resp = MagicMock()
+        mock_resp.text = json_payload
+        mock_resp.headers = {"content-type": "application/feed+json"}
+        mock_resp.raise_for_status = MagicMock()
+        mock_get.return_value = mock_resp
+        await feed_poller._poll_feed(feed)
+
+    count = db.execute(
+        "SELECT COUNT(*) FROM memory WHERE agent_id=? AND project='artel'", (TEST_AGENT,)
+    ).fetchone()[0]
+    assert count == 1
+
+
 # ── MCP tools ─────────────────────────────────────────────────────────────────
 
 

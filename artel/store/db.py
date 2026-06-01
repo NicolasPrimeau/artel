@@ -16,6 +16,7 @@ def get_db(path: str | None = None) -> sqlite3.Connection:
             path = os.environ.get("DB_PATH", "artel.db")
         _conn = sqlite3.connect(path, check_same_thread=False)
         _conn.row_factory = sqlite3.Row
+        _conn.execute("PRAGMA busy_timeout=5000")
         _conn.enable_load_extension(True)
         sqlite_vec.load(_conn)
         _conn.enable_load_extension(False)

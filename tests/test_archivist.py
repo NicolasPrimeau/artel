@@ -162,6 +162,47 @@ class TestCheckAndMergeDedup:
         client.delete_memory.assert_any_await("feed-new")
         client.delete_memory.assert_any_await("canonical")
 
+    async def test_empty_merge_does_not_delete_source_entries(self):
+        client = MagicMock()
+        client.get_memory = AsyncMock(
+            return_value={
+                "id": "entry-a",
+                "agent_id": "agent-a",
+                "content": "original A",
+                "tags": [],
+                "type": "memory",
+                "project": "artel",
+                "parents": [],
+            }
+        )
+        client.search_memory = AsyncMock(
+            return_value=[
+                {
+                    "id": "entry-b",
+                    "agent_id": "agent-b",
+                    "content": "original B",
+                    "tags": [],
+                    "type": "memory",
+                    "project": "artel",
+                    "parents": [],
+                }
+            ]
+        )
+        client.write_memory = AsyncMock(return_value={"id": "merged"})
+        client.delete_memory = AsyncMock()
+        client.send_message = AsyncMock()
+
+        with (
+            patch("artel.archivist.conflict.is_configured", return_value=True),
+            patch("artel.archivist.conflict._merge", new=AsyncMock(return_value="")),
+            patch("artel.archivist.conflict.settings") as s,
+        ):
+            s.archivist_id = "archivist"
+            await conflict.check_and_merge("entry-a", client)
+
+        client.write_memory.assert_not_called()
+        client.delete_memory.assert_not_called()
+
 
 class TestParseOperations:
     def test_valid_json_array(self):

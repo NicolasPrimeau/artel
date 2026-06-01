@@ -80,9 +80,10 @@ async def _check_directive_conflicts(directives: list[dict], client: ArtelClient
     embeddings = []
     for d in directives:
         try:
-            embeddings.append(embed(d["content"]))
+            vec = embed(d["content"])
         except Exception:
-            embeddings.append([0.0] * 384)
+            vec = None
+        embeddings.append(vec if vec is not None else [0.0] * 384)
     for i in range(len(directives)):
         for j in range(i + 1, len(directives)):
             sim = _cosine_similarity(embeddings[i], embeddings[j])

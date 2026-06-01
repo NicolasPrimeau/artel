@@ -36,7 +36,10 @@ async def complete(system: str, user: str, max_tokens: int = 2048) -> str:
             system=system,
             messages=[{"role": "user", "content": user}],
         )
-        return msg.content[0].text
+        for block in msg.content:
+            if getattr(block, "type", None) == "text":
+                return block.text or ""
+        return ""
 
     import openai
 
@@ -54,4 +57,4 @@ async def complete(system: str, user: str, max_tokens: int = 2048) -> str:
             {"role": "user", "content": user},
         ],
     )
-    return resp.choices[0].message.content
+    return resp.choices[0].message.content or ""

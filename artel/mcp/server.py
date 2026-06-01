@@ -937,8 +937,10 @@ async def agent_rename(new_id: str) -> str:
     except _HTTPX_ERRORS as e:
         return _err(e)
     new_agent_id = r.json()["agent_id"]
-    old_key = _key_cache.get(_agent_id.get(""), "")
-    _key_cache[new_agent_id] = old_key
+    old_id = _agent_id.get("")
+    old_key = _key_cache.pop(old_id, "")
+    if old_key:
+        _key_cache[new_agent_id] = old_key
     _agent_id.set(new_agent_id)
     return f"renamed to {new_agent_id}"
 

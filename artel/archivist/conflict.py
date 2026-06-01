@@ -33,7 +33,9 @@ async def check_and_merge(entry_id: str, client: ArtelClient) -> None:
         return
 
     other = conflicts[0]
-    merged_content = await _merge(entry, other)
+    merged_content = (await _merge(entry, other)).strip()
+    if not merged_content:
+        return
     merged_tags = list((set(entry["tags"]) | set(other["tags"])) - _WORKFLOW_TAGS)
     merged_project = entry["project"] if entry["project"] == other["project"] else None
 
