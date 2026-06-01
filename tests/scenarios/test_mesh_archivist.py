@@ -27,7 +27,12 @@ class _MeshArchivistClient:
         return r.json()
 
     async def list_entries(
-        self, type=None, updated_before=None, min_version=None, limit=200
+        self,
+        type=None,
+        updated_before=None,
+        min_version=None,
+        min_distinct_readers=None,
+        limit=200,
     ) -> list[dict]:
         params: dict = {"limit": limit}
         if type:
@@ -36,6 +41,8 @@ class _MeshArchivistClient:
             params["updated_before"] = updated_before
         if min_version is not None:
             params["min_version"] = min_version
+        if min_distinct_readers is not None:
+            params["min_distinct_readers"] = min_distinct_readers
         r = await self._http.get("/memory", params=params)
         r.raise_for_status()
         return r.json()
@@ -138,6 +145,12 @@ def _bump_version(entry_id: str, version: int) -> None:
     db.commit()
 
 
+def _set_distinct_readers(entry_id: str, count: int) -> None:
+    db = db_mod.get_db()
+    db.execute("UPDATE memory SET distinct_reader_count=? WHERE id=?", (count, entry_id))
+    db.commit()
+
+
 async def test_synthesis_excludes_peer_entries(mesh_scenario):
     scenario, client = mesh_scenario
     agent = await scenario.agent("alice")
@@ -235,6 +248,7 @@ async def test_promotion_skips_peer_entries(mesh_scenario):
         mock_settings.promotion_memory_min_version = 3
         mock_settings.promotion_stability_days = 7
         mock_settings.promotion_min_confidence = 0.6
+        mock_settings.promotion_distinct_readers = 2
         await run_promotion(client)
 
     after_local = await client.get_memory(local["id"])
@@ -260,8 +274,33 @@ async def test_promotion_skips_low_confidence_and_flagged(mesh_scenario):
         mock_settings.promotion_memory_min_version = 3
         mock_settings.promotion_stability_days = 7
         mock_settings.promotion_min_confidence = 0.6
+        mock_settings.promotion_distinct_readers = 2
         await run_promotion(client)
 
     assert (await client.get_memory(decayed["id"]))["type"] == "memory"
     assert (await client.get_memory(flagged["id"]))["type"] == "memory"
     assert (await client.get_memory(healthy["id"]))["type"] == "doc"
+
+
+async def test_promotion_fast_track_via_distinct_readers(mesh_scenario):
+    scenario, client = mesh_scenario
+    agent = await scenario.agent("frank")
+
+    # Fresh, low-version entries (would NOT qualify on version/stability alone)
+    well_read = await agent.write_memory("widely read insight", confidence=1.0)
+    single_read = await agent.write_memory("repeatedly read by one agent", confidence=1.0)
+    _set_distinct_readers(well_read["id"], 3)
+    _set_distinct_readers(single_read["id"], 1)
+
+    with patch("artel.archivist.synthesis.settings") as mock_settings:
+        mock_settings.archivist_id = ARCHIVIST_ID
+        mock_settings.promotion_memory_min_version = 3
+        mock_settings.promotion_stability_days = 7
+        mock_settings.promotion_min_confidence = 0.6
+        mock_settings.promotion_distinct_readers = 2
+        await run_promotion(client)
+
+    # Multiple distinct readers promote faster, even at version 1 and not yet stable
+    assert (await client.get_memory(well_read["id"]))["type"] == "doc"
+    # A single reader (even if repeated) does not trigger the fast-track
+    assert (await client.get_memory(single_read["id"]))["type"] == "memory"

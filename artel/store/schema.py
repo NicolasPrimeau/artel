@@ -28,7 +28,8 @@ CREATE TABLE IF NOT EXISTS memory (
     expires_at   TEXT,
     origin       TEXT,
     read_count   INTEGER NOT NULL DEFAULT 0,
-    last_read_at TEXT
+    last_read_at TEXT,
+    distinct_reader_count INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS tasks (
@@ -105,8 +106,15 @@ CREATE TABLE IF NOT EXISTS message_reads (
     PRIMARY KEY (agent_id, message_id)
 );
 
+CREATE TABLE IF NOT EXISTS memory_reads (
+    memory_id   TEXT NOT NULL,
+    agent_id    TEXT NOT NULL,
+    PRIMARY KEY (memory_id, agent_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_messages_to      ON messages (to_agent, read);
 CREATE INDEX IF NOT EXISTS idx_message_reads    ON message_reads (agent_id);
+CREATE INDEX IF NOT EXISTS idx_memory_reads     ON memory_reads (memory_id);
 CREATE INDEX IF NOT EXISTS idx_events_created   ON events (created_at);
 CREATE INDEX IF NOT EXISTS idx_handoff_agent    ON session_handoffs (agent_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_proj_members     ON project_members (agent_id);

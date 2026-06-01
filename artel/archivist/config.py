@@ -21,6 +21,7 @@ class ArchivistSettings(BaseSettings):
     promotion_memory_min_version: int = 3
     promotion_stability_days: int = 7
     promotion_min_confidence: float = 0.6
+    promotion_distinct_readers: int = 2
 
     def api_key(self) -> str:
         for pair in self.agent_keys.split(","):

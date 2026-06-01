@@ -94,6 +94,7 @@ class ArtelClient:
         updated_before: str | None = None,
         created_before: str | None = None,
         min_version: int | None = None,
+        min_distinct_readers: int | None = None,
         limit: int = 100,
     ) -> list[dict]:
         params: dict = {"limit": limit}
@@ -105,6 +106,8 @@ class ArtelClient:
             params["created_before"] = created_before
         if min_version is not None:
             params["min_version"] = min_version
+        if min_distinct_readers is not None:
+            params["min_distinct_readers"] = min_distinct_readers
         r = await self._request("GET", "/memory", params=params)
         return r.json()
 

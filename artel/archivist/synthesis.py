@@ -1278,14 +1278,24 @@ async def run_promotion(client: ArtelClient) -> None:
     cutoff = (datetime.now(UTC) - timedelta(days=settings.promotion_stability_days)).strftime(
         "%Y-%m-%dT%H:%M:%S.000Z"
     )
-    memory_entries = await client.list_entries(
+    stable_entries = await client.list_entries(
         type="memory",
         min_version=settings.promotion_memory_min_version,
         updated_before=cutoff,
     )
+    well_read_entries = await client.list_entries(
+        type="memory",
+        min_distinct_readers=settings.promotion_distinct_readers,
+    )
+
+    candidates: dict[str, dict] = {}
+    for entry in stable_entries + well_read_entries:
+        candidates.setdefault(entry["id"], entry)
+
     local_id = instance_id()
     promoted = 0
-    for entry in memory_entries:
+    via_readers = 0
+    for entry in candidates.values():
         if entry.get("type") == "directive":
             continue
         if entry.get("origin") is not None and entry.get("origin") != local_id:
@@ -1297,13 +1307,16 @@ async def run_promotion(client: ArtelClient) -> None:
         try:
             await client.patch_memory(entry["id"], type="doc")
             promoted += 1
+            if entry.get("version", 1) < settings.promotion_memory_min_version:
+                via_readers += 1
         except Exception as e:
             log.warning("memory promotion failed for %s: %s", entry["id"], e)
     if promoted:
         await client.log(
             action="promotion",
-            message=f"promoted {promoted} memor{'y' if promoted == 1 else 'ies'} to doc",
-            details={"promoted": promoted},
+            message=f"promoted {promoted} memor{'y' if promoted == 1 else 'ies'} to doc"
+            + (f" ({via_readers} via distinct-reader fast-track)" if via_readers else ""),
+            details={"promoted": promoted, "via_distinct_readers": via_readers},
         )
 
 

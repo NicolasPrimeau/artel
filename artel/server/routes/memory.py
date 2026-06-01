@@ -111,6 +111,9 @@ def _row_to_entry(row: sqlite3.Row) -> MemoryEntry:
         version=row["version"],
         expires_at=row["expires_at"] if "expires_at" in keys else None,
         origin=row["origin"] if "origin" in keys else None,
+        distinct_reader_count=row["distinct_reader_count"]
+        if "distinct_reader_count" in keys
+        else 0,
     )
 
 
@@ -242,6 +245,7 @@ async def list_memory(
     updated_before: str | None = Query(default=None),
     created_before: str | None = Query(default=None),
     min_version: int | None = Query(default=None),
+    min_distinct_readers: int | None = Query(default=None),
     limit: int = Query(default=100, le=500),
     agent_id: str = ReaderDep,
 ):
@@ -281,6 +285,9 @@ async def list_memory(
     if min_version is not None:
         clauses.append("version >= ?")
         params.append(min_version)
+    if min_distinct_readers is not None:
+        clauses.append("distinct_reader_count >= ?")
+        params.append(min_distinct_readers)
     params.append(limit)
     rows = db.execute(
         f"SELECT * FROM memory WHERE {' AND '.join(clauses)} ORDER BY updated_at DESC LIMIT ?",
@@ -453,11 +460,24 @@ async def get_memory(
         allowed = _memberships(agent_id)
         if allowed is not None and row["project"] not in allowed:
             raise HTTPException(status_code=403, detail="not a member of this project")
-    db.execute(
-        "UPDATE memory SET read_count = read_count + 1, last_read_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?",
-        (entry_id,),
-    )
-    db.commit()
+    with db:
+        db.execute(
+            "UPDATE memory SET read_count = read_count + 1, last_read_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?",
+            (entry_id,),
+        )
+        if agent_id != settings.archivist_agent_id:
+            cur = db.execute(
+                "INSERT OR IGNORE INTO memory_reads (memory_id, agent_id) VALUES (?, ?)",
+                (entry_id, agent_id),
+            )
+            if cur.rowcount > 0:
+                db.execute(
+                    "UPDATE memory SET distinct_reader_count = distinct_reader_count + 1 WHERE id=?",
+                    (entry_id,),
+                )
+    row = db.execute(
+        "SELECT * FROM memory WHERE id=? AND deleted_at IS NULL", (entry_id,)
+    ).fetchone()
     return _row_to_entry(row)
 
 

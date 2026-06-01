@@ -449,3 +449,33 @@ async def test_bulk_delete_ignores_unknown_ids(client):
         headers=HEADERS,
     )
     assert r.status_code == 204
+
+
+async def test_distinct_reader_count_increments_once_per_agent(client, mem_payload):
+    r = await client.post("/memory", json=mem_payload, headers=HEADERS)
+    eid = r.json()["id"]
+    assert r.json()["distinct_reader_count"] == 0
+
+    first = await client.get(f"/memory/{eid}", headers=HEADERS)
+    assert first.json()["distinct_reader_count"] == 1
+    again = await client.get(f"/memory/{eid}", headers=HEADERS)
+    assert again.json()["distinct_reader_count"] == 1
+
+    other = await client.get(f"/memory/{eid}", headers=HEADERS2)
+    assert other.json()["distinct_reader_count"] == 2
+
+
+async def test_min_distinct_readers_filter(client, mem_payload):
+    r1 = await client.post("/memory", json=mem_payload, headers=HEADERS)
+    popular = r1.json()["id"]
+    r2 = await client.post("/memory", json={**mem_payload, "content": "lonely"}, headers=HEADERS)
+    lonely = r2.json()["id"]
+
+    await client.get(f"/memory/{popular}", headers=HEADERS)
+    await client.get(f"/memory/{popular}", headers=HEADERS2)
+    await client.get(f"/memory/{lonely}", headers=HEADERS)
+
+    r = await client.get("/memory", params={"min_distinct_readers": 2}, headers=HEADERS)
+    ids = [e["id"] for e in r.json()]
+    assert popular in ids
+    assert lonely not in ids

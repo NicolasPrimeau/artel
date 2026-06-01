@@ -68,6 +68,7 @@ class MemoryEntry(BaseModel):
     version: int
     expires_at: str | None = None
     origin: str | None = None
+    distinct_reader_count: int = 0
 
 
 class TaskCreate(BaseModel):

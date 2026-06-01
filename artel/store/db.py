@@ -97,6 +97,11 @@ def _migrate(conn: sqlite3.Connection) -> None:
     if "last_read_at" not in mem_cols:
         conn.execute("ALTER TABLE memory ADD COLUMN last_read_at TEXT")
         conn.commit()
+    if "distinct_reader_count" not in mem_cols:
+        conn.execute(
+            "ALTER TABLE memory ADD COLUMN distinct_reader_count INTEGER NOT NULL DEFAULT 0"
+        )
+        conn.commit()
     if "role" not in agent_cols:
         conn.execute(
             "ALTER TABLE agents ADD COLUMN role TEXT NOT NULL DEFAULT 'agent' CHECK (role IN ('owner', 'agent'))"
