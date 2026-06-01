@@ -479,3 +479,60 @@ async def test_min_distinct_readers_filter(client, mem_payload):
     ids = [e["id"] for e in r.json()]
     assert popular in ids
     assert lonely not in ids
+
+
+async def test_patch_if_match_matching_version_succeeds(client, mem_payload):
+    r = await client.post("/memory", json=mem_payload, headers=HEADERS)
+    eid = r.json()["id"]
+    assert r.json()["version"] == 1
+
+    r2 = await client.patch(
+        f"/memory/{eid}",
+        json={"confidence": 0.5},
+        headers={**HEADERS, "If-Match": "1"},
+    )
+    assert r2.status_code == 200
+    assert r2.json()["version"] == 2
+
+
+async def test_patch_if_match_stale_version_returns_409(client, mem_payload):
+    r = await client.post("/memory", json=mem_payload, headers=HEADERS)
+    eid = r.json()["id"]
+
+    # First write moves the entry to version 2
+    await client.patch(f"/memory/{eid}", json={"confidence": 0.8}, headers=HEADERS)
+
+    # A second caller still believes it is at version 1
+    r2 = await client.patch(
+        f"/memory/{eid}",
+        json={"confidence": 0.3},
+        headers={**HEADERS, "If-Match": "1"},
+    )
+    assert r2.status_code == 409
+
+    # The conflicting write did not take effect
+    cur = await client.get(f"/memory/{eid}", headers=HEADERS)
+    assert cur.json()["confidence"] == 0.8
+
+
+async def test_patch_without_if_match_is_last_write_wins(client, mem_payload):
+    r = await client.post("/memory", json=mem_payload, headers=HEADERS)
+    eid = r.json()["id"]
+    await client.patch(f"/memory/{eid}", json={"confidence": 0.8}, headers=HEADERS)
+
+    # No If-Match header: write succeeds regardless of intervening version change
+    r2 = await client.patch(f"/memory/{eid}", json={"confidence": 0.2}, headers=HEADERS)
+    assert r2.status_code == 200
+    assert r2.json()["confidence"] == 0.2
+
+
+async def test_patch_invalid_if_match_returns_400(client, mem_payload):
+    r = await client.post("/memory", json=mem_payload, headers=HEADERS)
+    eid = r.json()["id"]
+
+    r2 = await client.patch(
+        f"/memory/{eid}",
+        json={"confidence": 0.5},
+        headers={**HEADERS, "If-Match": "not-a-number"},
+    )
+    assert r2.status_code == 400

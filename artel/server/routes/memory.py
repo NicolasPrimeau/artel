@@ -3,7 +3,7 @@ import sqlite3
 import xml.etree.ElementTree as ET
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import JSONResponse, Response
 
 from ...store.db import AmbiguousId, get_db, instance_id, norm_project, resolve_id
@@ -488,6 +488,7 @@ async def patch_memory(
     entry_id: str,
     body: MemoryPatch,
     agent_id: str = ActorDep,
+    if_match: str | None = Header(default=None, alias="If-Match"),
 ):
     entry_id = _resolve_entry(entry_id)
     db = get_db()
@@ -507,6 +508,18 @@ async def patch_memory(
         allowed = _memberships(agent_id)
         if allowed is not None and row["project"] not in (allowed or []):
             raise HTTPException(status_code=403, detail="forbidden")
+
+    if if_match is not None:
+        try:
+            expected_version = int(if_match.strip().strip('"'))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="invalid If-Match header")
+        if expected_version != row["version"]:
+            raise HTTPException(
+                status_code=409,
+                detail=f"version conflict: entry is at version {row['version']}, "
+                f"If-Match expected {expected_version}",
+            )
 
     updates: dict = {}
     vec = None
