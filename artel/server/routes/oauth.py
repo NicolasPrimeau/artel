@@ -5,7 +5,7 @@ import secrets
 import time
 from urllib.parse import urlencode, urlparse
 
-from fastapi import APIRouter, Form, Query, Request
+from fastapi import APIRouter, Form, Header, Query, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from ...store.db import get_db
@@ -29,7 +29,8 @@ def _gc_codes() -> None:
 
 def _validate_client(client_id: str, client_secret: str) -> tuple[str, str] | None:
     api_keys = settings.api_keys()
-    if client_secret in api_keys and api_keys[client_secret] == client_id:
+    mapped = api_keys.get(client_secret)
+    if mapped is not None and secrets.compare_digest(mapped, client_id):
         return client_id, client_secret
     db = get_db()
     row = db.execute(
@@ -85,7 +86,7 @@ async def token_endpoint(
         with db:
             _gc_codes()
             row = db.execute(
-                "SELECT agent_id, api_key, client_id, code_challenge, expires_at"
+                "SELECT agent_id, api_key, client_id, code_challenge, redirect_uri, expires_at"
                 " FROM oauth_codes WHERE code=?",
                 (code,),
             ).fetchone()
@@ -95,6 +96,8 @@ async def token_endpoint(
         if row["expires_at"] < time.time():
             return JSONResponse({"error": "invalid_grant"}, status_code=400)
         if client_id and client_id != row["client_id"]:
+            return JSONResponse({"error": "invalid_grant"}, status_code=400)
+        if row["redirect_uri"] and redirect_uri != row["redirect_uri"]:
             return JSONResponse({"error": "invalid_grant"}, status_code=400)
         challenge = row["code_challenge"]
         if challenge:
@@ -153,7 +156,7 @@ async def authorize_endpoint(
             params["state"] = state
         return RedirectResponse(_redirect_with_params(redirect_uri, params), status_code=302)
 
-    if code_challenge and code_challenge_method not in (None, "S256"):
+    if not code_challenge or code_challenge_method not in (None, "S256"):
         params = {"error": "invalid_request"}
         if state:
             params["state"] = state
@@ -184,7 +187,9 @@ async def authorize_endpoint(
 
 
 @router.post("/oauth/register", status_code=201, include_in_schema=False)
-async def register_endpoint(request: Request):
+async def register_endpoint(request: Request, x_registration_key: str = Header(default="")):
+    if settings.registration_key and x_registration_key != settings.registration_key:
+        return JSONResponse({"error": "access_denied"}, status_code=403)
     try:
         body = await request.json()
     except Exception:
@@ -199,8 +204,8 @@ async def register_endpoint(request: Request):
         candidate = f"{base}-{i}"
         i += 1
     api_key = secrets.token_urlsafe(32)
-    db.execute("INSERT INTO agents (id, api_key) VALUES (?, ?)", (candidate, api_key))
-    db.commit()
+    with db:
+        db.execute("INSERT INTO agents (id, api_key) VALUES (?, ?)", (candidate, api_key))
     return {
         "client_id": candidate,
         "client_secret": api_key,
