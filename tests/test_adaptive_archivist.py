@@ -522,6 +522,29 @@ class TestHeatAwareDecay:
 
         client.patch_memory.assert_not_called()
 
+    async def test_doc_entries_never_decayed(self, raw_db):
+        eid = _insert_memory(raw_db, confidence=0.9, type_="doc")
+        doc_entry = {
+            "id": eid,
+            "agent_id": TEST_AGENT,
+            "type": "doc",
+            "content": "canonical doc",
+            "confidence": 0.9,
+            "origin": None,
+        }
+        client = self._make_client()
+        client.list_entries = AsyncMock(return_value=[doc_entry])
+
+        with patch("artel.archivist.synthesis.settings") as s:
+            s.decay_window_days = 7
+            s.decay_floor = 0.05
+            s.decay_rate = 0.9
+            s.archivist_id = "archivist"
+            s.synthesis_interval = 3600
+            await decay_confidence(client)
+
+        client.patch_memory.assert_not_called()
+
     async def test_empty_entry_list_no_side_effects(self, raw_db):
         client = self._make_client()
         client.list_entries = AsyncMock(return_value=[])

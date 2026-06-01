@@ -234,9 +234,34 @@ async def test_promotion_skips_peer_entries(mesh_scenario):
         mock_settings.archivist_id = ARCHIVIST_ID
         mock_settings.promotion_memory_min_version = 3
         mock_settings.promotion_stability_days = 7
+        mock_settings.promotion_min_confidence = 0.6
         await run_promotion(client)
 
     after_local = await client.get_memory(local["id"])
     after_peer = await client.get_memory(peer["id"])
     assert after_local["type"] == "doc"
     assert after_peer["type"] == "memory"
+
+
+async def test_promotion_skips_low_confidence_and_flagged(mesh_scenario):
+    scenario, client = mesh_scenario
+    agent = await scenario.agent("erin")
+
+    decayed = await agent.write_memory("stale low-confidence note", confidence=0.3)
+    flagged = await agent.write_memory("flagged note", confidence=1.0, tags=["archivist-flagged"])
+    healthy = await agent.write_memory("healthy stable note", confidence=1.0)
+
+    for entry_id in (decayed["id"], flagged["id"], healthy["id"]):
+        _bump_version(entry_id, 5)
+        _stamp_old(entry_id, days=30)
+
+    with patch("artel.archivist.synthesis.settings") as mock_settings:
+        mock_settings.archivist_id = ARCHIVIST_ID
+        mock_settings.promotion_memory_min_version = 3
+        mock_settings.promotion_stability_days = 7
+        mock_settings.promotion_min_confidence = 0.6
+        await run_promotion(client)
+
+    assert (await client.get_memory(decayed["id"]))["type"] == "memory"
+    assert (await client.get_memory(flagged["id"]))["type"] == "memory"
+    assert (await client.get_memory(healthy["id"]))["type"] == "doc"

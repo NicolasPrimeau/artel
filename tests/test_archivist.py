@@ -653,6 +653,23 @@ class TestExecuteOperations:
         client.patch_memory.assert_called_once_with("bbbb-2222", content="combined into content")
         client.delete_memory.assert_called_once_with("aaaa-1111")
 
+    async def test_extract_skips_empty_merged_content(self):
+        entries = self._make_entries()
+        client = self._make_client()
+        ops = [
+            {
+                "op": "extract",
+                "from": "aaaa-1111",
+                "into": "bbbb-2222",
+                "extracted_content": "the segment",
+                "remaining_content": "what stays",
+                "merged_content": "   ",
+            }
+        ]
+        await _execute_operations(ops, client, entries)
+        client.patch_memory.assert_not_called()
+        client.delete_memory.assert_not_called()
+
     async def test_extract_rejects_same_id(self):
         entries = self._make_entries()
         client = self._make_client()

@@ -383,6 +383,24 @@ async def test_curator_empty_ops(arch_scenario):
     assert still_b["type"] == "memory"
 
 
+async def test_curator_advances_synthesis_cursor(arch_scenario):
+    scenario, arch_client, arch_http = arch_scenario
+
+    db = db_mod.get_db()
+    before = db.execute("SELECT value FROM kv WHERE key='archivist_last_synthesis'").fetchone()
+    assert before is None
+
+    agent_a = await scenario.agent("cursor-a")
+    agent_b = await scenario.agent("cursor-b")
+    await agent_a.write_memory("cursor entry one")
+    await agent_b.write_memory("cursor entry two")
+
+    await _run_synthesis_mocked(arch_client, "[]")
+
+    after = db.execute("SELECT value FROM kv WHERE key='archivist_last_synthesis'").fetchone()
+    assert after is not None and after["value"]
+
+
 async def test_curator_directives_loaded_as_preamble(arch_scenario):
     scenario, arch_client, arch_http = arch_scenario
 
@@ -637,6 +655,7 @@ async def test_triage_llm_duplicate_flag(arch_scenario):
 
     agent_a = await scenario.agent("triage-dup-a")
     task = await agent_a.create_task("Add cities to BuildData")
+    await agent_a.create_task("Expand coverage to new cities")
     await agent_a.write_memory("BuildData city expansion was tracked before")
 
     llm_response = '{"link_comment": null, "duplicate_of": "Expand coverage to new cities", "already_done": false}'
@@ -647,6 +666,23 @@ async def test_triage_llm_duplicate_flag(arch_scenario):
     assert any("duplicate" in c["body"].lower() for c in archivist_comments)
     r = await arch_http.get(f"/tasks/{task['id']}")
     assert r.json()["status"] == "failed"
+
+
+async def test_triage_llm_duplicate_flag_no_match_comments_only(arch_scenario):
+    scenario, arch_client, arch_http = arch_scenario
+
+    agent_a = await scenario.agent("triage-dup-nomatch-a")
+    task = await agent_a.create_task("Add cities to BuildData")
+    await agent_a.write_memory("BuildData city expansion was tracked before")
+
+    llm_response = '{"link_comment": null, "duplicate_of": "Some task that does not exist", "already_done": false}'
+    await _run_triage_mocked(arch_client, llm_response)
+
+    comments = await arch_client.list_task_comments(task["id"])
+    archivist_comments = [c for c in comments if c["agent_id"] == ARCHIVIST_ID]
+    assert any("duplicate" in c["body"].lower() for c in archivist_comments)
+    r = await arch_http.get(f"/tasks/{task['id']}")
+    assert r.json()["status"] == "open"
 
 
 async def test_triage_llm_already_done_flag(arch_scenario):

@@ -248,8 +248,13 @@ class TestRunTaskTriageLLMMode:
 
     async def test_flags_duplicate_task(self):
         task = _make_task()
+        sibling = _make_task(
+            task_id="task-canonical",
+            title="Expand city coverage to 63",
+            assigned_to="someone",
+        )
         mem = _make_memory()
-        client = _make_client(tasks=[task], search_results=[mem])
+        client = _make_client(tasks=[task, sibling], search_results=[mem])
         llm_response = json.dumps(
             {
                 "link_comment": None,
@@ -264,8 +269,32 @@ class TestRunTaskTriageLLMMode:
             await run_task_triage(client)
 
         client.close_task_as_duplicate.assert_called_once()
+        closed_id = client.close_task_as_duplicate.call_args.args[0]
         reason = client.close_task_as_duplicate.call_args.args[1]
+        assert closed_id == "task-abc"
         assert "duplicate" in reason.lower()
+
+    async def test_duplicate_without_matching_task_comments_only(self):
+        task = _make_task()
+        mem = _make_memory()
+        client = _make_client(tasks=[task], search_results=[mem])
+        llm_response = json.dumps(
+            {
+                "link_comment": None,
+                "duplicate_of": "A task that does not exist anywhere",
+                "already_done": False,
+            }
+        )
+        with (
+            patch("artel.archivist.synthesis.is_configured", return_value=True),
+            patch("artel.archivist.synthesis.complete", AsyncMock(return_value=llm_response)),
+        ):
+            await run_task_triage(client)
+
+        client.close_task_as_duplicate.assert_not_called()
+        client.add_task_comment.assert_called_once()
+        body = client.add_task_comment.call_args.args[1]
+        assert "duplicate" in body.lower()
 
     async def test_flags_already_done_task(self):
         task = _make_task()
@@ -290,8 +319,9 @@ class TestRunTaskTriageLLMMode:
 
     async def test_multiple_comments_per_task(self):
         task = _make_task()
+        sibling = _make_task(task_id="task-other", title="Other task", assigned_to="someone")
         mem = _make_memory()
-        client = _make_client(tasks=[task], search_results=[mem])
+        client = _make_client(tasks=[task, sibling], search_results=[mem])
         llm_response = json.dumps(
             {
                 "link_comment": "See mem-xyz",

@@ -114,6 +114,35 @@ def _utc_ago(hours: int) -> str:
     return (datetime.now(UTC) - timedelta(hours=hours)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
+_SYNTHESIS_CURSOR_KEY = "archivist_last_synthesis"
+
+
+def _read_synthesis_cursor() -> str | None:
+    try:
+        row = (
+            get_db()
+            .execute("SELECT value FROM kv WHERE key = ?", (_SYNTHESIS_CURSOR_KEY,))
+            .fetchone()
+        )
+        value = row["value"] if row else None
+        return value if isinstance(value, str) else None
+    except Exception:
+        return None
+
+
+def _write_synthesis_cursor(value: str) -> None:
+    try:
+        db = get_db()
+        with db:
+            db.execute(
+                "INSERT INTO kv (key, value) VALUES (?, ?) "
+                "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                (_SYNTHESIS_CURSOR_KEY, value),
+            )
+    except Exception as e:
+        log.warning("could not advance synthesis cursor: %s", e)
+
+
 def _parse_operations(text: str) -> list[dict]:
     stripped = text.strip()
     if stripped.startswith("```"):
@@ -283,6 +312,9 @@ async def _execute_operations(
                     continue
                 merged_content = op.get("merged_content", "")
                 remaining_content = op.get("remaining_content", "")
+                if not merged_content or not merged_content.strip():
+                    log.warning("extract op has empty merged_content, skipping: into=%s", into_id)
+                    continue
                 await client.patch_memory(into_id, content=merged_content)
                 if remaining_content and remaining_content.strip():
                     await client.patch_memory(from_id, content=remaining_content)
@@ -544,7 +576,9 @@ async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
             log.warning("directive conflict check failed: %s", e)
 
     local_id = instance_id()
-    entries = await client.get_delta(_utc_ago(since_hours))
+    run_started = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    cutoff = _read_synthesis_cursor() or _utc_ago(since_hours)
+    entries = await client.get_delta(cutoff)
     entries = [
         e
         for e in entries
@@ -675,6 +709,7 @@ async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
             "op_counts": op_counts,
         },
     )
+    _write_synthesis_cursor(run_started)
 
 
 async def run_deep_synthesis(client: ArtelClient) -> None:
@@ -1016,7 +1051,8 @@ async def decay_confidence(client: ArtelClient) -> None:
     entries = [
         e
         for e in entries
-        if e.get("type") != "directive" and (e.get("origin") is None or e.get("origin") == local_id)
+        if e.get("type") not in ("directive", "doc")
+        and (e.get("origin") is None or e.get("origin") == local_id)
     ]
 
     db = get_db()
@@ -1103,7 +1139,7 @@ async def run_task_triage(client: ArtelClient) -> None:
 
         if "archivist-triaged" not in tags:
             try:
-                await _triage_task(task, client)
+                await _triage_task(task, client, open_tasks=all_tasks)
                 await client.patch_task(task["id"], tags=list(tags | {"archivist-triaged"}))
                 triaged += 1
             except asyncio.CancelledError:
@@ -1123,7 +1159,24 @@ async def run_task_triage(client: ArtelClient) -> None:
         )
 
 
-async def _triage_task(task: dict, client: ArtelClient) -> None:
+def _resolve_duplicate_task(hint: str, task: dict, open_tasks: list[dict]) -> dict | None:
+    needle = hint.strip().lower()
+    if not needle:
+        return None
+    for other in open_tasks:
+        if other.get("id") == task.get("id"):
+            continue
+        title = (other.get("title") or "").strip().lower()
+        if not title:
+            continue
+        if needle == title or needle in title or title in needle:
+            return other
+    return None
+
+
+async def _triage_task(
+    task: dict, client: ArtelClient, open_tasks: list[dict] | None = None
+) -> None:
     query = f"{task['title']} {task.get('description') or ''}"
     related = await client.search_memory(query, limit=8, max_distance=0.5)
     if not related:
@@ -1185,14 +1238,30 @@ async def _triage_task(task: dict, client: ArtelClient) -> None:
             log.warning("could not add link comment to task %s: %s", task["id"], e)
 
     if duplicate_of and isinstance(duplicate_of, str) and duplicate_of.strip():
-        try:
-            await client.close_task_as_duplicate(
-                task["id"],
-                f"[archivist] Closed as duplicate of: {duplicate_of.strip()}",
-            )
-            log.info("archivist closed duplicate task %s", task["id"][:8])
-        except Exception as e:
-            log.warning("could not close duplicate task %s: %s", task["id"], e)
+        match = _resolve_duplicate_task(duplicate_of, task, open_tasks or [])
+        if match:
+            try:
+                await client.close_task_as_duplicate(
+                    task["id"],
+                    f"[archivist] Closed as duplicate of [{match['id']}] {match.get('title', '')!r}",
+                )
+                log.info(
+                    "archivist closed duplicate task %s (of %s)",
+                    task["id"][:8],
+                    match["id"][:8],
+                )
+            except Exception as e:
+                log.warning("could not close duplicate task %s: %s", task["id"], e)
+        else:
+            try:
+                await client.add_task_comment(
+                    task["id"],
+                    f"[archivist] Possible duplicate of existing work ({duplicate_of.strip()}). "
+                    "No matching open task found — verify before closing.",
+                )
+                log.info("archivist flagged possible duplicate for task %s", task["id"][:8])
+            except Exception as e:
+                log.warning("could not add duplicate comment to task %s: %s", task["id"], e)
 
     if already_done:
         try:
@@ -1221,7 +1290,9 @@ async def run_promotion(client: ArtelClient) -> None:
             continue
         if entry.get("origin") is not None and entry.get("origin") != local_id:
             continue
-        if {"feed-item", "unprocessed"} & set(entry.get("tags") or []):
+        if {"feed-item", "unprocessed", "archivist-flagged"} & set(entry.get("tags") or []):
+            continue
+        if entry.get("confidence", 1.0) < settings.promotion_min_confidence:
             continue
         try:
             await client.patch_memory(entry["id"], type="doc")
