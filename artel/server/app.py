@@ -221,43 +221,12 @@ async def oauth_protected_resource():
     return JSONResponse(content=json.loads(_protected_resource_body()))
 
 
-_READONLY_TOOLS = {
-    "session_context",
-    "memory_search",
-    "memory_list",
-    "memory_get",
-    "memory_delta",
-    "project_list",
-    "project_members",
-    "agent_list",
-    "message_inbox",
-    "task_list",
-    "task_get",
-    "feed_list",
-}
-_DESTRUCTIVE_TOOLS = {
-    "memory_delete",
-    "agent_delete",
-    "task_fail",
-    "project_leave",
-    "feed_unsubscribe",
-}
-_IDEMPOTENT_TOOLS = {
-    "memory_update",
-    "task_update",
-    "task_unclaim",
-    "agent_rename",
-    "inbox_cron_setup",
-}
-
-
-def _tool_annotations(name: str) -> dict:
-    read_only = name in _READONLY_TOOLS
+def _tool_annotations(ann: object) -> dict:
     return {
-        "readOnlyHint": read_only,
-        "destructiveHint": name in _DESTRUCTIVE_TOOLS,
-        "idempotentHint": read_only or name in _IDEMPOTENT_TOOLS or name in _DESTRUCTIVE_TOOLS,
-        "openWorldHint": False,
+        "readOnlyHint": bool(getattr(ann, "readOnlyHint", None)),
+        "destructiveHint": bool(getattr(ann, "destructiveHint", None)),
+        "idempotentHint": bool(getattr(ann, "idempotentHint", None)),
+        "openWorldHint": bool(getattr(ann, "openWorldHint", None)),
     }
 
 
@@ -283,7 +252,7 @@ async def mcp_server_card():
                     "description": t.description or "",
                     "inputSchema": t.inputSchema,
                     **({"outputSchema": t.outputSchema} if t.outputSchema else {}),
-                    "annotations": _tool_annotations(t.name),
+                    "annotations": _tool_annotations(t.annotations),
                 }
                 for t in tools
             ],
