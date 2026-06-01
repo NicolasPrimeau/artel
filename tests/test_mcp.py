@@ -379,3 +379,39 @@ async def test_notification_queue_restart_survival(mcp):
         assert row["delivered_at"] is not None
     finally:
         mcp._sessions.pop(TEST_AGENT, None)
+
+
+async def test_memory_output_includes_version(mcp):
+    write = await mcp.memory_write("versioned entry")
+    entry_id = _extract_id(write)
+    result = await mcp.memory_get(entry_id)
+    assert " v1 " in result
+
+
+async def test_memory_update_optimistic_lock_success(mcp):
+    write = await mcp.memory_write("lock me")
+    entry_id = _extract_id(write)
+    result = await mcp.memory_update(entry_id, confidence=0.5, expected_version=1)
+    assert "conflict" not in result.lower()
+    assert " v2 " in result
+
+
+async def test_memory_update_optimistic_lock_conflict(mcp):
+    write = await mcp.memory_write("contended entry")
+    entry_id = _extract_id(write)
+    # First update moves the entry to version 2
+    await mcp.memory_update(entry_id, confidence=0.7)
+    # A stale caller still thinks it is at version 1
+    result = await mcp.memory_update(entry_id, confidence=0.2, expected_version=1)
+    assert result.lower().startswith("conflict")
+    # The conflicting write did not take effect
+    current = await mcp.memory_get(entry_id)
+    assert "conf=0.70" in current
+
+
+async def test_memory_update_without_version_is_last_write_wins(mcp):
+    write = await mcp.memory_write("lww entry")
+    entry_id = _extract_id(write)
+    await mcp.memory_update(entry_id, confidence=0.7)
+    result = await mcp.memory_update(entry_id, confidence=0.2)
+    assert "conflict" not in result.lower()

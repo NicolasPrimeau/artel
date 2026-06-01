@@ -337,7 +337,8 @@ class _StaleKeyError(BaseException):
 def _fmt_memory(e: dict, full_content: bool = False) -> str:
     tags = ", ".join(e["tags"]) if e["tags"] else "—"
     project = f" project={e['project']}" if e.get("project") else ""
-    meta = f"[{e['id']}] ({e['agent_id']}, {e['type']}, conf={e['confidence']:.2f}, tags={tags}{project})"
+    version = f" v{e['version']}" if e.get("version") is not None else ""
+    meta = f"[{e['id']}]{version} ({e['agent_id']}, {e['type']}, conf={e['confidence']:.2f}, tags={tags}{project})"
     raw = e["content"]
     if full_content or len(raw) <= 300:
         content = raw
@@ -647,6 +648,7 @@ async def memory_update(
     entry_type: str | None = None,
     scope: str | None = None,
     project: str | None = None,
+    expected_version: int | None = None,
 ) -> str:
     """Update a memory entry you own.
 
@@ -658,6 +660,9 @@ async def memory_update(
         entry_type: New type (memory or doc). Omit to leave unchanged.
         scope: New scope (agent or project). Omit to leave unchanged.
         project: Move entry to a different project. Omit to leave unchanged.
+        expected_version: The version you read (shown as "v<n>" in memory output).
+            If given and another agent has written since, the update is rejected
+            with a conflict instead of silently overwriting. Omit for last-write-wins.
     """
     patch: dict = {}
     if content is not None:
@@ -672,9 +677,16 @@ async def memory_update(
         patch["scope"] = scope
     if project is not None:
         patch["project"] = project
+    headers = {"If-Match": str(expected_version)} if expected_version is not None else None
     c = _http()
     try:
-        r = await c.patch(f"/memory/{entry_id}", json=patch)
+        r = await c.patch(f"/memory/{entry_id}", json=patch, headers=headers)
+        if r.status_code == 409:
+            return (
+                f"conflict: entry {entry_id} changed since version {expected_version}. "
+                "Re-read it with memory_get to see the current version and content, "
+                "then retry your update."
+            )
         r.raise_for_status()
     except _HTTPX_ERRORS as e:
         return _err(e)
