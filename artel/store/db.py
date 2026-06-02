@@ -182,6 +182,41 @@ def _migrate(conn: sqlite3.Connection) -> None:
         """)
         conn.commit()
 
+    memory_sql = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='memory'"
+    ).fetchone()
+    if memory_sql and "'skill'" not in memory_sql[0]:
+        conn.executescript("""
+            PRAGMA foreign_keys=off;
+            BEGIN;
+            ALTER TABLE memory RENAME TO _memory_old;
+            CREATE TABLE memory (
+                id          TEXT PRIMARY KEY,
+                type        TEXT NOT NULL CHECK (type IN ('memory','doc','directive','skill')),
+                agent_id    TEXT NOT NULL,
+                project     TEXT,
+                scope       TEXT NOT NULL DEFAULT 'project' CHECK (scope IN ('agent','project')),
+                content     TEXT NOT NULL,
+                confidence  REAL NOT NULL DEFAULT 1.0,
+                parents     TEXT NOT NULL DEFAULT '[]',
+                tags        TEXT NOT NULL DEFAULT '[]',
+                created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+                updated_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+                version      INTEGER NOT NULL DEFAULT 1,
+                deleted_at   TEXT,
+                expires_at   TEXT,
+                origin       TEXT,
+                read_count   INTEGER NOT NULL DEFAULT 0,
+                last_read_at TEXT,
+                distinct_reader_count INTEGER NOT NULL DEFAULT 0
+            );
+            INSERT INTO memory SELECT * FROM _memory_old;
+            DROP TABLE _memory_old;
+            COMMIT;
+            PRAGMA foreign_keys=on;
+        """)
+        conn.commit()
+
     _canonicalize_projects(conn)
 
 

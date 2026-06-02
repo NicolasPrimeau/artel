@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS agents (
 
 CREATE TABLE IF NOT EXISTS memory (
     id          TEXT PRIMARY KEY,
-    type        TEXT NOT NULL CHECK (type IN ('memory','doc','directive')),
+    type        TEXT NOT NULL CHECK (type IN ('memory','doc','directive','skill')),
     agent_id    TEXT NOT NULL,
     project     TEXT,
     scope       TEXT NOT NULL DEFAULT 'project' CHECK (scope IN ('agent','project')),

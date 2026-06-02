@@ -722,7 +722,7 @@ async def run_deep_synthesis(client: ArtelClient) -> None:
         e
         for e in all_entries
         if e.get("type") not in ("directive",)
-        and e.get("type") in ("memory", "doc")
+        and e.get("type") in ("memory", "doc", "skill")
         and (e.get("origin") is None or e.get("origin") == local_id)
     ]
 
@@ -982,8 +982,7 @@ async def run_utilization_prune(client: ArtelClient) -> None:
     candidates = [
         e
         for e in all_entries
-        if e.get("type") == "memory"
-        and e.get("type") != "directive"
+        if e.get("type") in ("memory", "skill")
         and (e.get("origin") is None or e.get("origin") == local_id)
         and datetime.fromisoformat(e["created_at"].replace("Z", "+00:00")) < cutoff_30d
     ]
@@ -1051,7 +1050,7 @@ async def decay_confidence(client: ArtelClient) -> None:
     entries = [
         e
         for e in entries
-        if e.get("type") not in ("directive", "doc")
+        if e.get("type") not in ("directive", "doc", "skill")
         and (e.get("origin") is None or e.get("origin") == local_id)
     ]
 
@@ -1296,7 +1295,7 @@ async def run_promotion(client: ArtelClient) -> None:
     promoted = 0
     via_readers = 0
     for entry in candidates.values():
-        if entry.get("type") == "directive":
+        if entry.get("type") in ("directive", "skill"):
             continue
         if entry.get("origin") is not None and entry.get("origin") != local_id:
             continue

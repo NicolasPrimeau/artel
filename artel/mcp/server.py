@@ -286,6 +286,7 @@ MEMORY (write often, read before you act):
 - Call memory_search() before starting any non-trivial work — another agent may have already done it.
 - Call memory_write() whenever you learn something worth keeping: decisions, facts, findings, plans, bugs.
 - entry_type="memory" is the default and right for almost everything. The archivist promotes stable entries to entry_type="doc" automatically.
+- Use entry_type="skill" for procedural knowledge — how to do something. Skills decay like memories but are never promoted to doc and are never merged. If a directive covers the same topic, the directive takes precedence.
 - Use tags to make things findable. Use scope="agent" only for things no other agent should see.
 - If MCP_PROJECT is set, all memory calls default to that project automatically.
 
@@ -490,6 +491,7 @@ async def memory_write(
     - memory: default — use this for everything
     - doc: stable reference material; normally written by the archivist, not agents
     - directive: a standing instruction that governs archivist behavior fleet-wide; requires elevated permission (the UI agent has it by default); confidence is always forced to 1.0
+    - skill: procedural knowledge — how to do something; decays like memory, never promoted, never merged; superseded by directives on the same topic
 
     Scopes:
     - project: visible to all members of this project (default)

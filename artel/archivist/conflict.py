@@ -25,6 +25,10 @@ async def check_and_merge(entry_id: str, client: ArtelClient) -> None:
     if entry.get("origin") and entry.get("origin") != local:
         return
 
+    if entry.get("type") == "skill":
+        await _check_directive_supersedes_skill(entry, client)
+        return
+
     similar = await client.search_memory(entry["content"], limit=6, max_distance=_MAX_DISTANCE)
 
     conflicts = [s for s in similar if s["id"] != entry_id]
@@ -68,6 +72,30 @@ async def check_and_merge(entry_id: str, client: ArtelClient) -> None:
             )
         except Exception as e:
             log.warning("could not notify %s of merge: %s", agent, e)
+
+
+async def _check_directive_supersedes_skill(entry: dict, client: ArtelClient) -> None:
+    similar = await client.search_memory(entry["content"], limit=6, max_distance=_MAX_DISTANCE)
+    directives = [s for s in similar if s["id"] != entry["id"] and s.get("type") == "directive"]
+    if not directives:
+        return
+    d = directives[0]
+    notice = (
+        f"Your skill entry [{entry['id'][:8]}] is superseded by an existing directive "
+        f"[{d['id'][:8]}] from {d['agent_id']}. The directive takes precedence. "
+        f"You may want to review or remove the skill."
+    )
+    agent = entry["agent_id"]
+    if agent == settings.archivist_id:
+        return
+    try:
+        await client.send_message(
+            to=agent,
+            subject="Skill superseded by directive",
+            body=notice,
+        )
+    except Exception as e:
+        log.warning("could not notify %s of superseded skill: %s", agent, e)
 
 
 async def _merge(a: dict, b: dict) -> str:
