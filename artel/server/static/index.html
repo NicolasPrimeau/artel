@@ -357,6 +357,7 @@ button.icon-btn{width:24px;height:24px;padding:0;font-size:12px}
 .pill.memory   {background:var(--a-bg);color:var(--accent);border:1px solid var(--a-bord)}
 .pill.doc      {background:var(--p-bg);color:var(--purple);border:1px solid var(--p-bord)}
 .pill.directive{background:var(--bl-bg);color:var(--blue);border:1px solid var(--bl-bord)}
+.pill.skill    {background:var(--g-bg);color:var(--green);border:1px solid var(--g-bord)}
 .pill.scratch  {background:var(--s3);color:var(--t3);border:1px solid var(--b2)}
 .pill.private  {background:var(--r-bg);color:var(--red);border:1px solid var(--r-bord)}
 .pill.project  {background:var(--o-bg);color:var(--orange);border:1px solid var(--o-bord)}
@@ -1150,6 +1151,7 @@ pre{
       <option>memory</option>
       <option>doc</option>
       <option>directive</option>
+      <option>skill</option>
       <option>scratch</option>
     </select>
     <button onclick="search()">search</button>
@@ -1159,7 +1161,7 @@ pre{
     <textarea id="mc" placeholder="write a memory entry… (ctrl+enter to save)" rows="3"></textarea>
     <div class="write-row">
       <input id="mtags" placeholder="tags (comma-separated)" style="flex:1">
-      <select id="mtype"><option>memory</option><option>doc</option></select>
+      <select id="mtype"><option>memory</option><option>doc</option><option>skill</option></select>
       <select id="mscope"><option value="project">project</option><option value="agent">private</option></select>
       <button class="p" onclick="writeMem()">write</button>
     </div>
@@ -1639,7 +1641,7 @@ async function search(){
 
 function confClass(c){return c<0.4?'very-low':c<0.7?'low':''}
 
-function _typeOrder(t){return t==='directive'?0:t==='doc'?1:2}
+function _typeOrder(t){return t==='directive'?0:t==='doc'?1:t==='skill'?2:3}
 
 function renderMem(es,isSearch=false){
   const hdr=$('mem-section-header'),cnt=$('mem-count');
@@ -1659,8 +1661,8 @@ function renderMem(es,isSearch=false){
     const tags=e.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join(' ');
     const proj=e.project?`<span class="pill project">${esc(e.project)}</span>`:'';
     const isDirective=e.type==='directive';
-    const cardClass=isDirective?'blue':e.type==='doc'?'purple':e.type==='scratch'?'':'accent';
-    const headerPrefix=isDirective?'🔒 ':'';
+    const cardClass=isDirective?'blue':e.type==='doc'?'purple':e.type==='skill'?'green':e.type==='scratch'?'':'accent';
+    const headerPrefix=isDirective?'🔒 ':e.type==='skill'?'⚡ ':'';
     const isLong=e.content.length>500;
     return `<div class="card ${cardClass}" id="mc-${e.id}">
       <div class="meta">
@@ -1680,7 +1682,7 @@ function renderMem(es,isSearch=false){
       </div>
       ${isDirective?'':`<div class="conf-row">
         <div class="conf-bar"><div class="conf-fill ${cc}" style="width:${pct}%"></div></div>
-        <span class="conf-label">${pct}% conf${e.version>1?` · v${e.version}`:''}${e.parents?.length?` · ${e.parents.length} parent${e.parents.length>1?'s':''}`:''}
+        <span class="conf-label">${pct}% conf${e.version>1?` · v${e.version}`:''}${e.distinct_reader_count>1?` · ${e.distinct_reader_count} readers`:''}${e.parents?.length?` · ${e.parents.length} parent${e.parents.length>1?'s':''}`:''}
         </span>
       </div>`}
       <div class="card-actions">
