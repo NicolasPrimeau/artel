@@ -82,7 +82,7 @@ button:hover{background:#3c3836}
   {error}
   <input type="password" name="password" placeholder="admin password" autofocus>
   <button type="submit">login</button>
-  <a class="guest" href="/ui">continue read-only →</a>
+  {guest}
 </form>
 </body>
 </html>
@@ -319,7 +319,8 @@ _NO_STORE = {"Cache-Control": "no-store, no-cache, must-revalidate", "Pragma": "
 @app.get("/ui/login", response_class=HTMLResponse, include_in_schema=False)
 async def login_page(error: str = ""):
     err = '<p class="err">incorrect password</p>' if error else ""
-    return HTMLResponse(_LOGIN.replace("{error}", err), headers=_NO_STORE)
+    guest = '<a class="guest" href="/ui">continue read-only →</a>' if settings.demo_mode else ""
+    return HTMLResponse(_LOGIN.replace("{error}", err).replace("{guest}", guest), headers=_NO_STORE)
 
 
 @app.post("/ui/login", include_in_schema=False)

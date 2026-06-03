@@ -73,3 +73,18 @@ async def test_ui_demo_mode_serves_readonly_viewer(client, monkeypatch):
     r = await client.get("/ui", follow_redirects=False)
     assert r.status_code == 200
     assert 'window._agent_role="viewer"' in r.text
+
+
+@pytest.mark.asyncio
+async def test_login_page_hides_readonly_link_when_demo_disabled(client):
+    r = await client.get("/ui/login")
+    assert "continue read-only" not in r.text
+
+
+@pytest.mark.asyncio
+async def test_login_page_shows_readonly_link_in_demo_mode(client, monkeypatch):
+    import artel.server.config as cfg_mod
+
+    monkeypatch.setattr(cfg_mod.settings, "demo_mode", True)
+    r = await client.get("/ui/login")
+    assert "continue read-only" in r.text
