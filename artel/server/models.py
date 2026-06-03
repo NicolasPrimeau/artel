@@ -25,7 +25,7 @@ ProjectName = Annotated[str | None, AfterValidator(_normalize_project_optional)]
 ProjectNameRequired = Annotated[str, AfterValidator(_normalize_project_required)]
 
 
-EntryType = Literal["memory", "doc", "directive"]
+EntryType = Literal["memory", "doc", "directive", "skill"]
 Scope = Literal["agent", "project"]
 TaskStatus = Literal["open", "claimed", "completed", "failed"]
 TaskCommentKind = Literal["comment", "claim", "unclaim", "complete", "fail"]

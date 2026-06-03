@@ -536,3 +536,27 @@ async def test_patch_invalid_if_match_returns_400(client, mem_payload):
         headers={**HEADERS, "If-Match": "not-a-number"},
     )
     assert r2.status_code == 400
+
+
+async def test_write_skill_entry_type(client):
+    r = await client.post(
+        "/memory",
+        json={
+            "content": "How to deploy: docker compose up -d",
+            "type": "skill",
+            "scope": "project",
+            "tags": ["procedure"],
+            "parents": [],
+            "confidence": 1.0,
+        },
+        headers=HEADERS,
+    )
+    assert r.status_code == 201
+    assert r.json()["type"] == "skill"
+
+    eid = r.json()["id"]
+    got = await client.get(f"/memory/{eid}", headers=HEADERS)
+    assert got.json()["type"] == "skill"
+
+    listed = await client.get("/memory", params={"type": "skill"}, headers=HEADERS)
+    assert any(e["id"] == eid for e in listed.json())
