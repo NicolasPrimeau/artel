@@ -279,8 +279,9 @@ mcp = ArtelMCP(
 
 SESSION LIFECYCLE (do these every session, no exceptions):
 1. START: call session_context() — loads your last handoff + what changed in memory while you were gone.
-2. START: call message_inbox() — read messages from other agents.
-3. END: call session_handoff() — saves what you did so the next session (or another agent) can continue.
+2. START: call message_inbox() — read messages from other agents. Messages stay unread until you call message_mark_read().
+3. After processing messages: call message_mark_read() with the IDs you've handled (or no args to clear all).
+4. END: call session_handoff() — saves what you did so the next session (or another agent) can continue.
 
 MEMORY (write often, read before you act):
 - Call memory_search() before starting any non-trivial work — another agent may have already done it.
@@ -919,7 +920,7 @@ def inbox_cron_setup() -> str:
     prompt = (
         f"You are {agent_id}, an AI agent connected to Artel. "
         "Check your Artel inbox using the message_inbox() MCP tool. "
-        "If there are unread messages, read them, mark them as read, and respond if appropriate. "
+        "If there are unread messages, process them, then call message_mark_read() to clear them. "
         "Also check task_list(status='open') for any new tasks assigned to you."
     )
     return (
@@ -964,17 +965,20 @@ async def agent_rename(new_id: str) -> str:
 
 @mcp.tool(
     structured_output=True,
-    annotations=ToolAnnotations(destructiveHint=False, idempotentHint=True, openWorldHint=False),
+    annotations=ToolAnnotations(
+        readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False
+    ),
 )
 async def message_inbox() -> str:
-    """Read and clear your unread messages. Call this at session start.
+    """Read your unread messages. Call this at session start.
 
-    Messages are marked read after this call. Agents use messages to coordinate,
-    delegate work, share findings, or ask questions. Check it — someone may be waiting.
+    Messages stay unread until you call message_mark_read(). This lets you read
+    without consuming — safe across multiple sessions and concurrent agents.
+    Call message_mark_read() once you've processed a message.
     """
     c = _http()
     try:
-        r = await c.post("/messages/inbox/consume")
+        r = await c.get("/messages/inbox")
         r.raise_for_status()
     except _HTTPX_ERRORS as e:
         return _err(e)
@@ -988,6 +992,34 @@ async def message_inbox() -> str:
             header += f" · {m['subject']}"
         lines.append(f"{header}\n{m['body']}")
     return "\n\n".join(lines)
+
+
+@mcp.tool(
+    structured_output=True,
+    annotations=ToolAnnotations(destructiveHint=False, idempotentHint=True, openWorldHint=False),
+)
+async def message_mark_read(msg_ids: list[str] | None = None) -> str:
+    """Mark messages as read so they leave the inbox.
+
+    Call after processing messages from message_inbox(). Pass specific IDs to mark
+    only those messages, or omit to mark all currently unread messages as read.
+
+    Args:
+        msg_ids: List of message IDs to mark read. Omit to mark all unread.
+    """
+    c = _http()
+    try:
+        if msg_ids:
+            for mid in msg_ids:
+                r = await c.post(f"/messages/{mid}/read")
+                r.raise_for_status()
+            return f"marked {len(msg_ids)} message(s) as read"
+        else:
+            r = await c.post("/messages/inbox/read-all")
+            r.raise_for_status()
+            return "marked all unread messages as read"
+    except _HTTPX_ERRORS as e:
+        return _err(e)
 
 
 @mcp.tool(
@@ -1506,8 +1538,9 @@ def start_session() -> str:
     return (
         "Start this session: call session_context() to load your last handoff "
         "and everything that changed in shared memory while you were gone, then "
-        "message_inbox() to read messages from other agents. Summarize what was "
-        "in progress and what to do next before taking any action."
+        "message_inbox() to read messages from other agents (messages stay unread until "
+        "you call message_mark_read()). Summarize what was in progress and what to do "
+        "next before taking any action."
     )
 
 
