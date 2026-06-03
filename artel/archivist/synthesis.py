@@ -227,6 +227,9 @@ async def _execute_operations(
                 if eid not in valid_ids:
                     log.warning("promote op references hallucinated ID: %s", eid)
                     continue
+                if entries_by_id.get(eid, {}).get("type") in ("skill", "directive", "doc"):
+                    log.warning("promote op skipped for non-memory entry: %s", eid)
+                    continue
                 await client.patch_memory(eid, type="doc")
                 log.info("archivist promoted entry %s", eid)
 
@@ -582,7 +585,7 @@ async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
     entries = [
         e
         for e in entries
-        if e.get("type") not in ("directive", "doc")
+        if e.get("type") not in ("directive", "doc", "skill")
         and (e.get("origin") is None or e.get("origin") == local_id)
     ]
 
@@ -721,8 +724,7 @@ async def run_deep_synthesis(client: ArtelClient) -> None:
     entries = [
         e
         for e in all_entries
-        if e.get("type") not in ("directive",)
-        and e.get("type") in ("memory", "doc", "skill")
+        if e.get("type") in ("memory", "doc")
         and (e.get("origin") is None or e.get("origin") == local_id)
     ]
 

@@ -411,6 +411,23 @@ class TestExecuteOperations:
         await _execute_operations(ops, client, entries)
         client.patch_memory.assert_called_once_with("aaaa-1111", type="doc")
 
+    async def test_promote_skips_skill_entry(self):
+        entries = [
+            {
+                "id": "skill-1",
+                "agent_id": "agent-a",
+                "type": "skill",
+                "content": "how to deploy",
+                "tags": [],
+                "confidence": 1.0,
+                "project": "proj-x",
+            }
+        ]
+        client = self._make_client()
+        ops = [{"op": "promote", "entry": "skill-1"}]
+        await _execute_operations(ops, client, entries)
+        client.patch_memory.assert_not_called()
+
     async def test_tag_merges_with_existing_tags(self):
         entries = self._make_entries()
         client = self._make_client()
