@@ -47,6 +47,32 @@ def _is_meta_task_title(title: str) -> bool:
     return any(p.search(title or "") for p in _META_TASK_PATTERNS)
 
 
+def _format_task_with_comments(task: dict, comments: list[dict]) -> str:
+    line = f'- [{task["id"]}] "{task["title"]}"'
+    substantive = [
+        c for c in comments if (c.get("body") or "").strip() and c.get("kind") == "comment"
+    ]
+    if not substantive:
+        substantive = [c for c in comments if (c.get("body") or "").strip()]
+    if substantive:
+        snippets = " | ".join(
+            f"[{c['agent_id']}] {c['body'][:120].replace(chr(10), ' ')}" for c in substantive[-3:]
+        )
+        line += f"\n    comments: {snippets}"
+    return line
+
+
+async def _fetch_task_comments(
+    tasks: list[dict],
+    client: "ArtelClient",  # type: ignore[name-defined]
+) -> dict[str, list[dict]]:
+    results = await asyncio.gather(
+        *[client.get_task_comments(t["id"]) for t in tasks],
+        return_exceptions=True,
+    )
+    return {t["id"]: (r if isinstance(r, list) else []) for t, r in zip(tasks, results)}
+
+
 def _cosine_similarity(a: list[float], b: list[float]) -> float:
     dot = sum(x * y for x, y in zip(a, b))
     mag_a = math.sqrt(sum(x * x for x in a))
@@ -609,6 +635,13 @@ async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
     except Exception as e:
         log.warning("could not fetch open tasks for synthesis: %s", e)
 
+    open_task_comments: dict[str, list[dict]] = {}
+    if open_tasks:
+        try:
+            open_task_comments = await _fetch_task_comments(open_tasks, client)
+        except Exception as e:
+            log.warning("could not fetch task comments for synthesis: %s", e)
+
     memory_block = "\n\n".join(
         f"[{e['id']}] agent={e['agent_id']} type={e['type']} conf={e.get('confidence', 1.0)} tags={e.get('tags', [])}\n{e['content']}"
         for e in entries
@@ -623,11 +656,13 @@ async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
         ]
         task_block = "\n\nCompleted tasks (last 24h):\n" + "\n".join(task_lines)
     if open_tasks:
-        open_lines = [f'- [{t["id"]}] "{t["title"]}"' for t in open_tasks]
+        open_lines = [
+            _format_task_with_comments(t, open_task_comments.get(t["id"], [])) for t in open_tasks
+        ]
         task_block += (
             "\n\nAlready-open tasks (do NOT create duplicates; "
-            "use close_task with the bracketed id when memory clearly shows the work is done):\n"
-            + "\n".join(open_lines)
+            "use close_task with the bracketed id when memory or comments clearly show the work is done "
+            "or the task is a duplicate of another):\n" + "\n".join(open_lines)
         )
 
     preamble = _build_directive_preamble(directives)
@@ -665,7 +700,7 @@ async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
         cleanup_ops, client, entries, open_task_titles=open_titles, open_task_ids=open_ids
     )
 
-    insight_system = "You are the Artel archivist running an insight pass. Promote stable knowledge to docs, improve tag discoverability, adjust confidence where appropriate, create tasks for work requiring an external agent, and close tasks where memory evidences completion."
+    insight_system = "You are the Artel archivist running an insight pass. Promote stable knowledge to docs, improve tag discoverability, adjust confidence where appropriate, create tasks for work requiring an external agent, and close tasks where memory or task comments evidence completion or identify duplicates."
     if preamble:
         insight_system = preamble + "\n\n" + insight_system
 
@@ -679,12 +714,13 @@ async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
         '- {"op": "tag", "entry": "<id>", "add_tags": ["<tag>", ...]}\n'
         '- {"op": "adjust_confidence", "entry": "<id>", "confidence": <0.0-1.0>}\n'
         '- {"op": "task", "title": "<title>", "description": "<desc>", "priority": "low|normal|high", "project": "<project|null>"}\n'
-        '- {"op": "close_task", "task_id": "<open task id from the Already-open tasks list>", "reason": "<which memory entry/IDs evidence completion>"}\n\n'
+        '- {"op": "close_task", "task_id": "<open task id from the Already-open tasks list>", "reason": "<cite the memory entry ID or comment text that evidences completion or duplication>"}\n\n'
         "Rules:\n"
         "- Promote entries that are stable, high-signal, and likely to remain true.\n"
         "- Use tag/adjust_confidence to surface connections or correct signal strength.\n"
         "- Create tasks ONLY for work requiring an external agent — never for memory operations.\n"
-        "- close_task only when the recent memory entries clearly evidence the task's outcome was achieved (cite the entry ID in reason). Do not close based on guesswork.\n"
+        "- close_task when: (a) memory entries or task comments clearly evidence the work is done — cite the evidence; or (b) the task is an exact or near-exact duplicate of another open task — cite the other task's ID.\n"
+        "- Do not close based on guesswork. Evidence must be explicit.\n"
         "- When in doubt about an operation, omit it. Conservatism is correct.\n"
         "- Output ONLY the JSON array. No prose, no explanation, no markdown fences."
     )
@@ -748,6 +784,13 @@ async def run_deep_synthesis(client: ArtelClient) -> None:
     except Exception as e:
         log.warning("could not fetch open tasks for deep synthesis: %s", e)
 
+    open_task_comments: dict[str, list[dict]] = {}
+    if open_tasks:
+        try:
+            open_task_comments = await _fetch_task_comments(open_tasks, client)
+        except Exception as e:
+            log.warning("could not fetch task comments for deep synthesis: %s", e)
+
     directives: list[dict] = []
     try:
         directives = await client.get_directives()
@@ -768,11 +811,13 @@ async def run_deep_synthesis(client: ArtelClient) -> None:
         ]
         task_block = "\n\nCompleted tasks (last 24h):\n" + "\n".join(task_lines)
     if open_tasks:
-        open_lines = [f'- [{t["id"]}] "{t["title"]}"' for t in open_tasks]
+        open_lines = [
+            _format_task_with_comments(t, open_task_comments.get(t["id"], [])) for t in open_tasks
+        ]
         task_block += (
             "\n\nAlready-open tasks (do NOT create duplicates; "
-            "use close_task with the bracketed id when memory clearly shows the work is done):\n"
-            + "\n".join(open_lines)
+            "use close_task with the bracketed id when memory or comments clearly show the work is done "
+            "or the task is a duplicate of another):\n" + "\n".join(open_lines)
         )
 
     preamble = _build_directive_preamble(directives)
@@ -810,8 +855,8 @@ async def run_deep_synthesis(client: ArtelClient) -> None:
     insight_system = (
         "You are the Artel archivist running an insight pass on the full memory store. "
         "Promote stable knowledge to docs, improve tag discoverability, adjust confidence where appropriate, "
-        "create tasks for work requiring an external agent, and close tasks where memory evidences completion. "
-        "Flag any doc entries that appear stale or superseded based on their content relative to other entries."
+        "create tasks for work requiring an external agent, and close tasks where memory or task comments "
+        "evidence completion or identify duplicates. Flag any doc entries that appear stale or superseded."
     )
     if preamble:
         insight_system = preamble + "\n\n" + insight_system
@@ -825,12 +870,13 @@ async def run_deep_synthesis(client: ArtelClient) -> None:
         '- {"op": "tag", "entry": "<id>", "add_tags": ["<tag>", ...]}\n'
         '- {"op": "adjust_confidence", "entry": "<id>", "confidence": <0.0-1.0>}\n'
         '- {"op": "task", "title": "<title>", "description": "<desc>", "priority": "low|normal|high", "project": "<project|null>"}\n'
-        '- {"op": "close_task", "task_id": "<open task id from the Already-open tasks list>", "reason": "<which memory entry/IDs evidence completion>"}\n\n'
+        '- {"op": "close_task", "task_id": "<open task id from the Already-open tasks list>", "reason": "<cite the memory entry ID or comment text that evidences completion or duplication>"}\n\n'
         "Rules:\n"
         "- Promote entries that are stable, high-signal, and likely to remain true.\n"
         "- Use tag/adjust_confidence to surface connections or correct signal strength. Tag stale/superseded doc entries with 'archivist-stale'.\n"
         "- Create tasks ONLY for work requiring an external agent — never for memory operations.\n"
-        "- close_task only when memory clearly evidences the task outcome was achieved.\n"
+        "- close_task when: (a) memory or task comments clearly evidence the work is done — cite the evidence; or (b) the task is an exact or near-exact duplicate of another open task — cite the other task's ID.\n"
+        "- Do not close based on guesswork. Evidence must be explicit.\n"
         "- When in doubt, omit. Conservatism is correct.\n"
         "- Output ONLY the JSON array. No prose, no explanation, no markdown fences."
     )
@@ -1160,32 +1206,38 @@ async def run_task_triage(client: ArtelClient) -> None:
         )
 
 
-def _resolve_duplicate_task(hint: str, task: dict, open_tasks: list[dict]) -> dict | None:
-    needle = hint.strip().lower()
-    if not needle:
-        return None
-    for other in open_tasks:
-        if other.get("id") == task.get("id"):
-            continue
-        title = (other.get("title") or "").strip().lower()
-        if not title:
-            continue
-        if needle == title or needle in title or title in needle:
-            return other
-    return None
-
-
 async def _triage_task(
     task: dict, client: ArtelClient, open_tasks: list[dict] | None = None
 ) -> None:
     query = f"{task['title']} {task.get('description') or ''}"
     related = await client.search_memory(query, limit=8, max_distance=0.5)
-    if not related:
+
+    comments: list[dict] = []
+    try:
+        comments = await client.get_task_comments(task["id"])
+    except Exception as e:
+        log.warning("could not fetch comments for task %s: %s", task["id"], e)
+
+    if not related and not comments:
         return
 
-    memory_block = "\n\n".join(
-        f"[{r['id']}] conf={r.get('confidence', 1.0):.2f} tags={r.get('tags', [])}\n{r['content'][:300].replace(chr(10), ' ')}"
-        for r in related
+    memory_block = (
+        "\n\n".join(
+            f"[{r['id']}] conf={r.get('confidence', 1.0):.2f} tags={r.get('tags', [])}\n{r['content'][:300].replace(chr(10), ' ')}"
+            for r in related
+        )
+        if related
+        else "(none)"
+    )
+
+    comment_block = (
+        "\n".join(
+            f"[{c['agent_id']}] {c['body'][:300].replace(chr(10), ' ')}"
+            for c in comments
+            if (c.get("body") or "").strip()
+        )
+        if comments
+        else "(none)"
     )
 
     if not is_configured():
@@ -1199,11 +1251,12 @@ async def _triage_task(
 
     try:
         text = await complete(
-            system="You are the Artel archivist triaging an open task. Output a JSON object with keys: link_comment (string or null — a comment noting relevant memory entries by ID and how they relate, null if nothing useful), duplicate_of (string or null — task title hint if this looks like a duplicate of known work, null if not), already_done (bool — true only if memory strongly suggests this work is complete). Be conservative: only flag duplicates if very confident, only flag already_done if memory explicitly describes the outcome.",
+            system="You are the Artel archivist triaging an open task. Read the task, its comments, and related memory. Output a JSON object with keys: link_comment (string or null — a comment noting relevant memory entries by ID and how they relate, null if nothing useful), already_done (bool — true only if the comments or memory explicitly describe the work as complete or shipped). Be conservative: only flag already_done if evidence is explicit.",
             user=(
                 f'Task: "{task["title"]}"\n'
                 f"Description: {task.get('description') or 'none'}\n"
                 f"Expected outcome: {task.get('expected_outcome') or 'none'}\n\n"
+                f"Task comments (chronological):\n{comment_block}\n\n"
                 f"Related memory:\n{memory_block}"
             ),
             max_tokens=512,
@@ -1228,7 +1281,6 @@ async def _triage_task(
         return
 
     link_comment = result.get("link_comment")
-    duplicate_of = result.get("duplicate_of")
     already_done = result.get("already_done", False)
 
     if link_comment and isinstance(link_comment, str) and link_comment.strip():
@@ -1238,37 +1290,11 @@ async def _triage_task(
         except Exception as e:
             log.warning("could not add link comment to task %s: %s", task["id"], e)
 
-    if duplicate_of and isinstance(duplicate_of, str) and duplicate_of.strip():
-        match = _resolve_duplicate_task(duplicate_of, task, open_tasks or [])
-        if match:
-            try:
-                await client.close_task_as_duplicate(
-                    task["id"],
-                    f"[archivist] Closed as duplicate of [{match['id']}] {match.get('title', '')!r}",
-                )
-                log.info(
-                    "archivist closed duplicate task %s (of %s)",
-                    task["id"][:8],
-                    match["id"][:8],
-                )
-            except Exception as e:
-                log.warning("could not close duplicate task %s: %s", task["id"], e)
-        else:
-            try:
-                await client.add_task_comment(
-                    task["id"],
-                    f"[archivist] Possible duplicate of existing work ({duplicate_of.strip()}). "
-                    "No matching open task found — verify before closing.",
-                )
-                log.info("archivist flagged possible duplicate for task %s", task["id"][:8])
-            except Exception as e:
-                log.warning("could not add duplicate comment to task %s: %s", task["id"], e)
-
     if already_done:
         try:
             await client.add_task_comment(
                 task["id"],
-                "[archivist] Project memory suggests this work may already be complete. Verify before claiming.",
+                "[archivist] Task comments and memory suggest this work is complete. Verify before closing.",
             )
             log.info("archivist flagged possible completion for task %s", task["id"][:8])
         except Exception as e:

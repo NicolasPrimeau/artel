@@ -1,3 +1,4 @@
+import json
 from unittest.mock import AsyncMock, patch
 
 import pytest_asyncio
@@ -100,8 +101,18 @@ class _ScenarioArchivistClient:
         r.raise_for_status()
         return r.json()
 
+    async def get_task_comments(self, task_id: str) -> list[dict]:
+        r = await self._http.get(f"/tasks/{task_id}/comments")
+        r.raise_for_status()
+        return r.json()
+
     async def add_task_comment(self, task_id: str, body: str) -> dict:
         r = await self._http.post(f"/tasks/{task_id}/comments", json={"body": body})
+        r.raise_for_status()
+        return r.json()
+
+    async def patch_task(self, task_id: str, **fields) -> dict:
+        r = await self._http.patch(f"/tasks/{task_id}", json=fields)
         r.raise_for_status()
         return r.json()
 
@@ -109,6 +120,12 @@ class _ScenarioArchivistClient:
         r = await self._http.post(f"/tasks/{task_id}/claim")
         r.raise_for_status()
         r = await self._http.post(f"/tasks/{task_id}/fail", json={"body": reason})
+        r.raise_for_status()
+
+    async def complete_task_as_done(self, task_id: str, reason: str) -> None:
+        r = await self._http.post(f"/tasks/{task_id}/claim")
+        r.raise_for_status()
+        r = await self._http.post(f"/tasks/{task_id}/complete", json={"body": reason})
         r.raise_for_status()
 
     async def list_task_comments(self, task_id: str) -> list[dict]:
@@ -641,48 +658,15 @@ async def test_triage_llm_link_comment(arch_scenario):
     mem = await agent_a.write_memory("BuildData covers 60 cities across Canada")
 
     mem_id_short = mem["id"][:8]
-    llm_response = f'{{"link_comment": "See {mem_id_short}: current city count", "duplicate_of": null, "already_done": false}}'
+    llm_response = (
+        f'{{"link_comment": "See {mem_id_short}: current city count", "already_done": false}}'
+    )
     await _run_triage_mocked(arch_client, llm_response)
 
     comments = await arch_client.list_task_comments(task["id"])
     archivist_comments = [c for c in comments if c["agent_id"] == ARCHIVIST_ID]
     assert len(archivist_comments) == 1
     assert "[archivist]" in archivist_comments[0]["body"]
-
-
-async def test_triage_llm_duplicate_flag(arch_scenario):
-    scenario, arch_client, arch_http = arch_scenario
-
-    agent_a = await scenario.agent("triage-dup-a")
-    task = await agent_a.create_task("Add cities to BuildData")
-    await agent_a.create_task("Expand coverage to new cities")
-    await agent_a.write_memory("BuildData city expansion was tracked before")
-
-    llm_response = '{"link_comment": null, "duplicate_of": "Expand coverage to new cities", "already_done": false}'
-    await _run_triage_mocked(arch_client, llm_response)
-
-    comments = await arch_client.list_task_comments(task["id"])
-    archivist_comments = [c for c in comments if c["agent_id"] == ARCHIVIST_ID]
-    assert any("duplicate" in c["body"].lower() for c in archivist_comments)
-    r = await arch_http.get(f"/tasks/{task['id']}")
-    assert r.json()["status"] == "failed"
-
-
-async def test_triage_llm_duplicate_flag_no_match_comments_only(arch_scenario):
-    scenario, arch_client, arch_http = arch_scenario
-
-    agent_a = await scenario.agent("triage-dup-nomatch-a")
-    task = await agent_a.create_task("Add cities to BuildData")
-    await agent_a.write_memory("BuildData city expansion was tracked before")
-
-    llm_response = '{"link_comment": null, "duplicate_of": "Some task that does not exist", "already_done": false}'
-    await _run_triage_mocked(arch_client, llm_response)
-
-    comments = await arch_client.list_task_comments(task["id"])
-    archivist_comments = [c for c in comments if c["agent_id"] == ARCHIVIST_ID]
-    assert any("duplicate" in c["body"].lower() for c in archivist_comments)
-    r = await arch_http.get(f"/tasks/{task['id']}")
-    assert r.json()["status"] == "open"
 
 
 async def test_triage_llm_already_done_flag(arch_scenario):
@@ -692,7 +676,7 @@ async def test_triage_llm_already_done_flag(arch_scenario):
     task = await agent_a.create_task("Set up CI pipeline")
     await agent_a.write_memory("CI pipeline using GitHub Actions is fully configured and passing")
 
-    llm_response = '{"link_comment": null, "duplicate_of": null, "already_done": true}'
+    llm_response = '{"link_comment": null, "already_done": true}'
     await _run_triage_mocked(arch_client, llm_response)
 
     comments = await arch_client.list_task_comments(task["id"])
@@ -700,6 +684,32 @@ async def test_triage_llm_already_done_flag(arch_scenario):
     assert len(archivist_comments) == 1
     body = archivist_comments[0]["body"].lower()
     assert "already" in body or "complete" in body
+
+
+async def test_synthesis_closes_duplicate_task(arch_scenario):
+    scenario, arch_client, arch_http = arch_scenario
+
+    agent_a = await scenario.agent("synth-dup-a")
+    task_a = await agent_a.create_task("Add cities to BuildData")
+    task_b = await agent_a.create_task("Expand BuildData city coverage")
+    await agent_a.write_memory("BuildData city list needs updating")
+    await agent_a.write_memory("City coverage is a recurring topic")
+
+    llm_response = json.dumps(
+        [
+            {
+                "op": "close_task",
+                "task_id": task_b["id"],
+                "reason": f"duplicate of [{task_a['id']}] Add cities to BuildData",
+            },
+        ]
+    )
+    await _run_synthesis_mocked(arch_client, llm_response)
+
+    r = await arch_http.get(f"/tasks/{task_b['id']}")
+    assert r.json()["status"] == "completed"
+    r2 = await arch_http.get(f"/tasks/{task_a['id']}")
+    assert r2.json()["status"] == "open"
 
 
 async def test_on_task_completed_passive_writes_observation(arch_scenario):

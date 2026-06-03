@@ -8,13 +8,16 @@ def _make_client(
     task=None,
     search_results=None,
     tasks=None,
+    task_comments=None,
 ):
     client = MagicMock()
     client.get_task = AsyncMock(return_value=task or {})
     client.search_memory = AsyncMock(return_value=search_results or [])
     client.write_memory = AsyncMock(return_value={"id": "new-mem-id"})
     client.patch_memory = AsyncMock(return_value={})
+    client.patch_task = AsyncMock(return_value={})
     client.list_tasks = AsyncMock(return_value=tasks or [])
+    client.get_task_comments = AsyncMock(return_value=task_comments or [])
     client.add_task_comment = AsyncMock(return_value={"id": "comment-id"})
     client.close_task_as_duplicate = AsyncMock()
     client.log = AsyncMock()
@@ -229,11 +232,7 @@ class TestRunTaskTriageLLMMode:
         mem = _make_memory()
         client = _make_client(tasks=[task], search_results=[mem])
         llm_response = json.dumps(
-            {
-                "link_comment": "Related: mem-xyz describes current city count",
-                "duplicate_of": None,
-                "already_done": False,
-            }
+            {"link_comment": "Related: mem-xyz describes current city count", "already_done": False}
         )
         with (
             patch("artel.archivist.synthesis.is_configured", return_value=True),
@@ -246,21 +245,12 @@ class TestRunTaskTriageLLMMode:
         assert "[archivist]" in body
         assert "mem-xyz" in body
 
-    async def test_flags_duplicate_task(self):
+    async def test_adds_link_comment_from_task_comments(self):
         task = _make_task()
-        sibling = _make_task(
-            task_id="task-canonical",
-            title="Expand city coverage to 63",
-            assigned_to="someone",
-        )
-        mem = _make_memory()
-        client = _make_client(tasks=[task, sibling], search_results=[mem])
+        comment = {"agent_id": "agent-x", "body": "Shipped to prod", "kind": "comment"}
+        client = _make_client(tasks=[task], search_results=[], task_comments=[comment])
         llm_response = json.dumps(
-            {
-                "link_comment": None,
-                "duplicate_of": "Expand city coverage to 63",
-                "already_done": False,
-            }
+            {"link_comment": "Task comments indicate this is done", "already_done": True}
         )
         with (
             patch("artel.archivist.synthesis.is_configured", return_value=True),
@@ -268,45 +258,13 @@ class TestRunTaskTriageLLMMode:
         ):
             await run_task_triage(client)
 
-        client.close_task_as_duplicate.assert_called_once()
-        closed_id = client.close_task_as_duplicate.call_args.args[0]
-        reason = client.close_task_as_duplicate.call_args.args[1]
-        assert closed_id == "task-abc"
-        assert "duplicate" in reason.lower()
-
-    async def test_duplicate_without_matching_task_comments_only(self):
-        task = _make_task()
-        mem = _make_memory()
-        client = _make_client(tasks=[task], search_results=[mem])
-        llm_response = json.dumps(
-            {
-                "link_comment": None,
-                "duplicate_of": "A task that does not exist anywhere",
-                "already_done": False,
-            }
-        )
-        with (
-            patch("artel.archivist.synthesis.is_configured", return_value=True),
-            patch("artel.archivist.synthesis.complete", AsyncMock(return_value=llm_response)),
-        ):
-            await run_task_triage(client)
-
-        client.close_task_as_duplicate.assert_not_called()
-        client.add_task_comment.assert_called_once()
-        body = client.add_task_comment.call_args.args[1]
-        assert "duplicate" in body.lower()
+        client.add_task_comment.assert_called()
 
     async def test_flags_already_done_task(self):
         task = _make_task()
         mem = _make_memory()
         client = _make_client(tasks=[task], search_results=[mem])
-        llm_response = json.dumps(
-            {
-                "link_comment": None,
-                "duplicate_of": None,
-                "already_done": True,
-            }
-        )
+        llm_response = json.dumps({"link_comment": None, "already_done": True})
         with (
             patch("artel.archivist.synthesis.is_configured", return_value=True),
             patch("artel.archivist.synthesis.complete", AsyncMock(return_value=llm_response)),
@@ -317,18 +275,11 @@ class TestRunTaskTriageLLMMode:
         body = client.add_task_comment.call_args.args[1]
         assert "already" in body.lower() or "complete" in body.lower()
 
-    async def test_multiple_comments_per_task(self):
+    async def test_link_and_done_produce_two_comments(self):
         task = _make_task()
-        sibling = _make_task(task_id="task-other", title="Other task", assigned_to="someone")
         mem = _make_memory()
-        client = _make_client(tasks=[task, sibling], search_results=[mem])
-        llm_response = json.dumps(
-            {
-                "link_comment": "See mem-xyz",
-                "duplicate_of": "Other task",
-                "already_done": True,
-            }
-        )
+        client = _make_client(tasks=[task], search_results=[mem])
+        llm_response = json.dumps({"link_comment": "See mem-xyz", "already_done": True})
         with (
             patch("artel.archivist.synthesis.is_configured", return_value=True),
             patch("artel.archivist.synthesis.complete", AsyncMock(return_value=llm_response)),
@@ -336,11 +287,10 @@ class TestRunTaskTriageLLMMode:
             await run_task_triage(client)
 
         assert client.add_task_comment.call_count == 2
-        client.close_task_as_duplicate.assert_called_once()
 
-    async def test_no_related_memory_skips_llm(self):
+    async def test_no_related_memory_or_comments_skips_llm(self):
         task = _make_task()
-        client = _make_client(tasks=[task], search_results=[])
+        client = _make_client(tasks=[task], search_results=[], task_comments=[])
         mock_complete = AsyncMock()
         with (
             patch("artel.archivist.synthesis.is_configured", return_value=True),

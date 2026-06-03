@@ -131,6 +131,10 @@ class ArtelClient:
         r = await self._request("GET", f"/tasks/{task_id}")
         return r.json()
 
+    async def get_task_comments(self, task_id: str) -> list[dict]:
+        r = await self._request("GET", f"/tasks/{task_id}/comments")
+        return r.json()
+
     async def list_tasks(self, status: str | None = None, limit: int = 50) -> list[dict]:
         params: dict = {"limit": limit}
         if status:
