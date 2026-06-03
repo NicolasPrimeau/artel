@@ -2302,7 +2302,7 @@ async function detachPeer(id){
 function _connectCmd(){
   const base=window.location.origin;
   return window._regkey
-    ?`curl -fsSL ${base}/onboard | ARTEL_REG_KEY=${window._regkey} sh`
+    ?`curl -fsSL ${base}/onboard | REG_KEY=${window._regkey} sh`
     :`curl -fsSL ${base}/onboard | sh`;
 }
 function toggleConnect(e){
