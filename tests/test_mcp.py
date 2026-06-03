@@ -148,12 +148,12 @@ async def test_task_fail_returns_title(mcp):
 
 
 async def test_task_list_project_filter(mcp):
+    await mcp.task_create("global task")  # no membership yet -> stays global
     await mcp.project_join("proj-a")
     await mcp.task_create("in proj-a", project="proj-a")
-    await mcp.task_create("no project")
     result = await mcp.task_list(project="proj-a")
     assert "in proj-a" in result
-    assert "no project" not in result
+    assert "global task" not in result
 
 
 async def test_task_list_status_filter(mcp):

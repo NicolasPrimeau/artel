@@ -14,6 +14,7 @@ from ..auth import (
     ReaderDep,
     _memberships,
     can_curate_memory,
+    default_project_for,
     enforce_no_phantom_project,
     feed_auth_dep,
     project_filter,
@@ -125,10 +126,11 @@ async def write_memory(
     db = get_db()
     if body.type == "directive" and not can_curate_memory(agent_id):
         raise HTTPException(status_code=403, detail="directive writes require elevated permission")
-    enforce_no_phantom_project(agent_id, body.project)
-    if body.project:
+    project = body.project if body.project is not None else default_project_for(agent_id)
+    enforce_no_phantom_project(agent_id, project)
+    if project:
         allowed = _memberships(agent_id)
-        if allowed is not None and body.project not in allowed:
+        if allowed is not None and project not in allowed:
             raise HTTPException(status_code=403, detail="not a member of this project")
     confidence = 1.0 if body.type == "directive" else body.confidence
     entry_id = new_id()
@@ -145,7 +147,7 @@ async def write_memory(
                 entry_id,
                 body.type,
                 agent_id,
-                body.project,
+                project,
                 body.scope,
                 body.content,
                 confidence,

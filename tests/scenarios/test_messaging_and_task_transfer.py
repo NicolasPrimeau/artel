@@ -65,15 +65,16 @@ async def test_task_transfer_to_project(scenario):
     coordinator = await scenario.agent("coordinator")
     worker = await scenario.agent("worker")
 
-    await coordinator.join_project("ops")
     await worker.join_project("ops")
 
+    # coordinator isn't in ops yet, so the task is created unscoped (global)
     task = await coordinator.create_task("Audit log retention policy")
     assert task["project"] is None
 
     scoped = await worker.list_tasks(project="ops")
     assert not any(t["id"] == task["id"] for t in scoped)
 
+    await coordinator.join_project("ops")
     transferred = await coordinator.update_task(task["id"], project="ops")
     assert transferred["project"] == "ops"
 
@@ -103,9 +104,9 @@ async def test_orphaned_task_discovered_and_transferred(scenario):
     steward = await scenario.agent("steward")
     coordinator = await scenario.agent("coordinator")
 
-    await steward.join_project("nimbus")
     await coordinator.join_project("nimbus")
 
+    # steward isn't in nimbus yet, so the task lands unscoped (the orphan)
     task = await steward.create_task(
         "Set up DMARC records",
         description="SPF missing amazonses.com, no DMARC on any domain",
@@ -133,6 +134,7 @@ async def test_orphaned_task_discovered_and_transferred(scenario):
     steward_msgs = await steward.list_messages(read="false")
     assert any("missing project" in m["body"] for m in steward_msgs)
 
+    await steward.join_project("nimbus")
     fixed = await steward.update_task(task["id"], project="nimbus")
     assert fixed["project"] == "nimbus"
 

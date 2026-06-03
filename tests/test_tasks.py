@@ -83,15 +83,22 @@ async def test_get_task_not_found(client):
 
 async def test_list_tasks_by_project(client):
     await client.post("/projects/alpha/join", headers=HEADERS)
+    await client.post("/projects/beta/join", headers=HEADERS2)
     await client.post("/tasks", json={"title": "alpha task", "project": "alpha"}, headers=HEADERS)
-    await client.post("/tasks", json={"title": "beta task", "project": "beta"}, headers=HEADERS)
-    await client.post("/tasks", json={"title": "no project task"}, headers=HEADERS)
+    await client.post("/tasks", json={"title": "beta task", "project": "beta"}, headers=HEADERS2)
 
     r = await client.get("/tasks", params={"project": "alpha"}, headers=HEADERS)
     assert r.status_code == 200
     tasks = r.json()
     assert len(tasks) == 1
     assert tasks[0]["title"] == "alpha task"
+
+
+async def test_create_task_defaults_to_joined_project(client):
+    await client.post("/projects/gamma/join", headers=HEADERS)
+    r = await client.post("/tasks", json={"title": "no project task"}, headers=HEADERS)
+    assert r.status_code == 201
+    assert r.json()["project"] == "gamma"
 
 
 async def test_complete_task_by_non_assignee_forbidden(client):
@@ -374,12 +381,13 @@ async def test_short_prefix_not_resolved(client):
 
 
 async def test_update_task_project_transfer(client):
-    await client.post("/projects/transfer-target/join", headers=HEADERS)
-    r = await client.post("/tasks", json={"title": "floating task"}, headers=HEADERS)
+    # HEADERS2 has no membership, so the task starts unscoped (floating)
+    r = await client.post("/tasks", json={"title": "floating task"}, headers=HEADERS2)
     tid = r.json()["id"]
     assert r.json()["project"] is None
 
-    r2 = await client.patch(f"/tasks/{tid}", json={"project": "transfer-target"}, headers=HEADERS)
+    await client.post("/projects/transfer-target/join", headers=HEADERS2)
+    r2 = await client.patch(f"/tasks/{tid}", json={"project": "transfer-target"}, headers=HEADERS2)
     assert r2.status_code == 200
     assert r2.json()["project"] == "transfer-target"
 
@@ -482,4 +490,14 @@ async def test_non_owner_cannot_update_non_tag_fields_on_others_task(client):
     tid = r.json()["id"]
 
     r2 = await client.patch(f"/tasks/{tid}", json={"title": "hijacked"}, headers=HEADERS2)
+    assert r2.status_code == 403
+
+
+async def test_join_is_exclusive(client):
+    await client.post("/projects/alpha/join", headers=HEADERS)
+    await client.post("/projects/beta/join", headers=HEADERS)
+    # default goes to the most recently joined (beta); alpha membership was replaced
+    r = await client.post("/tasks", json={"title": "t"}, headers=HEADERS)
+    assert r.json()["project"] == "beta"
+    r2 = await client.post("/tasks", json={"title": "a", "project": "alpha"}, headers=HEADERS)
     assert r2.status_code == 403

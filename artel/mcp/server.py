@@ -782,13 +782,15 @@ async def project_list() -> str:
     annotations=ToolAnnotations(destructiveHint=False, idempotentHint=True, openWorldHint=False),
 )
 async def project_join(project_id: str) -> str:
-    """Join a project so you can read and write its shared memories and tasks.
+    """Switch to a project — this becomes your single active project.
 
-    After joining, project-scoped memory for this project becomes visible to you,
-    and memory you write with this project will be visible to other members.
+    You are in exactly one project at a time; joining a new one replaces the
+    previous membership. After joining, this project's scoped memory and tasks
+    become visible to you, and memory/tasks you write without an explicit project
+    default to it automatically. Join the project you're working in at session start.
 
     Args:
-        project_id: The project name to join.
+        project_id: The project name to switch to.
     """
     c = _http()
     try:

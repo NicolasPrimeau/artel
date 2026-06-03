@@ -560,3 +560,16 @@ async def test_write_skill_entry_type(client):
 
     listed = await client.get("/memory", params={"type": "skill"}, headers=HEADERS)
     assert any(e["id"] == eid for e in listed.json())
+
+
+async def test_write_defaults_to_joined_project(client, mem_payload):
+    await client.post("/projects/delta/join", headers=HEADERS)
+    r = await client.post("/memory", json=mem_payload, headers=HEADERS)
+    assert r.status_code == 201
+    assert r.json()["project"] == "delta"
+
+
+async def test_write_no_project_stays_global_without_membership(client, mem_payload):
+    r = await client.post("/memory", json=mem_payload, headers=HEADERS)
+    assert r.status_code == 201
+    assert r.json()["project"] is None

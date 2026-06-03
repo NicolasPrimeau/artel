@@ -8,6 +8,7 @@ from ..auth import (
     ActorDep,
     ReaderDep,
     _memberships,
+    default_project_for,
     enforce_no_phantom_project,
     is_archivist,
     is_owner,
@@ -104,10 +105,11 @@ async def get_task(task_id: str, agent_id: str = ReaderDep):
 @router.post("", response_model=TaskEntry, status_code=201, summary="Create a task")
 async def create_task(body: TaskCreate, agent_id: str = ActorDep):
     db = get_db()
-    enforce_no_phantom_project(agent_id, body.project)
-    if body.project:
+    project = body.project if body.project is not None else default_project_for(agent_id)
+    enforce_no_phantom_project(agent_id, project)
+    if project:
         allowed = _memberships(agent_id)
-        if allowed is not None and body.project not in allowed:
+        if allowed is not None and project not in allowed:
             raise HTTPException(status_code=403, detail="not a member of this project")
     task_id = new_id()
     with db:
@@ -120,7 +122,7 @@ async def create_task(body: TaskCreate, agent_id: str = ActorDep):
                 body.description,
                 body.expected_outcome,
                 agent_id,
-                body.project,
+                project,
                 body.priority,
                 body.assigned_to,
                 body.due_at,

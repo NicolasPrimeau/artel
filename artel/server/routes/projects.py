@@ -31,7 +31,7 @@ async def create_project(body: ProjectCreate, agent_id: str = ActorDep):
     db.commit()
 
 
-@router.post("/{project_id}/join", status_code=204, summary="Join a project")
+@router.post("/{project_id}/join", status_code=204, summary="Join a project (replaces current)")
 async def join_project(project_id: str, agent_id: str = ActorDep):
     if is_archivist(agent_id):
         raise HTTPException(status_code=403, detail="archivist cannot join projects")
@@ -39,11 +39,12 @@ async def join_project(project_id: str, agent_id: str = ActorDep):
     if not project_id:
         raise HTTPException(status_code=422, detail="project name required")
     db = get_db()
-    db.execute(
-        "INSERT OR IGNORE INTO project_members (project_id, agent_id) VALUES (?, ?)",
-        (project_id, agent_id),
-    )
-    db.commit()
+    with db:
+        db.execute("DELETE FROM project_members WHERE agent_id=?", (agent_id,))
+        db.execute(
+            "INSERT INTO project_members (project_id, agent_id) VALUES (?, ?)",
+            (project_id, agent_id),
+        )
 
 
 @router.delete("/{project_id}/leave", status_code=204, summary="Leave a project")

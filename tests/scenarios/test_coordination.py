@@ -487,24 +487,28 @@ async def test_project_join_leave(scenario):
     assert not any(r["id"] == scoped["id"] for r in results_out)
 
 
-async def test_multiple_projects(scenario):
-    """Agent can be a member of multiple projects simultaneously."""
-    agent = await scenario.agent("multimember")
+async def test_join_replaces_previous_project(scenario):
+    """An agent is in exactly one project; joining a new one replaces the previous."""
+    agent = await scenario.agent("switcher")
     w1 = await scenario.agent("writer1")
     w2 = await scenario.agent("writer2")
 
-    await agent.join_project("alpha")
-    await agent.join_project("beta")
     await w1.join_project("alpha")
     await w2.join_project("beta")
 
-    mem_alpha = await w1.write_memory("Alpha secret", project="alpha")
-    mem_beta = await w2.write_memory("Beta secret", project="beta")
+    mem_alpha = await w1.write_memory("Alpha secret", project="alpha", scope="project")
+    mem_beta = await w2.write_memory("Beta secret", project="beta", scope="project")
 
-    all_mem = await agent.list_memory()
-    ids = [m["id"] for m in all_mem]
-    assert mem_alpha["id"] in ids
-    assert mem_beta["id"] in ids
+    await agent.join_project("alpha")
+    alpha_ids = {m["id"] for m in await agent.list_memory()}
+    assert mem_alpha["id"] in alpha_ids
+    assert mem_beta["id"] not in alpha_ids
+
+    # joining beta replaces the alpha membership
+    await agent.join_project("beta")
+    beta_ids = {m["id"] for m in await agent.list_memory()}
+    assert mem_beta["id"] in beta_ids
+    assert mem_alpha["id"] not in beta_ids
 
 
 # ── Events ────────────────────────────────────────────────────────────────────
@@ -1082,18 +1086,16 @@ async def test_stale_fact_correction(scenario):
     assert match["confidence"] == 1.0
 
 
-async def test_cross_project_memory_search(scenario):
+async def test_project_scoped_search_isolation(scenario):
     """
-    An agent in two projects can search across both.
-    An agent in neither project sees none of the scoped entries.
+    An agent sees only its current project's scoped memory; switching projects
+    flips visibility. An agent in neither sees none of the scoped entries.
     """
     bridge = await scenario.agent("bridge")
     writer_a = await scenario.agent("writer-a")
     writer_b = await scenario.agent("writer-b")
     outsider = await scenario.agent("outsider")
 
-    await bridge.join_project("red")
-    await bridge.join_project("blue")
     await writer_a.join_project("red")
     await writer_b.join_project("blue")
 
@@ -1108,10 +1110,16 @@ async def test_cross_project_memory_search(scenario):
         scope="project",
     )
 
-    bridge_results = await bridge.search_memory("token rotation")
-    bridge_ids = {r["id"] for r in bridge_results}
-    assert red_mem["id"] in bridge_ids
-    assert blue_mem["id"] in bridge_ids
+    await bridge.join_project("blue")
+    blue_view = {r["id"] for r in await bridge.search_memory("token rotation")}
+    assert blue_mem["id"] in blue_view
+    assert red_mem["id"] not in blue_view
+
+    # switching to red flips visibility
+    await bridge.join_project("red")
+    red_view = {r["id"] for r in await bridge.search_memory("token rotation")}
+    assert red_mem["id"] in red_view
+    assert blue_mem["id"] not in red_view
 
     outsider_results = await outsider.search_memory("token rotation")
     outsider_ids = {r["id"] for r in outsider_results}
@@ -1131,7 +1139,8 @@ async def test_partial_project_visibility(scenario):
     await member.join_project("gamma")
     await writer.join_project("gamma")
 
-    global_mem = await writer.write_memory("Global fact: the DB is PostgreSQL 16")
+    # outsider has no membership, so its write stays global
+    global_mem = await outsider.write_memory("Global fact: the DB is PostgreSQL 16")
     scoped_mem = await writer.write_memory(
         "Gamma secret: we use a homomorphic encryption prototype",
         project="gamma",
@@ -2323,6 +2332,7 @@ async def test_search_memory_tag_and_project_combined(scenario):
     """
     member = await scenario.agent("member")
     writer = await scenario.agent("writer")
+    outsider = await scenario.agent("outsider")
 
     await member.join_project("proj")
     await writer.join_project("proj")
@@ -2339,7 +2349,8 @@ async def test_search_memory_tag_and_project_combined(scenario):
         scope="project",
         tags=["other-tag"],
     )
-    no_project = await writer.write_memory(
+    # outsider has no membership, so this stays global (not in proj)
+    no_project = await outsider.write_memory(
         "No project: has target-tag but not in project",
         tags=["target-tag"],
     )
@@ -2390,9 +2401,10 @@ async def test_agent_rename_cascades_to_all_records(scenario):
     agent = await scenario.agent("old-name")
     peer = await scenario.agent("peer")
 
-    await agent.join_project("renaming-proj")
-
+    # write before joining so the entry is global and peer can read it
     mem = await agent.write_memory("Written before rename", tags=["pre-rename"])
+
+    await agent.join_project("renaming-proj")
     task = await agent.create_task("Task before rename", project="renaming-proj")
     await agent.send_message(to="peer", body="Message before rename")
     await agent.emit_event("pre.rename.event", {"note": "emitted before rename"})
@@ -2798,11 +2810,12 @@ async def test_memory_patch_project_change_valid_member(scenario):
     author = await scenario.agent("author")
     reader = await scenario.agent("reader")
 
-    await author.join_project("shared")
-    await reader.join_project("shared")
-
+    # write before joining so it starts global, then move it into the project
     mem = await author.write_memory("About to become project-scoped")
     assert mem["project"] is None
+
+    await author.join_project("shared")
+    await reader.join_project("shared")
 
     updated = await author.update_memory(mem["id"], project="shared", scope="project")
     assert updated["project"] == "shared"
@@ -3182,22 +3195,22 @@ async def test_leave_project_when_not_member_is_silent(scenario):
 
 
 async def test_my_projects_list(scenario):
-    """GET /projects/me lists only the projects the calling agent has joined."""
+    """GET /projects/mine lists the single project the agent is in; join replaces."""
     agent = await scenario.agent("agent")
     bystander = await scenario.agent("bystander")
 
     await agent.join_project("proj-one")
-    await agent.join_project("proj-two")
+    await agent.join_project("proj-two")  # replaces proj-one
 
     r = await agent._http.get("/projects/mine")
     assert r.status_code == 200
     my_projects = {p["project_id"] for p in r.json()}
-    assert "proj-one" in my_projects
-    assert "proj-two" in my_projects
+    assert my_projects == {"proj-two"}
+    assert "proj-one" not in my_projects
 
     r2 = await bystander._http.get("/projects/mine")
     bystander_projects = {p["project_id"] for p in r2.json()}
-    assert "proj-one" not in bystander_projects
+    assert "proj-two" not in bystander_projects
 
 
 async def test_global_project_list_shows_counts(scenario):

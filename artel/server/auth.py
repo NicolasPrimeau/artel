@@ -173,6 +173,15 @@ def _memberships(agent_id: str) -> list[str] | None:
     return list(set((static or []) + db_projects))
 
 
+def default_project_for(agent_id: str) -> str | None:
+    db = get_db()
+    row = db.execute(
+        "SELECT project_id FROM project_members WHERE agent_id=? ORDER BY joined_at DESC LIMIT 1",
+        (agent_id,),
+    ).fetchone()
+    return row["project_id"] if row else None
+
+
 def project_filter(agent_id: str) -> tuple[str, list]:
     allowed = _memberships(agent_id)
     if allowed is None:
