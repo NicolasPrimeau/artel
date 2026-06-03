@@ -487,6 +487,41 @@ pre{
 .pj-stats{font:11px var(--mono);color:var(--t4);display:flex;gap:12px;flex-wrap:wrap}
 .pj-stat-val{color:var(--t3)}
 
+/* ── Dashboard ────────────────────────── */
+.dash-stat-strip{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.dash-stat{
+  background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);
+  padding:12px 16px;flex:1;min-width:110px;
+  display:flex;flex-direction:column;gap:3px;
+}
+.dash-stat-val{font:600 22px var(--mono);color:var(--t1)}
+.dash-stat-lbl{font:10px var(--mono);color:var(--t4);text-transform:uppercase;letter-spacing:.5px}
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
+.dash-card{
+  background:var(--s1);border:1px solid var(--b1);border-left:3px solid var(--b2);
+  border-radius:var(--r);padding:14px;cursor:pointer;
+  transition:border-color .15s,box-shadow .15s,border-left-color .15s;
+}
+.dash-card:hover{border-left-color:var(--accent);box-shadow:var(--shadow)}
+.dash-card-name{font:600 13px var(--mono);color:var(--t1);margin-bottom:6px}
+.dash-card-stats{font:11px var(--mono);color:var(--t4);display:flex;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.dash-card-stat-val{color:var(--t3)}
+.dash-card-time{font:10px var(--mono);color:var(--t4)}
+.dash-back{display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--b1)}
+.dash-proj-title{font:600 14px var(--mono);color:var(--t1)}
+.dash-section{margin-bottom:20px}
+.dash-section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.dash-section-hdr-lbl{font:500 10px var(--mono);color:var(--t4);text-transform:uppercase;letter-spacing:.8px}
+.dash-link{background:none;border:none;color:var(--accent);cursor:pointer;font:11px var(--mono);padding:0}
+.dash-link:hover{text-decoration:underline}
+.dash-row{
+  background:var(--s2);border:1px solid var(--b1);border-radius:var(--r);
+  padding:9px 12px;margin-bottom:4px;font:12px var(--mono);color:var(--t2);
+  display:flex;flex-direction:column;gap:4px;
+}
+.dash-row-meta{font:10px var(--mono);color:var(--t4);display:flex;gap:10px;flex-wrap:wrap}
+.dash-quick-links{display:flex;gap:8px;flex-wrap:wrap}
+
 /* ── Section label ────────────────────── */
 .section-label{
   font:500 10px var(--mono);color:var(--t4);
@@ -1069,7 +1104,8 @@ pre{
   <div class="drawer-header">artel</div>
   <div class="drawer-scroll">
     <div class="drawer-nav">
-      <button class="drawer-item on" onclick="drawerTab('memory')">memory</button>
+      <button class="drawer-item on" onclick="drawerTab('dashboard')">dashboard</button>
+      <button class="drawer-item" onclick="drawerTab('memory')">memory</button>
       <button class="drawer-item" onclick="drawerTab('tasks')">tasks</button>
       <button class="drawer-item" id="drawer-btn-messages" onclick="drawerTab('messages')">messages</button>
       <button class="drawer-item" onclick="drawerTab('events')">events</button>
@@ -1108,7 +1144,8 @@ pre{
   </div>
   <div class="nav-scroll">
     <div class="nav-items">
-      <button class="nav-btn on" onclick="tab('memory',this)">memory</button>
+      <button class="nav-btn on" onclick="tab('dashboard',this)">dashboard</button>
+      <button class="nav-btn" onclick="tab('memory',this)">memory</button>
       <button class="nav-btn" onclick="tab('tasks',this)">tasks</button>
       <button class="nav-btn" onclick="tab('messages',this)" id="btn-messages">messages</button>
       <button class="nav-btn" onclick="tab('events',this)">events</button>
@@ -1143,7 +1180,46 @@ pre{
 <div id="toast-stack"></div>
 
 <!-- MEMORY -->
-<div id="panel-memory" class="panel on">
+<!-- DASHBOARD -->
+<div id="panel-dashboard" class="panel on">
+  <div id="dash-general">
+    <div class="dash-stat-strip" id="dash-stats"></div>
+    <div class="section-label" style="margin-bottom:10px">projects</div>
+    <div class="dash-grid" id="dash-grid"></div>
+  </div>
+  <div id="dash-project" style="display:none">
+    <div class="dash-back">
+      <button class="sm" onclick="closeProjDash()">← back</button>
+      <span class="dash-proj-title" id="dash-proj-name"></span>
+    </div>
+    <div class="dash-stat-strip" id="dash-proj-stats"></div>
+    <div class="dash-section">
+      <div class="dash-section-hdr">
+        <span class="dash-section-hdr-lbl">open tasks</span>
+        <button class="dash-link" onclick="navToProjectTasks()">view all →</button>
+      </div>
+      <div id="dash-proj-tasks"></div>
+    </div>
+    <div class="dash-section">
+      <div class="dash-section-hdr">
+        <span class="dash-section-hdr-lbl">recent memory</span>
+        <button class="dash-link" onclick="navToProjectMem()">view all →</button>
+      </div>
+      <div id="dash-proj-mem"></div>
+    </div>
+    <div class="dash-section">
+      <div class="dash-section-hdr-lbl" style="margin-bottom:8px">quick links</div>
+      <div class="dash-quick-links">
+        <button class="sm" onclick="navToProjectTasks()">tasks</button>
+        <button class="sm" onclick="navToProjectMem()">memory</button>
+        <button class="sm" onclick="navToProjectMessages()">messages</button>
+        <button class="sm" onclick="navToProjectEvents()">events</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="panel-memory" class="panel">
   <div class="toolbar">
     <input id="q" class="toolbar-search" placeholder="semantic search…" onkeydown="if(event.key==='Enter')search()">
     <select id="q-type" style="width:110px" onchange="search()">
@@ -1375,7 +1451,7 @@ const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>
 const hdrs=()=>window._akey
   ?{'content-type':'application/json','x-agent-id':window._aid,'x-api-key':window._akey}
   :{'content-type':'application/json','x-ui-session':'1'};
-let _sseAbort=null, _agents=[], _projects=[], _myProjects=new Set(), _editTaskId=null, _taskData={};
+let _sseAbort=null, _agents=[], _projects=[], _myProjects=new Set(), _editTaskId=null, _taskData={}, _currentProject=null;
 
 // ── Toast system ──────────────────────────────────────────────────────
 function toast(msg, type='info', dur=3000){
@@ -1438,6 +1514,7 @@ function tab(name,btn){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('nav button').forEach(b=>b.classList.remove('on'));
   $('panel-'+name).classList.add('on');btn.classList.add('on');
+  if(name==='dashboard')loadDashboard();
   if(name==='memory')loadMem();
   if(name==='tasks')loadTasks();
   if(name==='messages')loadInbox();
@@ -1475,6 +1552,7 @@ function drawerTab(name){
     document.querySelectorAll('.drawer-item').forEach(b=>b.classList.remove('on'));
     $('panel-'+name).classList.add('on');
     document.querySelector(`.drawer-item[onclick*="'${name}'"]`)?.classList.add('on');
+    if(name==='dashboard')loadDashboard();
     if(name==='memory')loadMem();
     if(name==='tasks')loadTasks();
     if(name==='messages')loadInbox();
@@ -1564,7 +1642,7 @@ async function init(){
     $('mtype').appendChild(opt);
   }
   await Promise.all([loadProjectsHeader(),loadAgentsGlobal()]);
-  loadMem();checkInbox();setInterval(checkInbox,30000);
+  loadDashboard();checkInbox();setInterval(checkInbox,30000);
   loadProjects();renderThemePickers();
 }
 
@@ -2300,11 +2378,117 @@ async function detachPeer(id){
   }catch(e){toast(e.message,'error');}
 }
 
+// ── Dashboard ─────────────────────────────────────────────────────────
+async function loadDashboard(){
+  loading('dash-stats',1);loading('dash-grid',4);
+  try{
+    const [agents,tasks,inbox]=await Promise.all([
+      req('GET','/agents').catch(()=>[]),
+      req('GET','/tasks?limit=200').catch(()=>[]),
+      req('GET','/messages/inbox?limit=100').catch(()=>[]),
+    ]);
+    const now=Date.now();
+    const active=agents.filter(a=>a.last_seen&&now-Date.parse(a.last_seen)<300000).length;
+    const openT=tasks.filter(t=>t.status==='open').length;
+    const claimedT=tasks.filter(t=>t.status==='claimed').length;
+    const unread=inbox.filter(m=>!m.read_at).length;
+    $('dash-stats').innerHTML=`
+      <div class="dash-stat"><span class="dash-stat-val">${active}</span><span class="dash-stat-lbl">active agents</span></div>
+      <div class="dash-stat"><span class="dash-stat-val">${openT}</span><span class="dash-stat-lbl">open tasks</span></div>
+      <div class="dash-stat"><span class="dash-stat-val">${claimedT}</span><span class="dash-stat-lbl">in progress</span></div>
+      <div class="dash-stat"><span class="dash-stat-val">${unread||'—'}</span><span class="dash-stat-lbl">unread messages</span></div>`;
+    const projMap=new Map();
+    _projects.forEach(p=>projMap.set(p.name,{name:p.name,open:0,claimed:0,last:null}));
+    if(!projMap.has(null))projMap.set(null,{name:null,open:0,claimed:0,last:null});
+    tasks.forEach(t=>{
+      const k=t.project||null;
+      if(!projMap.has(k))projMap.set(k,{name:k,open:0,claimed:0,last:null});
+      const p=projMap.get(k);
+      if(t.status==='open')p.open++;
+      if(t.status==='claimed')p.claimed++;
+      const ua=t.updated_at||t.created_at;
+      if(!p.last||ua>p.last)p.last=ua;
+    });
+    const cards=[...projMap.values()].sort((a,b)=>{
+      if(a.name===null&&b.name!==null)return 1;
+      if(b.name===null&&a.name!==null)return -1;
+      return(b.open+b.claimed)-(a.open+a.claimed)||(a.name||'').localeCompare(b.name||'');
+    });
+    $('dash-grid').innerHTML=cards.map(p=>`
+      <div class="dash-card" onclick="openProjDash('${esc(p.name||'')}')">
+        <div class="dash-card-name">${esc(p.name||'global')}</div>
+        <div class="dash-card-stats">
+          <span><span class="dash-card-stat-val">${p.open}</span> open</span>
+          ${p.claimed?`<span><span class="dash-card-stat-val">${p.claimed}</span> in progress</span>`:''}
+        </div>
+        <div class="dash-card-time">${p.last?'last activity '+relTime(p.last):'no activity'}</div>
+      </div>`).join('')||emptyState('◎','no projects yet');
+  }catch(e){toast(e.message,'err');}
+}
+
+async function openProjDash(projName){
+  _currentProject=projName||null;
+  $('dash-general').style.display='none';
+  $('dash-project').style.display='block';
+  $('dash-proj-name').textContent=projName||'global';
+  loading('dash-proj-tasks',3);loading('dash-proj-mem',3);
+  $('dash-proj-stats').innerHTML='';
+  const qp=projName?'project='+encodeURIComponent(projName):'';
+  try{
+    const [openTasks,allTasks,mems]=await Promise.all([
+      req('GET','/tasks?status=open&limit=10'+(qp?'&'+qp:'')).catch(()=>[]),
+      req('GET','/tasks?limit=200'+(qp?'&'+qp:'')).catch(()=>[]),
+      req('GET','/memory?limit=5'+(qp?'&'+qp:'')).catch(()=>[]),
+    ]);
+    const open=allTasks.filter(t=>t.status==='open').length;
+    const claimed=allTasks.filter(t=>t.status==='claimed').length;
+    const done=allTasks.filter(t=>t.status==='completed').length;
+    $('dash-proj-stats').innerHTML=`
+      <div class="dash-stat"><span class="dash-stat-val">${open}</span><span class="dash-stat-lbl">open tasks</span></div>
+      <div class="dash-stat"><span class="dash-stat-val">${claimed}</span><span class="dash-stat-lbl">in progress</span></div>
+      <div class="dash-stat"><span class="dash-stat-val">${done}</span><span class="dash-stat-lbl">completed</span></div>`;
+    $('dash-proj-tasks').innerHTML=openTasks.length
+      ?openTasks.slice(0,5).map(t=>`
+        <div class="dash-row">
+          <span><span class="pri ${t.priority}">${t.priority}</span>&nbsp;${esc(t.title)}</span>
+          <div class="dash-row-meta">
+            <span>${t.assigned_to?'claimed by '+esc(t.assigned_to):'unclaimed'}</span>
+            <span>${relTime(t.updated_at)}</span>
+          </div>
+        </div>`).join('')
+      :emptyState('◎','no open tasks');
+    $('dash-proj-mem').innerHTML=mems.length
+      ?mems.slice(0,3).map(e=>`
+        <div class="dash-row">
+          <span><span class="pill ${e.type}">${e.type}</span>&nbsp;${esc(e.content.length>100?e.content.slice(0,100)+'…':e.content)}</span>
+          <div class="dash-row-meta"><span>${esc(e.agent_id)}</span><span>${relTime(e.updated_at)}</span></div>
+        </div>`).join('')
+      :emptyState('◎','no memory entries');
+  }catch(e){toast(e.message,'err');}
+}
+
+function closeProjDash(){
+  _currentProject=null;
+  $('dash-project').style.display='none';
+  $('dash-general').style.display='block';
+}
+
+function _navToTab(name,loader){
+  if(_currentProject)$('h-project').value=_currentProject;
+  const btn=document.querySelector(`nav button[onclick*="'${name}'"]`);
+  if(btn)tab(name,btn);
+  if(loader)loader();
+}
+function navToProjectTasks(){_navToTab('tasks',loadTasks)}
+function navToProjectMem(){_navToTab('memory',loadMem)}
+function navToProjectMessages(){_navToTab('messages',loadInbox)}
+function navToProjectEvents(){_navToTab('events',()=>{if(!_sseAbort)startSSE();})}
+
 // ── Connect dropdown ──────────────────────────────────────────────────
 function _connectCmd(){
   const base=window.location.origin;
   return window._regkey
-    ?`curl -fsSL ${base}/onboard | REG_KEY=${window._regkey} sh`
+    ?`curl -fsSL ${base}/onboard | ARTEL_REG_KEY=${window._regkey} sh`
     :`curl -fsSL ${base}/onboard | sh`;
 }
 function toggleConnect(e){
