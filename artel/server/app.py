@@ -92,11 +92,13 @@ button:hover{background:#3c3836}
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     db = get_db(settings.db_path)
-    for special_id, special_role in (
+    specials = [
         (settings.ui_agent_id, "owner"),
         (settings.archivist_agent_id, "archivist"),
-        (settings.viewer_agent_id, "viewer"),
-    ):
+    ]
+    if settings.demo_mode:
+        specials.append((settings.viewer_agent_id, "viewer"))
+    for special_id, special_role in specials:
         if not db.execute("SELECT 1 FROM agents WHERE id=?", (special_id,)).fetchone():
             db.execute(
                 "INSERT INTO agents (id, api_key, role) VALUES (?, ?, ?)",
@@ -360,12 +362,14 @@ async def ui(request: Request):
         agent_row = db.execute("SELECT role FROM agents WHERE id=?", (aid,)).fetchone()
         agent_role = agent_row["role"] if agent_row else "owner"
         regkey = settings.registration_key
-    else:
+    elif settings.demo_mode:
         aid = settings.viewer_agent_id
         agent_row = db.execute("SELECT api_key, role FROM agents WHERE id=?", (aid,)).fetchone()
         akey = agent_row["api_key"] if agent_row else ""
         agent_role = agent_row["role"] if agent_row else "viewer"
         regkey = ""
+    else:
+        return RedirectResponse("/ui/login", status_code=303)
     html = _UI.read_text().replace(
         "/*CREDS*/",
         f"window._aid={json.dumps(aid)};window._akey={json.dumps(akey)};window._regkey={json.dumps(regkey)};window._ui_agent_id={json.dumps(aid)};window._agent_role={json.dumps(agent_role)};",
