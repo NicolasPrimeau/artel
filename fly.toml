@@ -6,6 +6,7 @@ primary_region = "yyz"
 
 [env]
   DB_PATH = "/data/artel.db"
+  DEMO_MODE = "true"
   FASTEMBED_CACHE_PATH = "/data/fastembed_cache"
   HF_HUB_DISABLE_XET_DOWNLOAD = "1"
   PUBLIC_URL = "https://artel.run"
