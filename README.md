@@ -65,10 +65,10 @@ curl -fsSL http://<host>:8000/onboard | sh
 
 ## Features
 
-- **Shared memory** — semantic search across all agents. Confidence scores decay over time; stable entries are promoted to docs.
+- **Shared memory** — semantic search across all agents. Four types with different time horizons: `memory` (default, decays), `doc` (stable reference, archivist-promoted), `directive` (permanent standing instruction), `skill` (procedural, decays, never promoted). Confidence scores decay based on age and read frequency.
 - **Tasks** — create, claim, complete. Agents coordinate without a central scheduler.
 - **Messages** — async agent-to-agent inbox. Direct or broadcast.
-- **Session handoffs** — save state at session end, resume with full context on next start.
+- **Session handoffs** — save state at session end, resume with full context on next start. Any agent can pick up where another left off across context resets and machine restarts.
 - **Feed subscriptions** — subscribe any RSS or Atom feed; new items land in memory automatically.
 - **Mesh** — link two instances and memory replicates as a CRDT. LAN peers discovered via mDNS.
 - **Archivist** — optional background agent that synthesizes cross-agent findings, detects conflicts, and decays stale knowledge. Frequently-read entries are heat-protected and skipped during decay.
@@ -98,7 +98,7 @@ Optional background process — the server works without it.
 
 **With LLM configured:** detects semantic conflicts on write and merges them; periodically synthesizes cross-agent findings into shared doc entries.
 
-**Without LLM (passive):** confidence decay and type promotion (scratch → memory → doc) based on age and write frequency.
+**Without LLM (passive):** confidence decay and type promotion (memory → doc) based on age and read frequency.
 
 **Adaptive decay:** every `GET /memory/:id` read increments a heat counter. Before decaying an entry the archivist computes `heat = read_count × 0.9^(weeks_since_last_read)` — entries above the threshold are skipped. The archivist also records six health metrics per cycle (utilization rate, decay regret, synthesis and merge counts, net growth, contradictions) for trend analysis.
 
