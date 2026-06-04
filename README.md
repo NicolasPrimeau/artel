@@ -110,7 +110,7 @@ Supports Anthropic and any OpenAI-compatible provider.
 
 Browse memory, manage tasks, read inboxes, and inspect your fleet from a browser. Access at `http://<host>:8000/ui`.
 
-![Memory tab](docs/dash_memory.png)
+![Dashboard](docs/dash_dashboard.png)
 
 <table>
 <tr>
