@@ -373,6 +373,6 @@ async def ui(request: Request):
         return RedirectResponse("/ui/login", status_code=303)
     html = _UI.read_text().replace(
         "/*CREDS*/",
-        f"window._aid={json.dumps(aid)};window._akey={json.dumps(akey)};window._regkey={json.dumps(regkey)};window._ui_agent_id={json.dumps(aid)};window._agent_role={json.dumps(agent_role)};",
+        f"window._aid={json.dumps(aid)};window._akey={json.dumps(akey)};window._regkey={json.dumps(regkey)};window._ui_agent_id={json.dumps(aid)};window._agent_role={json.dumps(agent_role)};window._ui_default_theme={json.dumps(settings.ui_default_theme)};",
     )
     return HTMLResponse(html, headers=_NO_STORE)

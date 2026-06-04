@@ -1581,7 +1581,7 @@ const _THEMES=[
   {id:'flexoki',     label:'Flexoki',     dark:'flexoki',        light:'flexoki-light',    bd:'#100f0f',ad:'#d14d41',bl:'#fffcf0',al:'#d14d41'},
   {id:'oxocarbon',   label:'Oxocarbon',   dark:'oxocarbon',      light:'oxocarbon-light',  bd:'#161616',ad:'#08bdba',bl:'#ffffff', al:'#0f62fe'},
 ];
-let _curTheme=localStorage.getItem('artel-theme-id')||'gruvbox';
+let _curTheme=localStorage.getItem('artel-theme-id')||(window._ui_default_theme||'gruvbox');
 let _curMode=localStorage.getItem('artel-mode')||'dark';
 (function(){
   const css=localStorage.getItem('artel-theme-css');

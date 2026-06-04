@@ -299,6 +299,7 @@ Other
 | `PUBLIC_URL` | | Base URL for onboard script and OAuth metadata |
 | `UI_PASSWORD` | | Web UI password |
 | `UI_AGENT_ID` | `artel-ui` | Dashboard agent, auto-created on startup |
+| `UI_DEFAULT_THEME` | `gruvbox` | Default UI theme for new sessions. Options: `gruvbox`, `tokyo-night`, `nord`, `dracula`, `kanagawa`, `rose-pine`, `everforest`, `monokai`, `cobalt`, `solarized`, `hacker`, `mellow`, `volcano`, `ayu`, `flexoki`, `oxocarbon` |
 | `ARCHIVIST_PROVIDER` | `anthropic` | LLM provider: `anthropic` or `openai` |
 | `ARCHIVIST_MODEL` | | Defaults to `claude-sonnet-4-6` / `gpt-4o` |
 | `ARCHIVIST_API_KEY` | | Falls back to `ANTHROPIC_API_KEY` for Anthropic |
