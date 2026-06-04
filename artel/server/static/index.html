@@ -1073,7 +1073,7 @@ pre{
 <script>/*CREDS*/</script>
 
 <header>
-  <div class="logo"><svg class="logo-mark" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><polygon points="32,4 60,32 32,60 4,32" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/><circle cx="32" cy="32" r="6" fill="currentColor"/></svg> artel</div>
+  <div class="logo" style="cursor:pointer" onclick="tab('dashboard',document.querySelector('.nav-items .nav-btn'))"><svg class="logo-mark" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><polygon points="32,4 60,32 32,60 4,32" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/><circle cx="32" cy="32" r="6" fill="currentColor"/></svg> artel</div>
   <span class="h-div">·</span>
   <select id="h-agent-sel" class="h-select" onchange="onAgentChange()" title="active agent">
     <option value="">all agents</option>
@@ -1657,7 +1657,7 @@ async function loadProjectsHeader(){
     sel.innerHTML='<option value="">all projects</option>';
     all.forEach(p=>{
       const o=document.createElement('option');
-      o.value=p.name;o.textContent=p.name+(_myProjects.has(p.name)?' ✓':'');
+      o.value=p.name;o.textContent=p.name;
       sel.appendChild(o);
     });
   }catch(_){}
