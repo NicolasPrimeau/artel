@@ -11,7 +11,6 @@ set -e
 ARTEL_URL="{artel_url}"
 MCP_URL="{mcp_url}"
 PROJECT="{project}"
-REG_KEY="${{ARTEL_REG_KEY:-}}"
 
 _git_name() {{
     remote=$(git remote get-url origin 2>/dev/null) || true
@@ -35,14 +34,14 @@ fi
 
 AGENT_ID="${{AGENT_ID:-${{_EXISTING_ID:-$DEFAULT_ID}}}}"
 
-ARTEL_URL="$ARTEL_URL" MCP_URL="$MCP_URL" BASE_ID="$AGENT_ID" PROJECT="$PROJECT" REG_KEY="$REG_KEY" python3 << 'PYEOF'
+ARTEL_URL="$ARTEL_URL" MCP_URL="$MCP_URL" BASE_ID="$AGENT_ID" PROJECT="$PROJECT" ARTEL_REG_KEY="${{ARTEL_REG_KEY:-}}" python3 << 'PYEOF'
 import os, json, urllib.request, urllib.error, sys, pathlib
 
 url     = os.environ['ARTEL_URL']
 mcp_url = os.environ['MCP_URL']
 base_id = os.environ['BASE_ID']
 project = os.environ.get('PROJECT') or None
-reg_key = os.environ.get('REG_KEY') or None
+reg_key = os.environ.get('ARTEL_REG_KEY') or None
 
 creds_dir = pathlib.Path.home() / '.config' / 'artel'
 
