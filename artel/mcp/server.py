@@ -197,6 +197,7 @@ async def _sse_watcher():
                 async with client.stream(
                     "GET", "/events/stream", params={"type": "message.received"}
                 ) as resp:
+                    resp.raise_for_status()
                     async for line in resp.aiter_lines():
                         delay = 1.0
                         if not line.startswith("data: "):
