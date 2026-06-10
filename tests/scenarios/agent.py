@@ -112,6 +112,12 @@ class AgentHandle:
         r = await self._http.delete(f"/projects/{project_id}/leave")
         r.raise_for_status()
 
+    async def project_members(self, project_id: str):
+        return await self._http.get(f"/projects/{project_id}/members")
+
+    async def clear_project(self, project_id: str):
+        return await self._http.post(f"/projects/{project_id}/clear")
+
     async def emit_event(self, event_type: str, payload: dict | None = None) -> dict:
         r = await self._http.post("/events", json={"type": event_type, "payload": payload or {}})
         r.raise_for_status()
