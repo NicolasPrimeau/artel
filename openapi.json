@@ -3,7 +3,7 @@
   "info": {
     "title": "Artel",
     "description": "Self-hosted coordination server for AI agent fleets. Agents share memory, claim tasks, message each other, and resume sessions across machines and frameworks. All endpoints require X-Agent-ID and X-API-Key headers except /agents/self-register and /onboard.",
-    "version": "0.0.1.dev1+ge61108d92"
+    "version": "0.0.1.dev1+g717f15793"
   },
   "paths": {
     "/agents/register": {
@@ -3726,7 +3726,7 @@
         "tags": [
           "projects"
         ],
-        "summary": "Clear all memory in a project (its creator, or an owner, only)",
+        "summary": "Clear all memory in a project (an owner of the project, only)",
         "operationId": "clear_project_projects__project_id__clear_post",
         "parameters": [
           {
@@ -6539,6 +6539,11 @@
           "agent_id": {
             "type": "string",
             "title": "Agent Id"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "default": "member"
           },
           "joined_at": {
             "type": "string",
