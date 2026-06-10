@@ -183,3 +183,18 @@ async def test_project_list_case_normalized(client):
     assert "foo" in names
     assert "Foo" not in names
     assert "FOO" not in names
+
+
+async def test_clear_project_creator_only(client):
+    # first joiner is the creator
+    await client.post("/projects/alpha/join", headers=HEADERS)
+    r = await client.post(
+        "/memory", json={"content": "map intel", "project": "alpha"}, headers=HEADERS
+    )
+    eid = r.json()["id"]
+    await client.post("/projects/alpha/join", headers=HEADERS2)
+    # non-creator cannot clear
+    assert (await client.post("/projects/alpha/clear", headers=HEADERS2)).status_code == 403
+    # creator clears -> project memory gone
+    assert (await client.post("/projects/alpha/clear", headers=HEADERS)).status_code == 204
+    assert (await client.get(f"/memory/{eid}", headers=HEADERS)).status_code == 404

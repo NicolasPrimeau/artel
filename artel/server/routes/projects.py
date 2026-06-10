@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from ...store.db import get_db, norm_project
-from ..auth import ActorDep, ReaderDep, is_archivist
+from ..auth import ActorDep, ReaderDep, is_archivist, is_owner
 from ..config import settings
 from ..models import ProjectCreate, ProjectInfo
 
@@ -44,6 +44,38 @@ async def join_project(project_id: str, agent_id: str = ActorDep):
         db.execute(
             "INSERT INTO project_members (project_id, agent_id) VALUES (?, ?)",
             (project_id, agent_id),
+        )
+
+
+def _project_creator(db, project_id: str) -> str | None:
+    row = db.execute(
+        "SELECT agent_id FROM project_members WHERE project_id=? "
+        "ORDER BY joined_at ASC, agent_id ASC LIMIT 1",
+        (project_id,),
+    ).fetchone()
+    return row["agent_id"] if row else None
+
+
+@router.post(
+    "/{project_id}/clear",
+    status_code=204,
+    summary="Clear all memory in a project (its creator, or an owner, only)",
+)
+async def clear_project(project_id: str, agent_id: str = ActorDep):
+    project_id = norm_project(project_id) or ""
+    if not project_id:
+        raise HTTPException(status_code=422, detail="project name required")
+    db = get_db()
+    creator = _project_creator(db, project_id)
+    if agent_id != creator and not is_owner(agent_id):
+        raise HTTPException(
+            status_code=403, detail="only the project's creator or an owner can clear it"
+        )
+    now = "strftime('%Y-%m-%dT%H:%M:%fZ','now')"
+    with db:
+        db.execute(
+            f"UPDATE memory SET deleted_at={now} WHERE project=? AND deleted_at IS NULL",
+            (project_id,),
         )
 
 
