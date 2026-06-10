@@ -11,6 +11,7 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 
 class ProjectMember(BaseModel):
     agent_id: str
+    role: str = "member"
     joined_at: str
 
 
@@ -19,16 +20,35 @@ class ProjectSummary(BaseModel):
     joined_at: str
 
 
+def _project_role(db, project_id: str, agent_id: str) -> str | None:
+    row = db.execute(
+        "SELECT role FROM project_members WHERE project_id=? AND agent_id=?",
+        (project_id, agent_id),
+    ).fetchone()
+    return row["role"] if row else None
+
+
+def _role_for_new_member(db, project_id: str, agent_id: str) -> str:
+    existing = _project_role(db, project_id, agent_id)
+    if existing:
+        return existing  # preserve role (e.g. an owner re-joining stays owner)
+    has_members = db.execute(
+        "SELECT 1 FROM project_members WHERE project_id=? LIMIT 1", (project_id,)
+    ).fetchone()
+    return "member" if has_members else "owner"  # first member owns the project
+
+
 @router.post("", status_code=204, summary="Create a project and join it")
 async def create_project(body: ProjectCreate, agent_id: str = ActorDep):
     if is_archivist(agent_id):
         raise HTTPException(status_code=403, detail="archivist cannot create projects")
     db = get_db()
-    db.execute(
-        "INSERT OR IGNORE INTO project_members (project_id, agent_id) VALUES (?, ?)",
-        (body.name, agent_id),
-    )
-    db.commit()
+    with db:
+        role = _role_for_new_member(db, body.name, agent_id)
+        db.execute(
+            "INSERT OR IGNORE INTO project_members (project_id, agent_id, role) VALUES (?, ?, ?)",
+            (body.name, agent_id, role),
+        )
 
 
 @router.post("/{project_id}/join", status_code=204, summary="Join a project (replaces current)")
@@ -40,37 +60,26 @@ async def join_project(project_id: str, agent_id: str = ActorDep):
         raise HTTPException(status_code=422, detail="project name required")
     db = get_db()
     with db:
+        role = _role_for_new_member(db, project_id, agent_id)
         db.execute("DELETE FROM project_members WHERE agent_id=?", (agent_id,))
         db.execute(
-            "INSERT INTO project_members (project_id, agent_id) VALUES (?, ?)",
-            (project_id, agent_id),
+            "INSERT INTO project_members (project_id, agent_id, role) VALUES (?, ?, ?)",
+            (project_id, agent_id, role),
         )
-
-
-def _project_creator(db, project_id: str) -> str | None:
-    row = db.execute(
-        "SELECT agent_id FROM project_members WHERE project_id=? "
-        "ORDER BY joined_at ASC, agent_id ASC LIMIT 1",
-        (project_id,),
-    ).fetchone()
-    return row["agent_id"] if row else None
 
 
 @router.post(
     "/{project_id}/clear",
     status_code=204,
-    summary="Clear all memory in a project (its creator, or an owner, only)",
+    summary="Clear all memory in a project (an owner of the project, only)",
 )
 async def clear_project(project_id: str, agent_id: str = ActorDep):
     project_id = norm_project(project_id) or ""
     if not project_id:
         raise HTTPException(status_code=422, detail="project name required")
     db = get_db()
-    creator = _project_creator(db, project_id)
-    if agent_id != creator and not is_owner(agent_id):
-        raise HTTPException(
-            status_code=403, detail="only the project's creator or an owner can clear it"
-        )
+    if _project_role(db, project_id, agent_id) != "owner" and not is_owner(agent_id):
+        raise HTTPException(status_code=403, detail="only a project owner can clear it")
     now = "strftime('%Y-%m-%dT%H:%M:%fZ','now')"
     with db:
         db.execute(
@@ -105,10 +114,13 @@ async def list_members(project_id: str, agent_id: str = ReaderDep):
     if not row:
         raise HTTPException(status_code=403, detail="not a member of this project")
     rows = db.execute(
-        "SELECT agent_id, joined_at FROM project_members WHERE project_id=? ORDER BY joined_at",
+        "SELECT agent_id, role, joined_at FROM project_members WHERE project_id=? ORDER BY joined_at",
         (project_id,),
     ).fetchall()
-    return [ProjectMember(agent_id=r["agent_id"], joined_at=r["joined_at"]) for r in rows]
+    return [
+        ProjectMember(agent_id=r["agent_id"], role=r["role"], joined_at=r["joined_at"])
+        for r in rows
+    ]
 
 
 @router.get("/mine", response_model=list[ProjectSummary], summary="List projects you belong to")

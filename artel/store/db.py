@@ -218,6 +218,30 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.commit()
 
     _canonicalize_projects(conn)
+    _migrate_project_roles(conn)
+
+
+def _migrate_project_roles(conn: sqlite3.Connection) -> None:
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(project_members)").fetchall()}
+    if "role" not in cols:
+        conn.execute("ALTER TABLE project_members ADD COLUMN role TEXT NOT NULL DEFAULT 'member'")
+        conn.commit()
+    if conn.execute("SELECT value FROM kv WHERE key='project_roles_v1'").fetchone():
+        return
+    with conn:
+        # bootstrap legacy projects: the earliest member becomes the owner
+        for p in conn.execute("SELECT DISTINCT project_id FROM project_members").fetchall():
+            first = conn.execute(
+                "SELECT agent_id FROM project_members WHERE project_id=? "
+                "ORDER BY joined_at ASC, agent_id ASC LIMIT 1",
+                (p["project_id"],),
+            ).fetchone()
+            if first:
+                conn.execute(
+                    "UPDATE project_members SET role='owner' WHERE project_id=? AND agent_id=?",
+                    (p["project_id"], first["agent_id"]),
+                )
+        conn.execute("INSERT OR REPLACE INTO kv (key, value) VALUES ('project_roles_v1', '1')")
 
 
 def _canonicalize_projects(conn: sqlite3.Connection) -> None:

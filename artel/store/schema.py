@@ -89,6 +89,7 @@ CREATE TABLE IF NOT EXISTS session_handoffs (
 CREATE TABLE IF NOT EXISTS project_members (
     project_id  TEXT NOT NULL,
     agent_id    TEXT NOT NULL,
+    role        TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('owner', 'member')),
     joined_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     PRIMARY KEY (project_id, agent_id)
 );

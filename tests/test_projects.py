@@ -185,16 +185,26 @@ async def test_project_list_case_normalized(client):
     assert "FOO" not in names
 
 
-async def test_clear_project_creator_only(client):
-    # first joiner is the creator
+async def test_project_roles_and_clear(client):
+    # first member of a project becomes its owner; later joiners are members
     await client.post("/projects/alpha/join", headers=HEADERS)
     r = await client.post(
         "/memory", json={"content": "map intel", "project": "alpha"}, headers=HEADERS
     )
     eid = r.json()["id"]
     await client.post("/projects/alpha/join", headers=HEADERS2)
-    # non-creator cannot clear
+
+    members = (await client.get("/projects/alpha/members", headers=HEADERS)).json()
+    roles = {m["agent_id"]: m["role"] for m in members}
+    assert roles[TEST_AGENT] == "owner"
+    assert roles[AGENT2] == "member"
+
+    # only an owner can clear
     assert (await client.post("/projects/alpha/clear", headers=HEADERS2)).status_code == 403
-    # creator clears -> project memory gone
     assert (await client.post("/projects/alpha/clear", headers=HEADERS)).status_code == 204
     assert (await client.get(f"/memory/{eid}", headers=HEADERS)).status_code == 404
+
+    # re-joining preserves the owner role (it is not reassigned by position)
+    await client.post("/projects/alpha/join", headers=HEADERS)
+    again = (await client.get("/projects/alpha/members", headers=HEADERS)).json()
+    assert {m["agent_id"]: m["role"] for m in again}[TEST_AGENT] == "owner"
