@@ -512,6 +512,7 @@ pre{
 .dash-section{margin-bottom:20px}
 .dash-section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .dash-section-hdr-lbl{font:500 10px var(--mono);color:var(--t4);text-transform:uppercase;letter-spacing:.8px}
+.dash-hdr-counts{font:500 10px var(--mono);color:var(--t3);text-transform:none;letter-spacing:.3px;margin-left:6px}
 .dash-link{background:none;border:none;color:var(--accent);cursor:pointer;font:11px var(--mono);padding:0}
 .dash-link:hover{text-decoration:underline}
 .dash-row{
@@ -1192,7 +1193,6 @@ pre{
       <button class="sm" onclick="closeProjDash()">← back</button>
       <span class="dash-proj-title" id="dash-proj-name"></span>
     </div>
-    <div class="dash-stat-strip" id="dash-proj-stats"></div>
     <div class="dash-section">
       <div class="dash-section-hdr">
         <span class="dash-section-hdr-lbl">recent memory</span>
@@ -1202,7 +1202,7 @@ pre{
     </div>
     <div class="dash-section">
       <div class="dash-section-hdr">
-        <span class="dash-section-hdr-lbl">open tasks</span>
+        <span class="dash-section-hdr-lbl">tasks <span class="dash-hdr-counts" id="dash-proj-taskcounts"></span></span>
         <button class="dash-link" onclick="navToProjectTasks()">view all →</button>
       </div>
       <div id="dash-proj-tasks"></div>
@@ -2454,7 +2454,7 @@ async function openProjDash(projName){
   $('dash-project').style.display='block';
   $('dash-proj-name').textContent=projName||'global';
   loading('dash-proj-tasks',3);loading('dash-proj-mem',3);loading('dash-proj-msgs',3);
-  $('dash-proj-stats').innerHTML='';
+  $('dash-proj-taskcounts').textContent='';
   const qp=projName?'project='+encodeURIComponent(projName):'';
   try{
     const [openTasks,allTasks,mems,msgs]=await Promise.all([
@@ -2466,10 +2466,7 @@ async function openProjDash(projName){
     const open=allTasks.filter(t=>t.status==='open').length;
     const claimed=allTasks.filter(t=>t.status==='claimed').length;
     const done=allTasks.filter(t=>t.status==='completed').length;
-    $('dash-proj-stats').innerHTML=`
-      <div class="dash-stat"><span class="dash-stat-val">${open}</span><span class="dash-stat-lbl">open tasks</span></div>
-      <div class="dash-stat"><span class="dash-stat-val">${claimed}</span><span class="dash-stat-lbl">in progress</span></div>
-      <div class="dash-stat"><span class="dash-stat-val">${done}</span><span class="dash-stat-lbl">completed</span></div>`;
+    $('dash-proj-taskcounts').textContent=`· ${open} open · ${claimed} active · ${done} done`;
     $('dash-proj-tasks').innerHTML=openTasks.length
       ?openTasks.slice(0,5).map(t=>`
         <div class="dash-row">
