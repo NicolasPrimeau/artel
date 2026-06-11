@@ -210,7 +210,7 @@ async def test_project_roles_and_clear(client):
     assert {m["agent_id"]: m["role"] for m in again}[TEST_AGENT] == "owner"
 
 
-async def test_project_reset_clears_tasks_and_messages_but_memory_transcends(client):
+async def test_scoped_clear_wipes_tasks_and_messages_but_memory_transcends(client):
     await client.post("/projects/beta/join", headers=HEADERS)
     await client.post("/projects/beta/join", headers=HEADERS2)
     r = await client.post(
@@ -230,14 +230,19 @@ async def test_project_reset_clears_tasks_and_messages_but_memory_transcends(cli
     )
     eid = mem.json()["id"]
 
-    # a plain member cannot reset; the project owner (or instance owner) can
-    assert (await client.post("/projects/beta/reset", headers=HEADERS2)).status_code == 403
-    assert (await client.post("/projects/beta/reset", headers=HEADERS)).status_code == 204
+    scopes = {"memory": False, "tasks": True, "messages": True}
+    # a plain member cannot clear; the project owner (or instance owner) can
+    assert (
+        await client.post("/projects/beta/clear", json=scopes, headers=HEADERS2)
+    ).status_code == 403
+    assert (
+        await client.post("/projects/beta/clear", json=scopes, headers=HEADERS)
+    ).status_code == 204
 
     # tasks and messages (project + member-to-member DMs) are gone…
     assert (await client.get("/tasks", params={"project": "beta"}, headers=HEADERS)).json() == []
     bodies = [m["body"] for m in (await client.get("/messages", headers=HEADERS)).json()]
     assert "rally" not in bodies
     assert "dm intel" not in bodies
-    # …but memory transcends the reset
+    # …but memory was not in scope: knowledge transcends the round
     assert (await client.get(f"/memory/{eid}", headers=HEADERS)).status_code == 200

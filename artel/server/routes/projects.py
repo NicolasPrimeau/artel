@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Body, HTTPException
 from pydantic import BaseModel
 
 from ...store.db import get_db, norm_project
@@ -68,12 +68,25 @@ async def join_project(project_id: str, agent_id: str = ActorDep):
         )
 
 
+class ProjectClear(BaseModel):
+    # explicit scopes — the caller says exactly what goes. No body = memory only, the
+    # endpoint's historical behavior. Arena-style projects clear tasks+messages between
+    # rounds while memory persists: knowledge transcends, coordination state doesn't.
+    memory: bool = True
+    tasks: bool = False
+    messages: bool = False
+
+
 @router.post(
     "/{project_id}/clear",
     status_code=204,
-    summary="Clear all memory in a project (an owner of the project, only)",
+    summary="Clear a project's memory, tasks, and/or messages (project owner only)",
 )
-async def clear_project(project_id: str, agent_id: str = ActorDep):
+async def clear_project(
+    project_id: str,
+    body: ProjectClear = Body(default_factory=ProjectClear),
+    agent_id: str = ActorDep,
+):
     project_id = norm_project(project_id) or ""
     if not project_id:
         raise HTTPException(status_code=422, detail="project name required")
@@ -82,42 +95,30 @@ async def clear_project(project_id: str, agent_id: str = ActorDep):
         raise HTTPException(status_code=403, detail="only a project owner can clear it")
     now = "strftime('%Y-%m-%dT%H:%M:%fZ','now')"
     with db:
-        db.execute(
-            f"UPDATE memory SET deleted_at={now} WHERE project=? AND deleted_at IS NULL",
-            (project_id,),
-        )
-
-
-@router.post(
-    "/{project_id}/reset",
-    status_code=204,
-    summary="Reset a project's tasks and messages; memory persists (owner only)",
-)
-async def reset_project(project_id: str, agent_id: str = ActorDep):
-    # A round reset for arena-style projects: wipe the ephemeral coordination state (tasks,
-    # project messages, direct messages between members) but NEVER memory — what the agents
-    # learned is exactly what must transcend rounds.
-    project_id = norm_project(project_id) or ""
-    if not project_id:
-        raise HTTPException(status_code=422, detail="project name required")
-    db = get_db()
-    if _project_role(db, project_id, agent_id) != "owner" and not is_owner(agent_id):
-        raise HTTPException(status_code=403, detail="only a project owner can reset it")
-    target = f"project:{project_id}"
-    member_sql = "SELECT agent_id FROM project_members WHERE project_id=?"
-    msg_pred = f"to_agent=? OR (to_agent IN ({member_sql}) AND from_agent IN ({member_sql}))"
-    with db:
-        db.execute(
-            "DELETE FROM task_comments WHERE task_id IN (SELECT id FROM tasks WHERE project=?)",
-            (project_id,),
-        )
-        db.execute("DELETE FROM tasks WHERE project=?", (project_id,))
-        db.execute(
-            f"DELETE FROM message_reads WHERE message_id IN "
-            f"(SELECT id FROM messages WHERE {msg_pred})",
-            (target, project_id, project_id),
-        )
-        db.execute(f"DELETE FROM messages WHERE {msg_pred}", (target, project_id, project_id))
+        if body.memory:
+            db.execute(
+                f"UPDATE memory SET deleted_at={now} WHERE project=? AND deleted_at IS NULL",
+                (project_id,),
+            )
+        if body.tasks:
+            db.execute(
+                "DELETE FROM task_comments WHERE task_id IN (SELECT id FROM tasks WHERE project=?)",
+                (project_id,),
+            )
+            db.execute("DELETE FROM tasks WHERE project=?", (project_id,))
+        if body.messages:
+            # project-targeted messages, plus direct messages between project members
+            target = f"project:{project_id}"
+            member_sql = "SELECT agent_id FROM project_members WHERE project_id=?"
+            msg_pred = (
+                f"to_agent=? OR (to_agent IN ({member_sql}) AND from_agent IN ({member_sql}))"
+            )
+            db.execute(
+                f"DELETE FROM message_reads WHERE message_id IN "
+                f"(SELECT id FROM messages WHERE {msg_pred})",
+                (target, project_id, project_id),
+            )
+            db.execute(f"DELETE FROM messages WHERE {msg_pred}", (target, project_id, project_id))
 
 
 @router.delete("/{project_id}/leave", status_code=204, summary="Leave a project")
