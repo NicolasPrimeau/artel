@@ -130,17 +130,25 @@ async def send_message(body: MessageSend, agent_id: str = ActorDep):
     return _row_to_msg(row)
 
 
+def _subject(agent: str | None, agent_id: str) -> str:
+    if agent and agent != agent_id and is_owner(agent_id):
+        return agent
+    return agent_id
+
+
 @router.get("", response_model=list[MessageEntry], summary="List all sent and received messages")
 async def list_messages(
     read: bool | None = Query(default=None),
+    agent: str | None = Query(default=None),
     limit: int = Query(default=50, le=200),
     agent_id: str = ReaderDep,
 ):
+    subject = _subject(agent, agent_id)
     db = get_db()
-    project_targets = _project_inbox_targets(agent_id)
+    project_targets = _project_inbox_targets(subject)
     placeholders = ",".join("?" * (1 + len(project_targets))) if project_targets else "?"
     sql = f"SELECT * FROM messages WHERE (to_agent IN ({placeholders}) OR from_agent=?)"
-    params: list = [agent_id, *project_targets, agent_id]
+    params: list = [subject, *project_targets, subject]
     if read is not None:
         sql += " AND read=?"
         params.append(1 if read else 0)

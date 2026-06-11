@@ -1523,6 +1523,17 @@ function tab(name,btn){
   if(name==='sessions'){populateSessionAgents();loadSession();}
   if(name==='logs')loadLogs();
   if(name==='mesh')loadMesh();
+  try{localStorage.setItem('artel-tab',name)}catch(e){}
+  if(location.hash!=='#'+name)history.replaceState(null,'','#'+name);
+}
+
+function _restoreTab(){
+  const valid=['dashboard','memory','tasks','messages','events','agents','sessions','logs','mesh'];
+  let n=location.hash.slice(1);
+  if(!valid.includes(n)){try{n=localStorage.getItem('artel-tab')||''}catch(e){n=''}}
+  if(!valid.includes(n))n='dashboard';
+  const btn=document.querySelector(`nav button[onclick*="'${n}'"]`);
+  if(btn)tab(n,btn);else loadDashboard();
 }
 
 function toggleSection(id){
@@ -1642,7 +1653,7 @@ async function init(){
     $('mtype').appendChild(opt);
   }
   await Promise.all([loadProjectsHeader(),loadAgentsGlobal()]);
-  loadDashboard();checkInbox();setInterval(checkInbox,30000);
+  _restoreTab();checkInbox();setInterval(checkInbox,30000);
   loadProjects();renderThemePickers();
 }
 
@@ -1935,16 +1946,18 @@ $('task-modal').addEventListener('click',e=>{if(e.target===$('task-modal'))close
 
 async function loadInbox(){
   $('btn-messages').querySelector('.badge')?.remove();
+  const agent=activeAgent();
   const showAll=$('msg-show-all')?.checked;
-  const url=showAll?'/messages':'/messages/inbox';
+  const full=!!agent||showAll;
+  const url=agent?('/messages?limit=200&agent='+encodeURIComponent(agent)):(showAll?'/messages?limit=200':'/messages/inbox');
   loading('msglist',2);
   try{
     const ms=await req('GET',url);
     const unread=ms.filter(m=>!m.read);
-    $('mark-all-read-btn').style.display=unread.length?'':'none';
+    $('mark-all-read-btn').style.display=(!full&&unread.length)?'':'none';
     $('inbox-label').style.display=ms.length?'':'none';
-    $('inbox-label').textContent=showAll?'all messages':'inbox';
-    if(!ms.length){$('msglist').innerHTML=emptyState('✉',showAll?'no messages':'no unread messages');return;}
+    $('inbox-label').textContent=agent?esc(agent)+' · all messages':(showAll?'all messages':'inbox');
+    if(!ms.length){$('msglist').innerHTML=emptyState('✉',full?'no messages':'no unread messages');return;}
     $('msglist').innerHTML=ms.map(m=>`
       <div class="card ${m.read?'':'accent'}" style="${m.read?'opacity:0.7':''}">
         <div class="meta">
@@ -2054,13 +2067,15 @@ async function loadAgents(){
     ]);
     const agentProjects={};
     projects.forEach(p=>p.agents.forEach(a=>{(agentProjects[a]||(agentProjects[a]=[])).push(p.name)}));
+    const proj=activeProject();
+    const list=proj?participants.filter(p=>(agentProjects[p.agent_id]||[]).includes(proj)):participants;
     const lbl=$('agent-count-label');
-    if(!participants.length){
+    if(!list.length){
       lbl.style.display='none';
-      $('alist').innerHTML=emptyState('◎','no agents registered');return;
+      $('alist').innerHTML=emptyState('◎',proj?`no agents in ${esc(proj)}`:'no agents registered');return;
     }
     const now=Date.now();
-    const sorted=[...participants].sort((a,b)=>{
+    const sorted=[...list].sort((a,b)=>{
       return (b.last_seen?Date.parse(b.last_seen):0)-(a.last_seen?Date.parse(a.last_seen):0);
     });
     const activeCount=sorted.filter(p=>p.last_seen&&(now-Date.parse(p.last_seen))<300000).length;
