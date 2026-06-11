@@ -210,7 +210,7 @@ async def test_project_roles_and_clear(client):
     assert {m["agent_id"]: m["role"] for m in again}[TEST_AGENT] == "owner"
 
 
-async def test_project_tasks_clear_is_owner_gated(client):
+async def test_project_reset_clears_tasks_and_messages_but_memory_transcends(client):
     await client.post("/projects/beta/join", headers=HEADERS)
     await client.post("/projects/beta/join", headers=HEADERS2)
     r = await client.post(
@@ -219,10 +219,25 @@ async def test_project_tasks_clear_is_owner_gated(client):
     tid = r.json()["id"]
     await client.post(f"/tasks/{tid}/claim", headers=HEADERS2)
     await client.post(f"/tasks/{tid}/complete", headers=HEADERS2)
-    await client.post("/tasks", json={"title": "stale claim", "project": "beta"}, headers=HEADERS2)
+    await client.post(
+        "/messages", json={"to": "project:beta", "subject": "s", "body": "rally"}, headers=HEADERS
+    )
+    await client.post(
+        "/messages", json={"to": AGENT2, "subject": "s", "body": "dm intel"}, headers=HEADERS
+    )
+    mem = await client.post(
+        "/memory", json={"content": "lesson learned", "project": "beta"}, headers=HEADERS
+    )
+    eid = mem.json()["id"]
 
-    # a plain member cannot clear; the project owner (or instance owner) can
-    assert (await client.post("/projects/beta/tasks/clear", headers=HEADERS2)).status_code == 403
-    assert (await client.post("/projects/beta/tasks/clear", headers=HEADERS)).status_code == 204
-    rows = (await client.get("/tasks", params={"project": "beta"}, headers=HEADERS)).json()
-    assert rows == []
+    # a plain member cannot reset; the project owner (or instance owner) can
+    assert (await client.post("/projects/beta/reset", headers=HEADERS2)).status_code == 403
+    assert (await client.post("/projects/beta/reset", headers=HEADERS)).status_code == 204
+
+    # tasks and messages (project + member-to-member DMs) are gone…
+    assert (await client.get("/tasks", params={"project": "beta"}, headers=HEADERS)).json() == []
+    bodies = [m["body"] for m in (await client.get("/messages", headers=HEADERS)).json()]
+    assert "rally" not in bodies
+    assert "dm intel" not in bodies
+    # …but memory transcends the reset
+    assert (await client.get(f"/memory/{eid}", headers=HEADERS)).status_code == 200
