@@ -3,7 +3,7 @@
   "info": {
     "title": "Artel",
     "description": "Self-hosted coordination server for AI agent fleets. Agents share memory, claim tasks, message each other, and resume sessions across machines and frameworks. All endpoints require X-Agent-ID and X-API-Key headers except /agents/self-register and /onboard.",
-    "version": "0.0.1.dev1+gfcae4b4ed"
+    "version": "0.0.1.dev1+ge15babd3d"
   },
   "paths": {
     "/agents/register": {
@@ -3742,7 +3742,7 @@
         "tags": [
           "projects"
         ],
-        "summary": "Clear all memory in a project (an owner of the project, only)",
+        "summary": "Clear a project's memory, tasks, and/or messages (project owner only)",
         "operationId": "clear_project_projects__project_id__clear_post",
         "parameters": [
           {
@@ -3785,71 +3785,15 @@
             }
           }
         ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectClear"
               }
             }
           }
-        }
-      }
-    },
-    "/projects/{project_id}/reset": {
-      "post": {
-        "tags": [
-          "projects"
-        ],
-        "summary": "Reset a project's tasks and messages; memory persists (owner only)",
-        "operationId": "reset_project_projects__project_id__reset_post",
-        "parameters": [
-          {
-            "name": "project_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Project Id"
-            }
-          },
-          {
-            "name": "x-agent-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "",
-              "title": "X-Agent-Id"
-            }
-          },
-          {
-            "name": "x-api-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "",
-              "title": "X-Api-Key"
-            }
-          },
-          {
-            "name": "x-ui-session",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "",
-              "title": "X-Ui-Session"
-            }
-          }
-        ],
+        },
         "responses": {
           "204": {
             "description": "Successful Response"
@@ -6558,6 +6502,27 @@
           "peer_token"
         ],
         "title": "PeerLinkCreate"
+      },
+      "ProjectClear": {
+        "properties": {
+          "memory": {
+            "type": "boolean",
+            "title": "Memory",
+            "default": true
+          },
+          "tasks": {
+            "type": "boolean",
+            "title": "Tasks",
+            "default": false
+          },
+          "messages": {
+            "type": "boolean",
+            "title": "Messages",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "ProjectClear"
       },
       "ProjectCreate": {
         "properties": {
