@@ -88,6 +88,26 @@ async def clear_project(project_id: str, agent_id: str = ActorDep):
         )
 
 
+@router.post(
+    "/{project_id}/tasks/clear",
+    status_code=204,
+    summary="Delete all tasks in a project (project owner or instance owner, only)",
+)
+async def clear_project_tasks(project_id: str, agent_id: str = ActorDep):
+    project_id = norm_project(project_id) or ""
+    if not project_id:
+        raise HTTPException(status_code=422, detail="project name required")
+    db = get_db()
+    if _project_role(db, project_id, agent_id) != "owner" and not is_owner(agent_id):
+        raise HTTPException(status_code=403, detail="only a project owner can clear its tasks")
+    with db:
+        db.execute(
+            "DELETE FROM task_comments WHERE task_id IN (SELECT id FROM tasks WHERE project=?)",
+            (project_id,),
+        )
+        db.execute("DELETE FROM tasks WHERE project=?", (project_id,))
+
+
 @router.delete("/{project_id}/leave", status_code=204, summary="Leave a project")
 async def leave_project(project_id: str, agent_id: str = ActorDep):
     project_id = norm_project(project_id) or ""

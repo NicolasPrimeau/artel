@@ -208,3 +208,21 @@ async def test_project_roles_and_clear(client):
     await client.post("/projects/alpha/join", headers=HEADERS)
     again = (await client.get("/projects/alpha/members", headers=HEADERS)).json()
     assert {m["agent_id"]: m["role"] for m in again}[TEST_AGENT] == "owner"
+
+
+async def test_project_tasks_clear_is_owner_gated(client):
+    await client.post("/projects/beta/join", headers=HEADERS)
+    await client.post("/projects/beta/join", headers=HEADERS2)
+    r = await client.post(
+        "/tasks", json={"title": "round 1 relic", "project": "beta"}, headers=HEADERS
+    )
+    tid = r.json()["id"]
+    await client.post(f"/tasks/{tid}/claim", headers=HEADERS2)
+    await client.post(f"/tasks/{tid}/complete", headers=HEADERS2)
+    await client.post("/tasks", json={"title": "stale claim", "project": "beta"}, headers=HEADERS2)
+
+    # a plain member cannot clear; the project owner (or instance owner) can
+    assert (await client.post("/projects/beta/tasks/clear", headers=HEADERS2)).status_code == 403
+    assert (await client.post("/projects/beta/tasks/clear", headers=HEADERS)).status_code == 204
+    rows = (await client.get("/tasks", params={"project": "beta"}, headers=HEADERS)).json()
+    assert rows == []
