@@ -1133,7 +1133,7 @@ pre{
     </div>
   </div>
   <div class="drawer-footer">
-    <a class="drawer-item" href="/ui/logout" style="text-decoration:none">logout</a>
+    <a class="drawer-item auth-link" href="/ui/logout" style="text-decoration:none">logout</a>
   </div>
 </div>
 
@@ -1173,7 +1173,7 @@ pre{
     </div>
   </div>
   <div class="nav-footer">
-    <a class="nav-btn" href="/ui/logout" style="text-decoration:none">logout</a>
+    <a class="nav-btn auth-link" href="/ui/logout" style="text-decoration:none">logout</a>
   </div>
 </nav>
 
@@ -1647,6 +1647,10 @@ function onAgentChange(){
 }
 
 async function init(){
+  if(window._agent_role==='viewer'){
+    // read-only visitor: there is no session to log out of — offer the way IN instead
+    document.querySelectorAll('.auth-link').forEach(a=>{a.textContent='log in';a.href='/ui/login';});
+  }
   if(window._agent_role==='owner'){
     const opt=document.createElement('option');
     opt.value='directive';opt.textContent='directive';

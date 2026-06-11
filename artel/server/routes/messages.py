@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, HTTPException, Query
 
 from ...store.db import get_db, norm_project
-from ..auth import ActorDep, ReaderDep, _memberships, is_owner
+from ..auth import ActorDep, ReaderDep, _memberships, is_owner, role_of
 from ..broadcast import broadcast
 from ..models import EventEntry, MessageEntry, MessageSend, new_id
 
@@ -145,10 +145,16 @@ async def list_messages(
 ):
     subject = _subject(agent, agent_id)
     db = get_db()
-    project_targets = _project_inbox_targets(subject)
-    placeholders = ",".join("?" * (1 + len(project_targets))) if project_targets else "?"
-    sql = f"SELECT * FROM messages WHERE (to_agent IN ({placeholders}) OR from_agent=?)"
-    params: list = [subject, *project_targets, subject]
+    if role_of(agent_id) == "viewer":
+        # a read-only observer watches the whole fleet talk — direct messages included;
+        # it can never send, mark read, or otherwise touch any of them (ActorDep gates those)
+        sql = "SELECT * FROM messages WHERE 1=1"
+        params: list = []
+    else:
+        project_targets = _project_inbox_targets(subject)
+        placeholders = ",".join("?" * (1 + len(project_targets))) if project_targets else "?"
+        sql = f"SELECT * FROM messages WHERE (to_agent IN ({placeholders}) OR from_agent=?)"
+        params = [subject, *project_targets, subject]
     if read is not None:
         sql += " AND read=?"
         params.append(1 if read else 0)
@@ -222,6 +228,8 @@ async def mark_inbox_read(agent_id: str = ActorDep):
 
 
 def _can_read_message(row: sqlite3.Row, agent_id: str) -> bool:
+    if role_of(agent_id) == "viewer":
+        return True  # read-only observers see everything; they can't act on any of it
     to_agent = row["to_agent"]
     if to_agent == agent_id or row["from_agent"] == agent_id or to_agent == "broadcast":
         return True

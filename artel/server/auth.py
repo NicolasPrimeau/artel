@@ -159,7 +159,9 @@ def require_role(minimum: str):
 def _memberships(agent_id: str) -> list[str] | None:
     if agent_id == settings.ui_agent_id:
         return None
-    if role_of(agent_id) == "archivist":
+    # archivists synthesize across projects; viewers are read-only observers — both see
+    # everything (a viewer still can't modify anything: every write path requires ActorDep)
+    if role_of(agent_id) in ("archivist", "viewer"):
         return None
     is_static = agent_id in settings.api_keys().values()
     static = settings.agent_projects().get(agent_id)

@@ -26,6 +26,41 @@ async def test_viewer_is_read_only(scenario):
     ).status_code == 403
 
 
+async def test_viewer_sees_everything_without_joining(scenario):
+    """A viewer is a read-only observer of the WHOLE instance: project tasks,
+    project messages, and even direct agent-to-agent messages are visible
+    without joining any project — it just can't touch any of it."""
+    a = await scenario.agent("talker")
+    b = await scenario.agent("listener")
+    assert (await a._http.post("/projects/warzone/join")).status_code in (200, 201, 204)
+    assert (await b._http.post("/projects/warzone/join")).status_code in (200, 201, 204)
+    task = await a._http.post("/tasks", json={"title": "hold the line", "project": "warzone"})
+    assert task.status_code == 201
+    assert (
+        await a._http.post(
+            "/messages", json={"to": "project:warzone", "subject": "s", "body": "rally at (4,4)"}
+        )
+    ).status_code == 201
+    direct = await a._http.post(
+        "/messages", json={"to": "listener", "subject": "s", "body": "enemy #5 at (8,4)"}
+    )
+    assert direct.status_code == 201
+
+    viewer = await scenario.viewer_agent()
+    tasks = await viewer._http.get("/tasks", params={"project": "warzone"})
+    assert tasks.status_code == 200
+    assert any(t["title"] == "hold the line" for t in tasks.json())
+    msgs = await viewer._http.get("/messages")
+    assert msgs.status_code == 200
+    bodies = [m["body"] for m in msgs.json()]
+    assert "rally at (4,4)" in bodies
+    assert "enemy #5 at (8,4)" in bodies  # direct messages too — full observability
+    one = await viewer._http.get(f"/messages/{direct.json()['id']}")
+    assert one.status_code == 200
+    # still strictly read-only
+    assert (await viewer._http.post(f"/messages/{direct.json()['id']}/read")).status_code == 403
+
+
 async def test_agent_cannot_perform_owner_admin(scenario):
     agent = await scenario.agent("plain")
     victim = await scenario.agent("victim")
