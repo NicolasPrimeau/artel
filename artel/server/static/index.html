@@ -1208,6 +1208,13 @@ pre{
       <div id="dash-proj-mem"></div>
     </div>
     <div class="dash-section">
+      <div class="dash-section-hdr">
+        <span class="dash-section-hdr-lbl">recent messages</span>
+        <button class="dash-link" onclick="navToProjectMessages()">view all →</button>
+      </div>
+      <div id="dash-proj-msgs"></div>
+    </div>
+    <div class="dash-section">
       <div class="dash-section-hdr-lbl" style="margin-bottom:8px">quick links</div>
       <div class="dash-quick-links">
         <button class="sm" onclick="navToProjectTasks()">tasks</button>
@@ -1662,6 +1669,8 @@ async function init(){
   if(dlp&&[...$('h-project').options].some(o=>o.value===dlp)){$('h-project').value=dlp;}
   _restoreTab();checkInbox();setInterval(checkInbox,30000);
   loadProjects();renderThemePickers();
+  // on the dashboard, a deep-linked project opens its drill-down directly
+  if(dlp&&(location.hash||'#dashboard')==='#dashboard')openProjDash(dlp);
 }
 
 async function loadProjectsHeader(){
@@ -2453,14 +2462,15 @@ async function openProjDash(projName){
   $('dash-general').style.display='none';
   $('dash-project').style.display='block';
   $('dash-proj-name').textContent=projName||'global';
-  loading('dash-proj-tasks',3);loading('dash-proj-mem',3);
+  loading('dash-proj-tasks',3);loading('dash-proj-mem',3);loading('dash-proj-msgs',3);
   $('dash-proj-stats').innerHTML='';
   const qp=projName?'project='+encodeURIComponent(projName):'';
   try{
-    const [openTasks,allTasks,mems]=await Promise.all([
+    const [openTasks,allTasks,mems,msgs]=await Promise.all([
       req('GET','/tasks?status=open&limit=10'+(qp?'&'+qp:'')).catch(()=>[]),
       req('GET','/tasks?limit=200'+(qp?'&'+qp:'')).catch(()=>[]),
       req('GET','/memory?limit=5'+(qp?'&'+qp:'')).catch(()=>[]),
+      req('GET','/messages?limit=100').catch(()=>[]),
     ]);
     const open=allTasks.filter(t=>t.status==='open').length;
     const claimed=allTasks.filter(t=>t.status==='claimed').length;
@@ -2486,6 +2496,21 @@ async function openProjDash(projName){
           <div class="dash-row-meta"><span>${esc(e.agent_id)}</span><span>${relTime(e.updated_at)}</span></div>
         </div>`).join('')
       :emptyState('◎','no memory entries');
+    // project messages: broadcasts to the project, plus traffic between its agents
+    const pAgents=new Set(((_projects.find(p=>p.name===projName)||{}).agents)||[]);
+    const pmsgs=msgs.filter(m=>projName
+      ?(m.to_agent==='project:'+projName||(pAgents.has(m.from_agent)&&pAgents.has(m.to_agent)))
+      :true);
+    $('dash-proj-msgs').innerHTML=pmsgs.length
+      ?pmsgs.slice(0,5).map(m=>`
+        <div class="dash-row">
+          <span>${esc(m.body.length>100?m.body.slice(0,100)+'…':m.body)}</span>
+          <div class="dash-row-meta">
+            <span>${esc(m.from_agent)} → ${esc(m.to_agent==='project:'+projName?'team':m.to_agent)}</span>
+            <span>${relTime(m.created_at)}</span>
+          </div>
+        </div>`).join('')
+      :emptyState('◎','no messages yet');
   }catch(e){toast(e.message,'err');}
 }
 
