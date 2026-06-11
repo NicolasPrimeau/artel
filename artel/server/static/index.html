@@ -1657,6 +1657,9 @@ async function init(){
     $('mtype').appendChild(opt);
   }
   await Promise.all([loadProjectsHeader(),loadAgentsGlobal()]);
+  // deep link: /ui?project=<name>#<tab> lands with that project pre-selected
+  const dlp=new URLSearchParams(location.search).get('project');
+  if(dlp&&[...$('h-project').options].some(o=>o.value===dlp)){$('h-project').value=dlp;}
   _restoreTab();checkInbox();setInterval(checkInbox,30000);
   loadProjects();renderThemePickers();
 }
