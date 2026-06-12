@@ -1627,6 +1627,12 @@ document.addEventListener('click',e=>{
 function onProjectChange(){
   const p=document.querySelector('.panel.on');if(!p)return;
   const n=p.id.replace('panel-','');
+  if(n==='dashboard'){
+    const v=$('h-project').value;
+    if(v)openProjDash(v);
+    else{closeProjDash();loadDashboard();}
+    return;
+  }
   if(n==='memory')loadMem();
   if(n==='tasks')loadTasks();
   if(n==='agents')loadAgents();
