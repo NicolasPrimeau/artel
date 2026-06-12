@@ -1659,7 +1659,7 @@ async function init(){
   const dlp=new URLSearchParams(location.search).get('project');
   if(dlp&&[...$('h-project').options].some(o=>o.value===dlp)){$('h-project').value=dlp;}
   _restoreTab();checkInbox();setInterval(checkInbox,30000);
-  loadProjects();renderThemePickers();
+  loadProjects();renderThemePickers();startLive();
   // on the dashboard, a deep-linked project opens its drill-down directly
   if(dlp&&(location.hash||'#dashboard')==='#dashboard')openProjDash(dlp);
 }
@@ -2026,6 +2026,51 @@ function setSseStatus(on,label){
   if(db)db.disabled=!on;
 }
 
+let _liveAbort=null,_liveTimer=0,_liveLast=0;
+function _liveRefresh(){
+  // coalesce bursts (agent fleets write fast); refresh the visible view at most every 4s
+  const run=()=>{
+    _liveLast=Date.now();
+    if(document.hidden)return;
+    const panel=document.querySelector('.panel.on');const id=panel?panel.id:'';
+    if(id==='panel-dashboard'){ if(_currentProject)openProjDash(_currentProject); else loadDashboard(); }
+    else if(id==='panel-tasks')loadTasks();
+    else if(id==='panel-memory')loadMem();
+    else if(id==='panel-messages')loadInbox();
+  };
+  clearTimeout(_liveTimer);
+  const wait=Math.max(800,4000-(Date.now()-_liveLast));
+  _liveTimer=setTimeout(run,wait);
+}
+function startLive(){
+  // an always-on background event stream: any task/message/memory write anywhere
+  // refreshes whatever view is on screen — the UI follows the fleet in real time
+  if(_liveAbort)return;
+  _liveAbort=new AbortController();
+  (async()=>{
+    while(_liveAbort){
+      try{
+        const r=await fetch('/events/stream',{headers:hdrs(),credentials:'same-origin',signal:_liveAbort.signal});
+        if(r.ok){
+          const reader=r.body.getReader(),dec=new TextDecoder();let buf='';
+          while(true){
+            const{done,value}=await reader.read();if(done)break;
+            buf+=dec.decode(value,{stream:true});
+            const lines=buf.split('\n');buf=lines.pop();
+            for(const line of lines){
+              if(line.startsWith('data: ')&&line.length>6){
+                try{const e=JSON.parse(line.slice(6));
+                  if(/^(task|message|memory)\./.test(e.type||''))_liveRefresh();
+                }catch(_){}
+              }
+            }
+          }
+        }
+      }catch(e){if(e&&e.name==='AbortError')return;}
+      await new Promise(s=>setTimeout(s,3000));
+    }
+  })();
+}
 function startSSE(){
   stopSSE();
   _sseAbort=new AbortController();
