@@ -1,4 +1,6 @@
 import json
+import math
+import re
 import sqlite3
 import xml.etree.ElementTree as ET
 from datetime import UTC, datetime
@@ -6,7 +8,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import JSONResponse, Response
 
-from ...store.db import AmbiguousId, get_db, instance_id, norm_project, resolve_id
+from ...store.db import AmbiguousId, fts_index, get_db, instance_id, norm_project, resolve_id
 from ...store.embeddings import embed
 from ..auth import (
     ActorDep,
@@ -163,6 +165,7 @@ async def write_memory(
                 "INSERT INTO memory_vec (id, embedding) VALUES (?, ?)",
                 (entry_id, json.dumps(vec)),
             )
+        fts_index(db, entry_id, body.content)
         db.execute(
             "INSERT INTO events (id, type, agent_id, payload) VALUES (?,?,?,?)",
             (event_id, "memory.written", agent_id, json.dumps({"memory_id": entry_id})),
@@ -196,45 +199,119 @@ async def search_memory(
 ):
     project = norm_project(project)
     db = get_db()
-    vec = embed(q)
     allowed = _memberships(agent_id)
-
-    if vec is None:
+    if project and allowed is not None and project not in allowed:
         return []
 
-    # Over-fetch when project/membership filtering will reduce results
     has_filter = bool(project) or (allowed is not None)
-    fetch_k = limit * 5 if has_filter else limit
+    fetch_k = limit * 5 if has_filter else limit * 2
 
-    rows = db.execute(
-        """SELECT m.*, mv.distance
-           FROM memory_vec mv
-           JOIN memory m ON m.id = mv.id
-           WHERE mv.embedding MATCH ? AND k=?
-             AND m.deleted_at IS NULL
-             AND (m.scope != 'agent' OR m.agent_id = ?)
-           ORDER BY mv.distance""",
-        (json.dumps(vec), fetch_k, agent_id),
-    ).fetchall()
+    vec = embed(q)
+    vec_ids: list[str] = []
+    distances: dict[str, float] = {}
+    if vec is not None:
+        for r in db.execute(
+            """SELECT m.id, mv.distance
+               FROM memory_vec mv
+               JOIN memory m ON m.id = mv.id
+               WHERE mv.embedding MATCH ? AND k=?
+                 AND m.deleted_at IS NULL
+                 AND (m.scope != 'agent' OR m.agent_id = ?)
+               ORDER BY mv.distance""",
+            (json.dumps(vec), fetch_k, agent_id),
+        ).fetchall():
+            vec_ids.append(r["id"])
+            distances[r["id"]] = r["distance"]
 
-    if project:
-        if allowed is not None and project not in allowed:
-            return []
-        rows = [r for r in rows if r["project"] == project]
-    elif allowed is not None:
-        rows = [r for r in rows if r["project"] is None or r["project"] in allowed]
-    if max_distance is not None:
-        rows = [r for r in rows if r["distance"] <= max_distance]
-    if confidence_min is not None:
-        rows = [r for r in rows if (r["confidence"] or 0.0) >= confidence_min]
-    if tag:
-        rows = [r for r in rows if tag in json.loads(r["tags"])]
-    if type:
-        rows = [r for r in rows if r["type"] == type]
-    if agent:
-        rows = [r for r in rows if r["agent_id"] == agent]
+    fts_ids: list[str] = []
+    tokens = re.findall(r"\w+", q)[:12]
+    if tokens:
+        match = " OR ".join(f'"{t}"' for t in tokens)
+        try:
+            fts_ids = [
+                r["id"]
+                for r in db.execute(
+                    """SELECT m.id
+                       FROM memory_fts f
+                       JOIN memory m ON m.id = f.id
+                       WHERE memory_fts MATCH ?
+                         AND m.deleted_at IS NULL
+                         AND (m.scope != 'agent' OR m.agent_id = ?)
+                       ORDER BY bm25(memory_fts)
+                       LIMIT ?""",
+                    (match, agent_id, fetch_k),
+                ).fetchall()
+            ]
+        except Exception:
+            fts_ids = []
 
-    return [_row_to_entry(r) for r in rows[:limit]]
+    if not vec_ids and not fts_ids:
+        return []
+
+    K = 60.0
+    rrf: dict[str, float] = {}
+    for rank, mid in enumerate(vec_ids):
+        rrf[mid] = rrf.get(mid, 0.0) + 1.0 / (K + rank)
+    for rank, mid in enumerate(fts_ids):
+        rrf[mid] = rrf.get(mid, 0.0) + 1.0 / (K + rank)
+
+    placeholders = ",".join("?" * len(rrf))
+    rows = {
+        r["id"]: r
+        for r in db.execute(
+            f"SELECT * FROM memory WHERE id IN ({placeholders})", list(rrf)
+        ).fetchall()
+    }
+
+    now = datetime.now(UTC)
+
+    def _score(mid: str) -> float:
+        r = rows[mid]
+        conf = r["confidence"] if r["confidence"] is not None else 0.5
+        reads = r["read_count"] or 0
+        try:
+            age_days = max(
+                0.0,
+                (
+                    now - datetime.fromisoformat(str(r["updated_at"]).replace("Z", "+00:00"))
+                ).total_seconds()
+                / 86400.0,
+            )
+        except Exception:
+            age_days = 0.0
+        recency = 0.5 ** (age_days / 45.0)
+        return (
+            rrf[mid] * (0.4 + 0.6 * conf) * (1.0 + 0.15 * math.log1p(reads)) * (0.3 + 0.7 * recency)
+        )
+
+    ordered = sorted((m for m in rrf if m in rows), key=_score, reverse=True)
+
+    out = []
+    for mid in ordered:
+        r = rows[mid]
+        if project and r["project"] != project:
+            continue
+        if (
+            not project
+            and allowed is not None
+            and r["project"] is not None
+            and r["project"] not in allowed
+        ):
+            continue
+        if max_distance is not None and distances.get(mid, 1e9) > max_distance:
+            continue
+        if confidence_min is not None and (r["confidence"] or 0.0) < confidence_min:
+            continue
+        if tag and tag not in json.loads(r["tags"]):
+            continue
+        if type and r["type"] != type:
+            continue
+        if agent and r["agent_id"] != agent:
+            continue
+        out.append(r)
+        if len(out) >= limit:
+            break
+    return [_row_to_entry(r) for r in out]
 
 
 @router.get("", response_model=list[MemoryEntry], summary="List memory with optional filters")
@@ -560,6 +637,8 @@ async def patch_memory(
                     "INSERT INTO memory_vec (id, embedding) VALUES (?,?)",
                     (entry_id, json.dumps(vec)),
                 )
+            if body.content is not None:
+                fts_index(db, entry_id, body.content)
             db.execute(
                 f"UPDATE memory SET {', '.join(set_parts)} WHERE id=?",
                 [*updates.values(), entry_id],

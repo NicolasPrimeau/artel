@@ -23,7 +23,29 @@ def get_db(path: str | None = None) -> sqlite3.Connection:
         _conn.executescript(SCHEMA)
         _migrate(_conn)
         _init_vec_table(_conn)
+        _init_fts_table(_conn)
     return _conn
+
+
+def _init_fts_table(conn: sqlite3.Connection) -> None:
+    # keyword half of hybrid retrieval: BM25 over content via FTS5 (built into SQLite —
+    # still zero external dependencies). Backfills any rows written before the index existed.
+    conn.execute("""
+        CREATE VIRTUAL TABLE IF NOT EXISTS memory_fts
+        USING fts5(id UNINDEXED, content)
+    """)
+    conn.execute("""
+        INSERT INTO memory_fts (id, content)
+        SELECT m.id, m.content FROM memory m
+        WHERE m.id NOT IN (SELECT id FROM memory_fts)
+    """)
+    conn.commit()
+
+
+def fts_index(db: sqlite3.Connection, entry_id: str, content: str) -> None:
+    """Insert or refresh one memory's row in the keyword index."""
+    db.execute("DELETE FROM memory_fts WHERE id=?", (entry_id,))
+    db.execute("INSERT INTO memory_fts (id, content) VALUES (?, ?)", (entry_id, content))
 
 
 def norm_project(p: str | None) -> str | None:

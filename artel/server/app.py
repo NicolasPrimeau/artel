@@ -27,6 +27,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 from ..mcp.server import mcp as mcp_server
 from ..store.db import get_db, instance_id
+from ..store.embeddings import embeddings_ok
 from .auth import _SESSION_TTL, verify_ui_session
 from .config import settings
 from .feed_poller import run_poller
@@ -299,7 +300,7 @@ async def favicon():
 async def health():
     try:
         get_db().execute("SELECT 1").fetchone()
-        return {"status": "ok"}
+        return {"status": "ok", "embeddings": "ok" if embeddings_ok() else "unavailable"}
     except Exception as e:
         return JSONResponse({"status": "error", "detail": str(e)}, status_code=503)
 

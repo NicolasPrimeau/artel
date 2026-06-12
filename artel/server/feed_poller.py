@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 import feedparser
 import httpx
 
-from ..store.db import get_db, instance_id
+from ..store.db import fts_index, get_db, instance_id
 from ..store.embeddings import embed
 from .broadcast import broadcast
 from .models import EventEntry, new_id
@@ -69,6 +69,7 @@ def _write_memory(agent_id: str, project: str, content: str, tags: list[str]) ->
                 "INSERT INTO memory_vec (id, embedding) VALUES (?, ?)",
                 (entry_id, json.dumps(vec)),
             )
+        fts_index(db, entry_id, content)
         db.execute(
             "INSERT INTO events (id, type, agent_id, payload) VALUES (?,?,?,?)",
             (event_id, "memory.written", agent_id, json.dumps({"memory_id": entry_id})),
@@ -156,9 +157,11 @@ def _replicate_entry(db, feed: dict, meta: dict, content: str, tags: list, self_
                     origin,
                 ),
             )
-            db.execute(
-                "INSERT INTO memory_vec (id, embedding) VALUES (?, ?)", (gid, json.dumps(vec))
-            )
+            if vec is not None:
+                db.execute(
+                    "INSERT INTO memory_vec (id, embedding) VALUES (?, ?)", (gid, json.dumps(vec))
+                )
+            fts_index(db, gid, content)
             event_type = "memory.written"
             db.execute(
                 "INSERT INTO events (id, type, agent_id, payload) VALUES (?,?,?,?)",
@@ -184,10 +187,13 @@ def _replicate_entry(db, feed: dict, meta: dict, content: str, tags: list, self_
                     (etype, content, conf, parents, tags_json, incoming_upd, incoming_ver, gid),
                 )
                 db.execute("DELETE FROM memory_vec WHERE id=?", (gid,))
-                db.execute(
-                    "INSERT INTO memory_vec (id, embedding) VALUES (?, ?)",
-                    (gid, json.dumps(embed(content))),
-                )
+                new_vec = embed(content)
+                if new_vec is not None:
+                    db.execute(
+                        "INSERT INTO memory_vec (id, embedding) VALUES (?, ?)",
+                        (gid, json.dumps(new_vec)),
+                    )
+                fts_index(db, gid, content)
                 event_type = "memory.written"
             db.execute(
                 "INSERT INTO events (id, type, agent_id, payload) VALUES (?,?,?,?)",
