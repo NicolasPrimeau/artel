@@ -2457,8 +2457,7 @@ async function openProjDash(projName){
   $('dash-proj-taskcounts').textContent='';
   const qp=projName?'project='+encodeURIComponent(projName):'';
   try{
-    const [openTasks,allTasks,mems,msgs]=await Promise.all([
-      req('GET','/tasks?status=open&limit=10'+(qp?'&'+qp:'')).catch(()=>[]),
+    const [allTasks,mems,msgs]=await Promise.all([
       req('GET','/tasks?limit=200'+(qp?'&'+qp:'')).catch(()=>[]),
       req('GET','/memory?limit=5'+(qp?'&'+qp:'')).catch(()=>[]),
       req('GET','/messages?limit=100').catch(()=>[]),
@@ -2467,16 +2466,18 @@ async function openProjDash(projName){
     const claimed=allTasks.filter(t=>t.status==='claimed').length;
     const done=allTasks.filter(t=>t.status==='completed').length;
     $('dash-proj-taskcounts').textContent=`· ${open} open · ${claimed} active · ${done} done`;
-    $('dash-proj-tasks').innerHTML=openTasks.length
-      ?openTasks.slice(0,5).map(t=>`
+    const live=allTasks.filter(t=>t.status==='open'||t.status==='claimed')
+      .sort((a,b)=>(b.updated_at||'').localeCompare(a.updated_at||''));
+    $('dash-proj-tasks').innerHTML=live.length
+      ?live.slice(0,5).map(t=>`
         <div class="dash-row">
-          <span><span class="pri ${t.priority}">${t.priority}</span>&nbsp;${esc(t.title)}</span>
+          <span><span class="pill">${t.status==='claimed'?'active':'open'}</span>&nbsp;${esc(t.title)}</span>
           <div class="dash-row-meta">
-            <span>${t.assigned_to?'claimed by '+esc(t.assigned_to):'unclaimed'}</span>
+            <span>${t.assigned_to?esc(t.assigned_to):'unclaimed'}</span>
             <span>${relTime(t.updated_at)}</span>
           </div>
         </div>`).join('')
-      :emptyState('◎','no open tasks');
+      :emptyState('◎','no open or active tasks');
     $('dash-proj-mem').innerHTML=mems.length
       ?mems.slice(0,3).map(e=>`
         <div class="dash-row">
