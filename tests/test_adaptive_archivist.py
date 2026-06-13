@@ -219,7 +219,9 @@ class TestReadCountTracking:
         row = db_mod._conn.execute("SELECT read_count FROM memory WHERE id=?", (eid,)).fetchone()
         assert row["read_count"] == 0
 
-    async def test_search_does_not_increment_read_count(self, client):
+    async def test_search_hit_increments_read_count(self, client):
+        # agents consume content straight from search responses — a hit IS a read,
+        # and the heat protects the entry from decay
         r = await client.post(
             "/memory",
             json={
@@ -238,8 +240,11 @@ class TestReadCountTracking:
 
         import artel.store.db as db_mod
 
-        row = db_mod._conn.execute("SELECT read_count FROM memory WHERE id=?", (eid,)).fetchone()
-        assert row["read_count"] == 0
+        row = db_mod._conn.execute(
+            "SELECT read_count, last_read_at FROM memory WHERE id=?", (eid,)
+        ).fetchone()
+        assert row["read_count"] == 1
+        assert row["last_read_at"] is not None
 
     async def test_delta_does_not_increment_read_count(self, client):
         r = await client.post(

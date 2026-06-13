@@ -395,6 +395,45 @@ async def test_search_vector_respects_agent_scope(client, monkeypatch):
     assert r.json() == []
 
 
+async def test_search_hits_count_as_reads(client, monkeypatch):
+    _patch_embed(monkeypatch, lambda text: None)
+
+    r = await client.post("/memory", json=_payload("zugzwang endgame heuristic"), headers=HEADERS)
+    mid = r.json()["id"]
+    await client.post("/memory", json=_payload("unrelated grocery list"), headers=HEADERS)
+
+    r = await client.get("/memory/search", params={"q": "zugzwang"}, headers=HEADERS)
+    assert [e["id"] for e in r.json()] == [mid]
+    await client.get("/memory/search", params={"q": "zugzwang"}, headers=HEADERS2)
+
+    import artel.store.db as db_mod
+
+    def _heat():
+        row = (
+            db_mod.get_db()
+            .execute(
+                "SELECT read_count, last_read_at, distinct_reader_count FROM memory WHERE id=?",
+                (mid,),
+            )
+            .fetchone()
+        )
+        return row["read_count"], row["last_read_at"], row["distinct_reader_count"]
+
+    reads, last_read, distinct = _heat()
+    assert reads == 2  # one per search hit
+    assert last_read is not None
+    assert distinct == 2
+
+    await client.get("/memory/search", params={"q": "grocery"}, headers=HEADERS)
+    assert _heat()[0] == 2  # a search that misses this entry is not a read of it
+
+    import artel.server.routes.memory as mem_routes
+
+    monkeypatch.setattr(mem_routes.settings, "archivist_agent_id", HEADERS2["x-agent-id"])
+    await client.get("/memory/search", params={"q": "zugzwang"}, headers=HEADERS2)
+    assert _heat()[0] == 2  # the archivist's curation searches never heat entries
+
+
 async def test_health_reports_embeddings_status(client, monkeypatch):
     import artel.server.app as app_mod
 

@@ -311,6 +311,27 @@ async def search_memory(
         out.append(r)
         if len(out) >= limit:
             break
+    if out and agent_id != settings.archivist_agent_id:
+        hit_ids = [r["id"] for r in out]
+        hit_placeholders = ",".join("?" * len(hit_ids))
+        with db:
+            db.execute(
+                f"UPDATE memory SET read_count = read_count + 1, "
+                f"last_read_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') "
+                f"WHERE id IN ({hit_placeholders})",
+                hit_ids,
+            )
+            for hid in hit_ids:
+                cur = db.execute(
+                    "INSERT OR IGNORE INTO memory_reads (memory_id, agent_id) VALUES (?, ?)",
+                    (hid, agent_id),
+                )
+                if cur.rowcount > 0:
+                    db.execute(
+                        "UPDATE memory SET distinct_reader_count = distinct_reader_count + 1 "
+                        "WHERE id=?",
+                        (hid,),
+                    )
     return [_row_to_entry(r) for r in out]
 
 
