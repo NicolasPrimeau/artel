@@ -30,6 +30,7 @@ dependencies = [
     "zeroconf>=0.136.0",
     "python-jose>=3.3.0",
     "feedparser>=6.0.12",
+    "claude-agent-sdk>=0.2.100",
 ]
 
 [project.urls]

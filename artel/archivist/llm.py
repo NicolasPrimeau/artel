@@ -1,3 +1,5 @@
+import os
+
 from .config import settings
 
 _anthropic_client = None
@@ -9,11 +11,17 @@ def _api_key() -> str:
         return settings.archivist_api_key
     if settings.archivist_provider == "anthropic":
         return settings.anthropic_api_key
+    if settings.archivist_provider == "claude-sdk":
+        return os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "")
     return ""
 
 
 def _default_model() -> str:
-    return "claude-sonnet-4-6" if settings.archivist_provider == "anthropic" else "gpt-4o"
+    if settings.archivist_provider == "anthropic":
+        return "claude-sonnet-4-6"
+    if settings.archivist_provider == "claude-sdk":
+        return "haiku"
+    return "gpt-4o"
 
 
 def is_configured() -> bool:
@@ -23,6 +31,24 @@ def is_configured() -> bool:
 async def complete(system: str, user: str, max_tokens: int = 2048) -> str:
     model = settings.archivist_model or _default_model()
     key = _api_key()
+
+    if settings.archivist_provider == "claude-sdk":
+        from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
+
+        opts = ClaudeAgentOptions(
+            model=model,
+            system_prompt=system,
+            max_turns=1,
+            allowed_tools=[],
+            tools=[],
+        )
+        result = None
+        async for msg in query(prompt=user, options=opts):
+            if isinstance(msg, ResultMessage):
+                result = msg
+        if result is None or getattr(result, "is_error", False):
+            raise RuntimeError(f"claude-sdk: {getattr(result, 'result', 'no result')}")
+        return result.result or ""
 
     if settings.archivist_provider == "anthropic":
         import anthropic

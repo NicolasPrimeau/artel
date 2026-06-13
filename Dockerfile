@@ -17,7 +17,16 @@ ENV PATH="/app/.venv/bin:$PATH"
 ENV MCP_AGENT_ID="mcp" \
     ARTEL_URL="http://localhost:8000"
 
-RUN useradd --no-create-home --uid 1000 artel && chown -R artel /app && chmod +x /app/entrypoint.sh
+# Claude Code CLI (native binary) for the archivist's claude-sdk provider; no token in
+# the image, inert unless ARCHIVIST_PROVIDER=claude-sdk
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
+    && curl -fsSL https://claude.ai/install.sh | bash \
+    && install -m 0755 /root/.local/bin/claude /usr/local/bin/claude \
+    && apt-get purge -y curl && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+
+ENV DISABLE_AUTOUPDATER=1
+
+RUN useradd --create-home --uid 1000 artel && chown -R artel /app && chmod +x /app/entrypoint.sh
 USER artel
 
 EXPOSE 8000

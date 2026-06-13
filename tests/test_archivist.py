@@ -60,6 +60,37 @@ class TestLlmConfig:
             s.archivist_provider = "openai"
             assert _default_model() == "gpt-4o"
 
+    def test_claude_sdk_configured_via_oauth_token(self, monkeypatch):
+        with patch("artel.archivist.llm.settings") as s:
+            s.archivist_api_key = ""
+            s.archivist_provider = "claude-sdk"
+            s.anthropic_api_key = ""
+            monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
+            assert not is_configured()
+            monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "tok")
+            assert is_configured()
+            assert _default_model() == "haiku"
+
+    async def test_claude_sdk_complete_returns_result_text(self, monkeypatch):
+        import claude_agent_sdk as sdk
+
+        from artel.archivist.llm import complete
+
+        async def fake_query(prompt, options):
+            assert options.max_turns == 1 and options.system_prompt == "sys"
+            msg = MagicMock(spec=sdk.ResultMessage)
+            msg.is_error = False
+            msg.result = "merged 3 entries"
+            yield msg
+
+        monkeypatch.setattr(sdk, "query", fake_query)
+        with patch("artel.archivist.llm.settings") as s:
+            s.archivist_provider = "claude-sdk"
+            s.archivist_model = ""
+            s.archivist_api_key = ""
+            out = await complete("sys", "user prompt")
+        assert out == "merged 3 entries"
+
 
 class TestPassiveMode:
     @pytest.fixture
