@@ -15,4 +15,16 @@ if [ -z "$MCP_REGISTRATION_KEY" ] && [ -n "$REGISTRATION_KEY" ]; then
     export MCP_REGISTRATION_KEY="$REGISTRATION_KEY"
 fi
 
+# Run the archivist alongside the server when it has an LLM key — it curates the
+# shared memory (merge, decay, promote) so project corpora don't grow unbounded.
+if [ -n "$ARCHIVIST_API_KEY" ] || [ -n "$ANTHROPIC_API_KEY" ]; then
+    (
+        sleep 20  # let the server come up first
+        while true; do
+            python -m artel.archivist || true
+            sleep 60  # crashed or exited: back off, then resume curating
+        done
+    ) &
+fi
+
 exec "$@"
