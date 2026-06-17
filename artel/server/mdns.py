@@ -22,6 +22,7 @@ def _local_ip() -> str:
 
 
 def _make_info(port: int, instance_id: str, public_url: str) -> ServiceInfo:
+    instance_id = instance_id.strip() or socket.gethostname() or "artel"
     props = {
         "id": instance_id,
         "url": public_url or f"http://{_local_ip()}:{port}",

@@ -1,11 +1,16 @@
 import asyncio
+import socket
 
 from .config import settings
 from .mdns import MDNSService
 
 
 async def _run():
-    svc = MDNSService(settings.port)
+    svc = MDNSService(
+        settings.port,
+        instance_id=socket.gethostname() or "artel",
+        public_url=settings.public_url,
+    )
     await svc.start()
     print(f"mDNS: artel.local -> :{settings.port}", flush=True)
     await asyncio.Event().wait()
