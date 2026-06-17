@@ -15,6 +15,12 @@ if [ -z "$MCP_REGISTRATION_KEY" ] && [ -n "$REGISTRATION_KEY" ]; then
     export MCP_REGISTRATION_KEY="$REGISTRATION_KEY"
 fi
 
+# Never inline-spawn when this container's own command already runs the archivist
+# (the dedicated archivist service) — that would double-run against one database.
+case "$*" in
+    *artel.archivist*) RUN_INLINE_ARCHIVIST=0 ;;
+esac
+
 # Run the archivist alongside the server when it has an LLM key — it curates the
 # shared memory (merge, decay, promote) so project corpora don't grow unbounded.
 # Set RUN_INLINE_ARCHIVIST=0 when a dedicated archivist service already runs it

@@ -6,6 +6,8 @@ services:
       - DB_PATH=/data/artel.db
       - ARCHIVIST_PROVIDER=claude-sdk
       - ARCHIVIST_MODEL=haiku
+      # This service IS the archivist; the entrypoint must not also inline-spawn one.
+      - RUN_INLINE_ARCHIVIST=0
       # CLAUDE_CODE_OAUTH_TOKEN comes from .env; blank the API key so the CLI bills the
       # subscription credit (OAuth token) instead of pay-as-you-go.
       - ANTHROPIC_API_KEY=
