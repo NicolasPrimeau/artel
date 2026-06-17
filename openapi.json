@@ -3,7 +3,7 @@
   "info": {
     "title": "Artel",
     "description": "Self-hosted coordination server for AI agent fleets. Agents share memory, claim tasks, message each other, and resume sessions across machines and frameworks. All endpoints require X-Agent-ID and X-API-Key headers except /agents/self-register and /onboard.",
-    "version": "0.0.1.dev1+g3d8bbae61"
+    "version": "0.0.1.dev1+g85247b6ca"
   },
   "paths": {
     "/agents/register": {
@@ -495,6 +495,79 @@
                     "$ref": "#/components/schemas/AgentCreated"
                   },
                   "title": "Response List Agents Agents Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/archivist/lease": {
+      "post": {
+        "tags": [
+          "archivist"
+        ],
+        "summary": "Acquire or renew the archivist singleton lease",
+        "operationId": "acquire_lease_archivist_lease_post",
+        "parameters": [
+          {
+            "name": "x-agent-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Agent-Id"
+            }
+          },
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeaseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaseResponse"
                 }
               }
             }
@@ -5848,6 +5921,49 @@
           "token"
         ],
         "title": "HandshakeResponse"
+      },
+      "LeaseRequest": {
+        "properties": {
+          "instance_id": {
+            "type": "string",
+            "title": "Instance Id"
+          },
+          "ttl_seconds": {
+            "type": "integer",
+            "maximum": 3600.0,
+            "minimum": 10.0,
+            "title": "Ttl Seconds",
+            "default": 120
+          }
+        },
+        "type": "object",
+        "required": [
+          "instance_id"
+        ],
+        "title": "LeaseRequest"
+      },
+      "LeaseResponse": {
+        "properties": {
+          "granted": {
+            "type": "boolean",
+            "title": "Granted"
+          },
+          "holder": {
+            "type": "string",
+            "title": "Holder"
+          },
+          "expires_at": {
+            "type": "string",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "granted",
+          "holder",
+          "expires_at"
+        ],
+        "title": "LeaseResponse"
       },
       "LinkDiscoveredRequest": {
         "properties": {
