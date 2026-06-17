@@ -4,5 +4,19 @@ services:
       - artel-data:/data
     environment:
       - DB_PATH=/data/artel.db
+      - ARCHIVIST_PROVIDER=claude-sdk
+      - ARCHIVIST_MODEL=haiku
+      # CLAUDE_CODE_OAUTH_TOKEN comes from .env; blank the API key so the CLI bills the
+      # subscription credit (OAuth token) instead of pay-as-you-go.
+      - ANTHROPIC_API_KEY=
+
+  artel:
+    environment:
+      # A dedicated archivist service runs the curator; stop the server entrypoint
+      # from spawning a second one. RUN_INLINE_ARCHIVIST is honored by guarded images;
+      # blanking the key also suppresses the spawn on older images and keeps pay-as-you-go
+      # billing off the server (the archivist bills the SDK credit via its own service).
+      - RUN_INLINE_ARCHIVIST=0
+      - ANTHROPIC_API_KEY=
 
   watchtower: {}

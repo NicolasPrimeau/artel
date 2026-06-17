@@ -11,6 +11,8 @@ services:
       - DB_PATH=/data/artel.db
       - FASTEMBED_CACHE_PATH=/data/fastembed_cache
       - HF_HUB_DISABLE_XET_DOWNLOAD=1
+      # The dedicated archivist service curates memory; don't also spawn one inline.
+      - RUN_INLINE_ARCHIVIST=0
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
     healthcheck:

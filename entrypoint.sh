@@ -17,7 +17,9 @@ fi
 
 # Run the archivist alongside the server when it has an LLM key — it curates the
 # shared memory (merge, decay, promote) so project corpora don't grow unbounded.
-if [ -n "$ARCHIVIST_API_KEY" ] || [ -n "$ANTHROPIC_API_KEY" ]; then
+# Set RUN_INLINE_ARCHIVIST=0 when a dedicated archivist service already runs it
+# (e.g. docker-compose), so two archivists don't race on the same database.
+if [ "${RUN_INLINE_ARCHIVIST:-1}" != "0" ] && { [ -n "$ARCHIVIST_API_KEY" ] || [ -n "$ANTHROPIC_API_KEY" ] || [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; }; then
     (
         sleep 20  # let the server come up first
         while true; do

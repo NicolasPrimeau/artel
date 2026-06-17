@@ -212,6 +212,14 @@ class ArtelClient:
         r = await self._request("GET", "/agents")
         return r.json()
 
+    async def acquire_lease(self, instance_id: str, ttl_seconds: int) -> dict:
+        r = await self._request(
+            "POST",
+            "/archivist/lease",
+            json={"instance_id": instance_id, "ttl_seconds": ttl_seconds},
+        )
+        return r.json()
+
     async def stream_events(self, event_type: str | None = None):
         params = {}
         if event_type:

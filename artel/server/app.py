@@ -34,6 +34,7 @@ from .feed_poller import run_poller
 from .jwt_utils import verify_token
 from .mdns import MDNSService
 from .routes.agents import router as agents_router
+from .routes.archivist import router as archivist_router
 from .routes.events import router as events_router
 from .routes.feeds import router as feeds_router
 from .routes.logs import router as logs_router
@@ -206,6 +207,7 @@ app = FastAPI(
 )
 
 app.include_router(agents_router)
+app.include_router(archivist_router)
 app.include_router(oauth_router)
 app.include_router(onboard_router)
 app.include_router(memory_router)

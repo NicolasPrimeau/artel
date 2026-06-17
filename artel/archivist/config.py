@@ -13,6 +13,8 @@ class ArchivistSettings(BaseSettings):
     archivist_api_key: str = ""
     archivist_base_url: str = ""
     synthesis_interval: int = 3600
+    lease_ttl_seconds: int = 120
+    lease_renew_seconds: int = 40
     conflict_threshold: float = 0.92
     directive_conflict_threshold: float = 0.85
     decay_rate: float = 0.9

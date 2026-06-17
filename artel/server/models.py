@@ -316,3 +316,14 @@ class HandshakeResponse(BaseModel):
 class LinkDiscoveredRequest(BaseModel):
     instance_id: str
     project: ProjectName = None
+
+
+class LeaseRequest(BaseModel):
+    instance_id: str
+    ttl_seconds: int = Field(default=120, ge=10, le=3600)
+
+
+class LeaseResponse(BaseModel):
+    granted: bool
+    holder: str
+    expires_at: str
