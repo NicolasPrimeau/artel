@@ -171,6 +171,6 @@ jobs:
           else
             IMAGE="ghcr.io/nicolasprimeau/artel:edge"
           fi
-          flyctl deploy --app artel-sandbox --image "$IMAGE" --yes
+          flyctl deploy --app artel-sandbox --image "$IMAGE" --yes --wait-timeout=10m
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
