@@ -125,9 +125,16 @@ So a fresh, grounded note that nothing disputes scores well; the moment somethin
 
 **Why you can trust it.** A compiled note carries the source SHA it was built from. Freshness is a hash comparison, not a judgement call: `POST /compile/check` answers *fresh / stale / unknown* per symbol. Fresh means the code hasn't moved since the note was built — you can act on the note without re-reading the code. That's the whole point: trustworthy enough to *not* check.
 
+**Setup is one line — or just ask.** Tell any connected agent *"set up compile mode"* and it calls the `compile_setup` MCP tool, which hands back the installer. Or run it yourself from the repo root:
+
 ```bash
-# one-time: install the pre-commit hook
-ln -s ../../scripts/hooks/pre-commit .git/hooks/pre-commit
+# installs a pre-commit hook: a single self-contained, stdlib-only Python file.
+# no `pip install` in your repo, and it's a safe no-op until creds are set.
+curl -fsSL "$ARTEL/compile/install.sh" | sh
+export ARTEL_AGENT_ID=myagent ARTEL_AGENT_KEY=… ARTEL_PROJECT=myrepo
+
+# seed the whole repo once; later commits compile only what changed
+python3 "$(git rev-parse --show-toplevel)/.git/hooks/artel_compile.py" --all
 
 # inspect compile health and the graph
 curl "$ARTEL/compile/stale?project=myrepo"        # notes whose code moved out from under them

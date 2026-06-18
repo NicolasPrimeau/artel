@@ -303,6 +303,11 @@ INBOX CRON (first session only):
 - Call inbox_cron_setup() to get instructions for scheduling automatic inbox checks.
 - This lets other agents reach you even when you're not actively running.
 
+COMPILE MODE (ground memory in code):
+- If asked to "set up compile mode" (or to stop memory about code from rotting), call compile_setup().
+- It returns the one command to install a pre-commit hook that compiles changed source into grounded,
+  build-invalidated memory. Use compile_status()/compile_stale() to inspect it afterward.
+
 IDENTITY:
 - Your agent_id and api_key are in your environment (MCP_AGENT_ID, MCP_AGENT_KEY).
 - All agents share the same memory, tasks, and message bus. What you write, others can read.""",
@@ -869,6 +874,41 @@ async def graph_link(
     except _HTTPX_ERRORS as e:
         return _err(e)
     return f"linked {src} -{rel}-> {dst}"
+
+
+@mcp.tool(
+    structured_output=True,
+    annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False),
+)
+def compile_setup(project: str | None = None) -> str:
+    """Set up compile mode for the current git repo — ground this fleet's memory in source code.
+
+    Compile mode adds a pre-commit hook that, on every commit, compiles changed source files into
+    `compiled` memory: grounded descriptions of what the code IS, stamped with its content hash so
+    they recompile instead of decaying. Run this once per repo. Ask me "set up compile mode" anytime.
+
+    The hook is a single self-contained, stdlib-only Python file — no `pip install` needed, and it is
+    a safe no-op until ARTEL_AGENT_ID/ARTEL_AGENT_KEY (or MCP_AGENT_ID/MCP_AGENT_KEY) are present.
+
+    Args:
+        project: Project to scope compiled memory to. Defaults to MCP_PROJECT if set.
+    """
+    url = settings.artel_url.rstrip("/")
+    agent_id = _agent_id.get(settings.mcp_agent_id)
+    proj = settings.resolve_project(project)
+    scope = f" Compiled memory is scoped to project {proj!r}." if proj else ""
+    proj_env = f"\n  export ARTEL_PROJECT={proj}" if proj else ""
+    return (
+        "To set up compile mode in the current repository, run these from the repo root:\n\n"
+        f"  curl -fsSL {url}/compile/install.sh | sh\n"
+        f"  export ARTEL_AGENT_ID={agent_id}{proj_env}\n"
+        "  export ARTEL_AGENT_KEY=<this agent's api key>\n\n"
+        "Then seed the whole repo once (later commits compile only what changed):\n\n"
+        '  python3 "$(git rev-parse --show-toplevel)/.git/hooks/artel_compile.py" --all\n\n'
+        f"The installer writes a self-contained pre-commit hook that POSTs to {url}/compile as "
+        f"{agent_id}.{scope} Without the env vars the hook is a safe no-op, so it never blocks a commit. "
+        "Check status anytime with compile_status(); list drifted notes with compile_stale()."
+    )
 
 
 # ── Projects & Agents ────────────────────────────────────────────────────────

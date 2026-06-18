@@ -1,8 +1,10 @@
 import json
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi.responses import PlainTextResponse
 
+from ...compile.install import installer_sh, standalone_hook
 from ...store import graph as G
 from ...store.db import fts_index, get_db, instance_id, norm_project
 from ...store.embeddings import embed
@@ -14,6 +16,7 @@ from ..auth import (
     enforce_no_phantom_project,
 )
 from ..broadcast import broadcast
+from ..config import settings
 from ..models import (
     CompileCheckRequest,
     CompileCheckResult,
@@ -31,6 +34,20 @@ router = APIRouter(tags=["compile"])
 COMPILED = "compiled"
 TAG_COMPILED = "compiled"
 EVENT_COMPILED = "memory.compiled"
+
+
+def _base_url(request: Request) -> str:
+    return settings.public_url or str(request.base_url).rstrip("/")
+
+
+@router.get("/compile/install.sh", response_class=PlainTextResponse, include_in_schema=False)
+async def compile_install(request: Request):
+    return installer_sh(_base_url(request))
+
+
+@router.get("/compile/hook.py", response_class=PlainTextResponse, include_in_schema=False)
+async def compile_hook(request: Request):
+    return standalone_hook(_base_url(request))
 
 
 def _now() -> str:

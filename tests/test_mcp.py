@@ -468,3 +468,10 @@ async def test_graph_link_and_neighbors_via_mcp(mcp):
     nb = await mcp.graph_neighbors(a)
     assert "viability" in nb
     assert "corroborates" in nb
+
+
+async def test_compile_setup_returns_install_command(mcp):
+    result = mcp.compile_setup()
+    assert "/compile/install.sh" in result
+    assert "ARTEL_AGENT_ID" in result
+    assert "artel_compile.py" in result

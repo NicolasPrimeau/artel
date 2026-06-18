@@ -159,3 +159,50 @@ class AgentHandle:
     async def complete_task_raw(self, task_id: str) -> tuple[int, dict]:
         r = await self._http.post(f"/tasks/{task_id}/complete")
         return r.status_code, r.json()
+
+    async def compile(
+        self, path: str, source: str, commit: str, project: str | None = None
+    ) -> dict:
+        from artel.compile import compile_source
+
+        units = [
+            {
+                "path": u.path,
+                "symbol": u.symbol,
+                "lang": u.lang,
+                "kind": u.kind,
+                "start_line": u.start_line,
+                "end_line": u.end_line,
+                "sha": u.sha,
+                "description": u.description,
+                "deps": [{"kind": d.kind, "name": d.name} for d in u.deps],
+            }
+            for u in compile_source(path, source)
+        ]
+        r = await self._http.post(
+            "/compile", json={"project": project, "commit": commit, "units": units}
+        )
+        r.raise_for_status()
+        return r.json()
+
+    async def compile_check(self, project: str | None, units: list[dict]) -> list[dict]:
+        r = await self._http.post("/compile/check", json={"project": project, "units": units})
+        r.raise_for_status()
+        return r.json()
+
+    async def compile_stale(self, **kwargs) -> list[dict]:
+        r = await self._http.get("/compile/stale", params=kwargs)
+        r.raise_for_status()
+        return r.json()
+
+    async def graph_node(self, node_id: str) -> dict:
+        r = await self._http.get(f"/graph/{node_id}")
+        r.raise_for_status()
+        return r.json()
+
+    async def graph_edge(self, src: str, dst: str, rel: str, project: str | None = None) -> dict:
+        r = await self._http.post(
+            "/graph/edge", json={"project": project, "src": src, "dst": dst, "rel": rel}
+        )
+        r.raise_for_status()
+        return r.json()

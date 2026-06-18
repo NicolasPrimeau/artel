@@ -205,6 +205,28 @@ async def test_compiled_excluded_from_decay(client):
     assert "c1" not in patched
 
 
+@pytest.mark.asyncio
+async def test_installer_script_is_served(client):
+    r = await client.get("/compile/install.sh", headers=HEADERS)
+    assert r.status_code == 200
+    body = r.text
+    assert "git rev-parse --show-toplevel" in body
+    assert "/compile/hook.py" in body
+    assert ".git/hooks/artel_compile.py" in body
+
+
+@pytest.mark.asyncio
+async def test_served_hook_is_self_contained_valid_python(client):
+    r = await client.get("/compile/hook.py", headers=HEADERS)
+    assert r.status_code == 200
+    src = r.text
+    assert "def compile_source" in src
+    assert "urllib.request" in src
+    assert "/compile" in src
+    compile(src, "artel_compile.py", "exec")
+    assert "import artel" not in src
+
+
 def test_module_shape_sha_stable_across_body_edits():
     v1 = {u.symbol: u for u in compile_source("pkg/m.py", SRC_V1)}
     v2 = {u.symbol: u for u in compile_source("pkg/m.py", SRC_V2)}
