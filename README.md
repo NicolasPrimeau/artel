@@ -113,7 +113,17 @@ A pre-commit hook walks changed files with a deterministic AST compiler (no LLM)
 
 Invalidation propagates **backward along `relies_on`**, exactly like `gcc -MMD` incremental builds: change `g`, and every compiled note that relies on `g` is marked stale, transitively. The module anchor hashes the file's *shape* (its sorted imports and top-level symbols), not its bytes, so editing one function body doesn't restale the whole module.
 
-**Viability is connectivity — derived, never stored.** There's no "groundedness" score. An ungrounded memory is just a bare node on the graph, and a bare node is forgettable. The more a memory is connected — fresh groundings, corroborations, things that rely on it — the more viable it is; contradictions and stale groundings pull it down. `GET /graph/:id` returns the live computation.
+**Viability is connectivity — derived, never stored.** There's no "groundedness" score. An ungrounded memory is just a bare node on the graph, and a bare node is forgettable. The more a memory is connected — fresh groundings, corroborations, things that rely on it — the more viable it is; contradictions and stale groundings pull it down:
+
+```
+raw   = fresh_grounds + 0.5·backlinks + 0.3·corroborates − contradictions − 0.5·stale_grounds
+score = 0           if raw ≤ 0
+        1 − 2^(−raw) otherwise
+```
+
+So a fresh, grounded note that nothing disputes scores well; the moment something contradicts it the score collapses toward zero. The computation is live — `GET /graph/:id` recomputes it from the current edges every time, so nothing can go stale behind your back.
+
+**Why you can trust it.** A compiled note carries the source SHA it was built from. Freshness is a hash comparison, not a judgement call: `POST /compile/check` answers *fresh / stale / unknown* per symbol. Fresh means the code hasn't moved since the note was built — you can act on the note without re-reading the code. That's the whole point: trustworthy enough to *not* check.
 
 ```bash
 # one-time: install the pre-commit hook
@@ -124,7 +134,7 @@ curl "$ARTEL/compile/stale?project=myrepo"        # notes whose code moved out f
 curl "$ARTEL/graph/$NODE_ID"                       # node, edges, live viability
 ```
 
-Pinned by tests in `tests/test_compile.py`.
+Every property above — SHA freshness, `relies_on` invalidation, module-shape stability across body edits, viability collapsing on contradiction, compiled memory never decaying or merging — is pinned by `tests/test_compile.py`. The compiler is deterministic and LLM-free, so the tests are exact, not probabilistic.
 
 ---
 

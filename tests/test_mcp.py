@@ -415,3 +415,56 @@ async def test_memory_update_without_version_is_last_write_wins(mcp):
     await mcp.memory_update(entry_id, confidence=0.7)
     result = await mcp.memory_update(entry_id, confidence=0.2)
     assert "conflict" not in result.lower()
+
+
+_COMPILE_SRC = "def g(x):\n    return x + 1\n\n\ndef f(y):\n    return g(y) * 2\n"
+
+
+def _compile_payload(commit="c1"):
+    from artel.compile import compile_source
+
+    units = compile_source("pkg/m.py", _COMPILE_SRC)
+    return {
+        "commit": commit,
+        "units": [
+            {
+                "path": u.path,
+                "symbol": u.symbol,
+                "lang": u.lang,
+                "kind": u.kind,
+                "start_line": u.start_line,
+                "end_line": u.end_line,
+                "sha": u.sha,
+                "description": u.description,
+                "deps": [{"kind": d.kind, "name": d.name} for d in u.deps],
+            }
+            for u in units
+        ],
+    }
+
+
+async def test_compile_status_and_stale_via_mcp(mcp):
+    c = mcp._http()
+    r = await c.post("/compile", json=_compile_payload())
+    assert r.status_code == 201, r.text
+
+    status = await mcp.compile_status()
+    assert "compiled node" in status
+    assert "stale" in status
+
+    stale = await mcp.compile_stale()
+    assert "No stale" in stale
+
+
+async def test_graph_link_and_neighbors_via_mcp(mcp):
+    c = mcp._http()
+    await c.post("/compile", json=_compile_payload())
+    rows = (await c.get("/memory", params={"type": "compiled"})).json()
+    a, b = rows[0]["id"], rows[1]["id"]
+
+    link = await mcp.graph_link(a, b, "corroborates")
+    assert "linked" in link
+
+    nb = await mcp.graph_neighbors(a)
+    assert "viability" in nb
+    assert "corroborates" in nb

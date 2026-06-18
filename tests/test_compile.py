@@ -46,6 +46,26 @@ def _payload(path, source, project="proj", commit="c1"):
     }
 
 
+def _one(u, commit="c2"):
+    return {
+        "project": "proj",
+        "commit": commit,
+        "units": [
+            {
+                "path": u.path,
+                "symbol": u.symbol,
+                "lang": u.lang,
+                "kind": u.kind,
+                "start_line": u.start_line,
+                "end_line": u.end_line,
+                "sha": u.sha,
+                "description": u.description,
+                "deps": [{"kind": d.kind, "name": d.name} for d in u.deps],
+            }
+        ],
+    }
+
+
 async def _join(client, project="proj"):
     await client.post(f"/projects/{project}/join", headers=HEADERS)
 
@@ -183,6 +203,118 @@ async def test_compiled_excluded_from_decay(client):
     patched = {p[0] for p in stub.patched}
     assert "m1" in patched
     assert "c1" not in patched
+
+
+def test_module_shape_sha_stable_across_body_edits():
+    v1 = {u.symbol: u for u in compile_source("pkg/m.py", SRC_V1)}
+    v2 = {u.symbol: u for u in compile_source("pkg/m.py", SRC_V2)}
+    assert v1[""].sha == v2[""].sha
+    assert v1["g"].sha != v2["g"].sha
+    assert v1["f"].sha == v2["f"].sha
+
+
+def test_non_python_file_compiles_to_one_generic_unit():
+    units = compile_source("docs/notes.md", "# Title\n\nsome prose\n")
+    assert len(units) == 1
+    u = units[0]
+    assert u.symbol == ""
+    assert u.kind == "file"
+    assert u.lang == "markdown"
+    assert "No compiler frontend" in u.description
+
+
+def test_python_syntax_error_falls_back_without_raising():
+    units = compile_source("pkg/broken.py", "def f(:\n    pass\n")
+    assert len(units) == 1
+    assert units[0].kind == "file"
+    assert units[0].lang == "python"
+    assert units[0].sha
+
+
+@pytest.mark.asyncio
+async def test_contradiction_drops_viability_on_both_ends(client):
+    await _join(client)
+    await client.post("/compile", json=_payload("pkg/m.py", SRC_V1), headers=HEADERS)
+    rows = (
+        await client.get("/memory", params={"type": "compiled", "project": "proj"}, headers=HEADERS)
+    ).json()
+    a, b = rows[0]["id"], rows[1]["id"]
+
+    base = (await client.get(f"/graph/{a}", headers=HEADERS)).json()["viability"]
+    assert base["contradictions"] == 0
+    assert base["score"] > 0
+
+    await client.post(
+        "/graph/edge",
+        json={"project": "proj", "src": a, "dst": b, "rel": "contradicts"},
+        headers=HEADERS,
+    )
+
+    va = (await client.get(f"/graph/{a}", headers=HEADERS)).json()["viability"]
+    vb = (await client.get(f"/graph/{b}", headers=HEADERS)).json()["viability"]
+    assert va["contradictions"] == 1
+    assert vb["contradictions"] == 1
+    assert va["score"] < base["score"]
+    assert va["score"] == 0.0
+
+
+@pytest.mark.asyncio
+async def test_invalidated_node_reports_stale_grounds_and_zero_score(client):
+    await _join(client)
+    await client.post("/compile", json=_payload("pkg/m.py", SRC_V1), headers=HEADERS)
+
+    g_only = next(u for u in compile_source("pkg/m.py", SRC_V2) if u.symbol == "g")
+    await client.post("/compile", json=_one(g_only, commit="c2"), headers=HEADERS)
+
+    stale_rows = (
+        await client.get("/compile/stale", params={"project": "proj"}, headers=HEADERS)
+    ).json()
+    f_node = next(m for m in stale_rows if "def f" in m["content"])
+    v = (await client.get(f"/graph/{f_node['id']}", headers=HEADERS)).json()["viability"]
+    assert v["stale_grounds"] >= 1
+    assert v["fresh_grounds"] == 0
+    assert v["score"] == 0.0
+
+
+@pytest.mark.asyncio
+async def test_module_node_survives_a_body_only_recompile(client):
+    await _join(client)
+    await client.post("/compile", json=_payload("pkg/m.py", SRC_V1), headers=HEADERS)
+
+    g_only = next(u for u in compile_source("pkg/m.py", SRC_V2) if u.symbol == "g")
+    await client.post("/compile", json=_one(g_only, commit="c2"), headers=HEADERS)
+
+    rows = (
+        await client.get("/memory", params={"type": "compiled", "project": "proj"}, headers=HEADERS)
+    ).json()
+    module = next(m for m in rows if "SHAPE" in m["content"])
+    assert module["stale"] is False
+
+
+@pytest.mark.asyncio
+async def test_compiled_is_never_merged():
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from artel.archivist import conflict
+
+    c = MagicMock()
+    c.get_memory = AsyncMock(
+        return_value={
+            "id": "c1",
+            "type": "compiled",
+            "agent_id": "a",
+            "content": "x",
+            "tags": [],
+            "project": None,
+            "parents": [],
+        }
+    )
+    c.search_memory = AsyncMock(return_value=[])
+    c.write_memory = AsyncMock()
+    with patch("artel.archivist.conflict.is_configured", return_value=True):
+        await conflict.check_and_merge("c1", c)
+    c.search_memory.assert_not_called()
+    c.write_memory.assert_not_called()
 
 
 @pytest.mark.asyncio
