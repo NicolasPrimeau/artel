@@ -18,7 +18,7 @@ async def check_and_merge(entry_id: str, client: ArtelClient) -> None:
 
     entry = await client.get_memory(entry_id)
 
-    if entry.get("type") == "directive":
+    if entry.get("type") in ("directive", "compiled"):
         return
 
     local = instance_id()
@@ -31,7 +31,7 @@ async def check_and_merge(entry_id: str, client: ArtelClient) -> None:
 
     similar = await client.search_memory(entry["content"], limit=6, max_distance=_MAX_DISTANCE)
 
-    conflicts = [s for s in similar if s["id"] != entry_id]
+    conflicts = [s for s in similar if s["id"] != entry_id and s.get("type") != "compiled"]
 
     if not conflicts:
         return

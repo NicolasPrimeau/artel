@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS agents (
 
 CREATE TABLE IF NOT EXISTS memory (
     id          TEXT PRIMARY KEY,
-    type        TEXT NOT NULL CHECK (type IN ('memory','doc','directive','skill')),
+    type        TEXT NOT NULL CHECK (type IN ('memory','doc','directive','skill','compiled')),
     agent_id    TEXT NOT NULL,
     project     TEXT,
     scope       TEXT NOT NULL DEFAULT 'project' CHECK (scope IN ('agent','project')),
@@ -29,7 +29,12 @@ CREATE TABLE IF NOT EXISTS memory (
     origin       TEXT,
     read_count   INTEGER NOT NULL DEFAULT 0,
     last_read_at TEXT,
-    distinct_reader_count INTEGER NOT NULL DEFAULT 0
+    distinct_reader_count INTEGER NOT NULL DEFAULT 0,
+    source_path  TEXT,
+    source_sha   TEXT,
+    source_commit TEXT,
+    compiled_at  TEXT,
+    stale        INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS tasks (
@@ -223,4 +228,33 @@ CREATE TABLE IF NOT EXISTS archivist_metrics (
     params                TEXT NOT NULL DEFAULT '{}'
 );
 CREATE INDEX IF NOT EXISTS idx_arch_metrics_captured ON archivist_metrics (captured_at);
+
+CREATE TABLE IF NOT EXISTS code_anchor (
+    id          TEXT PRIMARY KEY,
+    project     TEXT,
+    path        TEXT NOT NULL,
+    symbol      TEXT NOT NULL DEFAULT '',
+    lang        TEXT NOT NULL DEFAULT '',
+    start_line  INTEGER,
+    end_line    INTEGER,
+    sha         TEXT NOT NULL,
+    commit_sha  TEXT,
+    created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    updated_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_code_anchor_loc ON code_anchor (project, path, symbol);
+CREATE INDEX IF NOT EXISTS idx_code_anchor_path ON code_anchor (project, path);
+
+CREATE TABLE IF NOT EXISTS memory_edge (
+    id          TEXT PRIMARY KEY,
+    project     TEXT,
+    src         TEXT NOT NULL,
+    dst         TEXT NOT NULL,
+    rel         TEXT NOT NULL CHECK (rel IN ('grounds','relies_on','applies_to','contradicts','corroborates')),
+    note        TEXT NOT NULL DEFAULT '',
+    created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_memory_edge_uniq ON memory_edge (src, dst, rel);
+CREATE INDEX IF NOT EXISTS idx_memory_edge_src ON memory_edge (src);
+CREATE INDEX IF NOT EXISTS idx_memory_edge_dst ON memory_edge (dst);
 """

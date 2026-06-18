@@ -611,7 +611,7 @@ async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
     entries = [
         e
         for e in entries
-        if e.get("type") not in ("directive", "doc", "skill")
+        if e.get("type") not in ("directive", "doc", "skill", "compiled")
         and (e.get("origin") is None or e.get("origin") == local_id)
     ]
 
@@ -1098,7 +1098,7 @@ async def decay_confidence(client: ArtelClient) -> None:
     entries = [
         e
         for e in entries
-        if e.get("type") not in ("directive", "doc", "skill")
+        if e.get("type") not in ("directive", "doc", "skill", "compiled")
         and (e.get("origin") is None or e.get("origin") == local_id)
     ]
 
@@ -1588,3 +1588,53 @@ async def capture_metrics(project: str | None = None) -> None:
                 params_json,
             ),
         )
+
+
+async def run_compilation(client: ArtelClient) -> None:
+    from ..store import graph as graph_store
+    from ..store.db import get_db
+
+    db = get_db()
+    compiled = db.execute(
+        "SELECT id, project, source_path FROM memory "
+        "WHERE type='compiled' AND deleted_at IS NULL AND source_path IS NOT NULL"
+    ).fetchall()
+    if not compiled:
+        return
+
+    by_path: dict = {}
+    for c in compiled:
+        by_path.setdefault((c["project"], c["source_path"]), []).append(c["id"])
+
+    authored = db.execute(
+        "SELECT id, project, content FROM memory "
+        "WHERE type IN ('memory','doc') AND deleted_at IS NULL"
+    ).fetchall()
+
+    linked = 0
+    with db:
+        for a in authored:
+            for (proj, path), cids in by_path.items():
+                if proj != a["project"] or not path or path not in a["content"]:
+                    continue
+                for cid in cids:
+                    exists = db.execute(
+                        "SELECT 1 FROM memory_edge WHERE src=? AND dst=? AND rel=?",
+                        (a["id"], cid, graph_store.APPLIES_TO),
+                    ).fetchone()
+                    if exists:
+                        continue
+                    graph_store.add_edge(db, a["project"], a["id"], cid, graph_store.APPLIES_TO)
+                    linked += 1
+
+    stale = db.execute(
+        "SELECT COUNT(*) AS n FROM memory WHERE type='compiled' AND stale=1 AND deleted_at IS NULL"
+    ).fetchone()["n"]
+    await client.log(
+        action="compilation",
+        message=(
+            f"compile mode: {len(compiled)} compiled node(s), {stale} stale, "
+            f"{linked} new authored→compiled link(s)"
+        ),
+        details={"compiled": len(compiled), "stale": stale, "linked": linked},
+    )

@@ -117,6 +117,11 @@ def _row_to_entry(row: sqlite3.Row) -> MemoryEntry:
         distinct_reader_count=row["distinct_reader_count"]
         if "distinct_reader_count" in keys
         else 0,
+        source_path=row["source_path"] if "source_path" in keys else None,
+        source_sha=row["source_sha"] if "source_sha" in keys else None,
+        source_commit=row["source_commit"] if "source_commit" in keys else None,
+        compiled_at=row["compiled_at"] if "compiled_at" in keys else None,
+        stale=bool(row["stale"]) if "stale" in keys else False,
     )
 
 

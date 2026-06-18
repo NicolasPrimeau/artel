@@ -25,8 +25,9 @@ ProjectName = Annotated[str | None, AfterValidator(_normalize_project_optional)]
 ProjectNameRequired = Annotated[str, AfterValidator(_normalize_project_required)]
 
 
-EntryType = Literal["memory", "doc", "directive", "skill"]
+EntryType = Literal["memory", "doc", "directive", "skill", "compiled"]
 Scope = Literal["agent", "project"]
+GraphRel = Literal["grounds", "relies_on", "applies_to", "contradicts", "corroborates"]
 TaskStatus = Literal["open", "claimed", "completed", "failed"]
 TaskCommentKind = Literal["comment", "claim", "unclaim", "complete", "fail"]
 Priority = Literal["low", "normal", "high"]
@@ -69,6 +70,69 @@ class MemoryEntry(BaseModel):
     expires_at: str | None = None
     origin: str | None = None
     distinct_reader_count: int = 0
+    source_path: str | None = None
+    source_sha: str | None = None
+    source_commit: str | None = None
+    compiled_at: str | None = None
+    stale: bool = False
+
+
+class CompileDep(BaseModel):
+    kind: str
+    name: str
+
+
+class CompileUnit(BaseModel):
+    path: str
+    symbol: str = ""
+    lang: str = ""
+    kind: str = ""
+    start_line: int | None = None
+    end_line: int | None = None
+    sha: str
+    description: str
+    deps: list[CompileDep] = []
+
+
+class CompileRequest(BaseModel):
+    project: ProjectName = None
+    commit: str | None = None
+    units: list[CompileUnit]
+
+
+class CompileReport(BaseModel):
+    project: str | None
+    anchors: int
+    created: int
+    updated: int
+    unchanged: int
+    invalidated: list[str]
+    memory_ids: list[str]
+
+
+class CompileCheckUnit(BaseModel):
+    path: str
+    symbol: str = ""
+    sha: str
+
+
+class CompileCheckRequest(BaseModel):
+    project: ProjectName = None
+    units: list[CompileCheckUnit]
+
+
+class CompileCheckResult(BaseModel):
+    path: str
+    symbol: str
+    status: Literal["fresh", "stale", "unknown"]
+
+
+class EdgeCreate(BaseModel):
+    project: ProjectName = None
+    src: str
+    dst: str
+    rel: GraphRel
+    note: str = ""
 
 
 class TaskCreate(BaseModel):

@@ -744,6 +744,133 @@ async def memory_delta(since: str) -> str:
     return "\n\n".join(_fmt_memory(e) for e in entries)
 
 
+@mcp.tool(
+    structured_output=True,
+    annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False),
+)
+async def compile_status(project: str | None = None) -> str:
+    """Summarize compile mode: how many compiled descriptions, code anchors, and how many are stale.
+
+    Compiled memory is the build-invalidated half of the store: a grounded description of what code
+    IS, stamped with its source SHA. Fresh = trust it without re-reading the code; stale = the source
+    moved, recheck. Authored memory (the decaying half) is unaffected — both modes share this store.
+
+    Args:
+        project: Restrict to a project. Defaults to MCP_PROJECT if set.
+    """
+    c = _http()
+    proj = settings.resolve_project(project)
+    params = {"project": proj} if proj else {}
+    try:
+        anchors = await c.get("/compile/anchors", params=params)
+        anchors.raise_for_status()
+        stale = await c.get("/compile/stale", params=params)
+        stale.raise_for_status()
+        compiled = await c.get("/memory", params={**params, "type": "compiled", "limit": 500})
+        compiled.raise_for_status()
+    except _HTTPX_ERRORS as e:
+        return _err(e)
+    rows = stale.json()
+    line = (
+        f"compile mode{' · ' + proj if proj else ''}: "
+        f"{len(compiled.json())} compiled node(s), {len(anchors.json())} anchor(s), {len(rows)} stale."
+    )
+    if rows:
+        line += " stale → " + ", ".join((m.get("source_path") or "?") for m in rows[:8])
+    return line
+
+
+@mcp.tool(
+    structured_output=True,
+    annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False),
+)
+async def compile_stale(project: str | None = None) -> str:
+    """List compiled descriptions whose source changed since they were built (SHA != HEAD).
+
+    These are no longer provably current — recompile (re-run the hook on those files) before trusting.
+
+    Args:
+        project: Restrict to a project. Defaults to MCP_PROJECT if set.
+    """
+    c = _http()
+    proj = settings.resolve_project(project)
+    params = {"project": proj} if proj else {}
+    try:
+        r = await c.get("/compile/stale", params=params)
+        r.raise_for_status()
+    except _HTTPX_ERRORS as e:
+        return _err(e)
+    rows = r.json()
+    if not rows:
+        return "No stale compiled nodes — every grounded description is current."
+    return "\n\n".join(_fmt_memory(m) for m in rows)
+
+
+@mcp.tool(
+    structured_output=True,
+    annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False),
+)
+async def graph_neighbors(node_id: str) -> str:
+    """Inspect a node in the memory knowledge graph: its kind, typed edges, and viability.
+
+    Edges are grounds / relies_on / applies_to / contradicts / corroborates. Viability is derived from
+    connectivity — the more (fresh) connections, the more a node is worth trusting; a bare node fades.
+    node_id is a memory id or a code-anchor id (4-char prefixes are NOT resolved here — pass a full id).
+
+    Args:
+        node_id: The graph node id (memory or code anchor).
+    """
+    c = _http()
+    try:
+        r = await c.get(f"/graph/{node_id}")
+        r.raise_for_status()
+    except _HTTPX_ERRORS as e:
+        return _err(e)
+    g = r.json()
+    v = g["viability"]
+    out = "\n".join(f"  -{e['rel']}-> {e['dst']}" for e in g["edges"]["out"]) or "  (none)"
+    inc = "\n".join(f"  <-{e['rel']}- {e['src']}" for e in g["edges"]["in"]) or "  (none)"
+    return (
+        f"[{g['kind']}] {node_id}\n"
+        f"viability {v['score']} — degree {v['degree']}, fresh_grounds {v['fresh_grounds']}, "
+        f"stale_grounds {v['stale_grounds']}, backlinks {v['backlinks']}, contradictions {v['contradictions']}\n"
+        f"out:\n{out}\nin:\n{inc}"
+    )
+
+
+@mcp.tool(
+    structured_output=True,
+    annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=False),
+)
+async def graph_link(
+    src: str, dst: str, rel: str, note: str = "", project: str | None = None
+) -> str:
+    """Add a typed edge between two graph nodes, weaving the two memory modes together.
+
+    Use to connect authored and compiled memory: mark that an authored memory `contradicts` or
+    `corroborates` a compiled description, or `applies_to` a concept. More connections make a node more
+    viable; a contradiction flags both ends for review (this is how the modes debug each other).
+
+    Args:
+        src: Source node id (memory or anchor).
+        dst: Destination node id.
+        rel: One of grounds, relies_on, applies_to, contradicts, corroborates.
+        note: Optional short justification.
+        project: Defaults to MCP_PROJECT if set.
+    """
+    c = _http()
+    body: dict = {"src": src, "dst": dst, "rel": rel, "note": note}
+    proj = settings.resolve_project(project)
+    if proj:
+        body["project"] = proj
+    try:
+        r = await c.post("/graph/edge", json=body)
+        r.raise_for_status()
+    except _HTTPX_ERRORS as e:
+        return _err(e)
+    return f"linked {src} -{rel}-> {dst}"
+
+
 # ── Projects & Agents ────────────────────────────────────────────────────────
 
 

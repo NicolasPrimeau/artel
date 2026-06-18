@@ -239,6 +239,50 @@ def _migrate(conn: sqlite3.Connection) -> None:
         """)
         conn.commit()
 
+    memory_sql = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='memory'"
+    ).fetchone()
+    if memory_sql and "'compiled'" not in memory_sql[0]:
+        conn.executescript("""
+            PRAGMA foreign_keys=off;
+            BEGIN;
+            ALTER TABLE memory RENAME TO _memory_old;
+            CREATE TABLE memory (
+                id          TEXT PRIMARY KEY,
+                type        TEXT NOT NULL CHECK (type IN ('memory','doc','directive','skill','compiled')),
+                agent_id    TEXT NOT NULL,
+                project     TEXT,
+                scope       TEXT NOT NULL DEFAULT 'project' CHECK (scope IN ('agent','project')),
+                content     TEXT NOT NULL,
+                confidence  REAL NOT NULL DEFAULT 1.0,
+                parents     TEXT NOT NULL DEFAULT '[]',
+                tags        TEXT NOT NULL DEFAULT '[]',
+                created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+                updated_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+                version      INTEGER NOT NULL DEFAULT 1,
+                deleted_at   TEXT,
+                expires_at   TEXT,
+                origin       TEXT,
+                read_count   INTEGER NOT NULL DEFAULT 0,
+                last_read_at TEXT,
+                distinct_reader_count INTEGER NOT NULL DEFAULT 0,
+                source_path  TEXT,
+                source_sha   TEXT,
+                source_commit TEXT,
+                compiled_at  TEXT,
+                stale        INTEGER NOT NULL DEFAULT 0
+            );
+            INSERT INTO memory (id,type,agent_id,project,scope,content,confidence,parents,tags,created_at,updated_at,version,deleted_at,expires_at,origin,read_count,last_read_at,distinct_reader_count)
+                SELECT id,type,agent_id,project,scope,content,confidence,parents,tags,created_at,updated_at,version,deleted_at,expires_at,origin,read_count,last_read_at,distinct_reader_count FROM _memory_old;
+            DROP TABLE _memory_old;
+            COMMIT;
+            PRAGMA foreign_keys=on;
+        """)
+        conn.commit()
+
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_compiled ON memory (type, stale)")
+    conn.commit()
+
     _canonicalize_projects(conn)
     _migrate_project_roles(conn)
 

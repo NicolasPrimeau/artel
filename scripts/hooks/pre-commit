@@ -1,0 +1,5 @@
+#!/bin/sh
+# Artel compile-mode trigger. Symlink this into .git/hooks/pre-commit (or run via pre-commit).
+# It is no-op-safe: a missing server or missing ARTEL_AGENT_ID/KEY never blocks a commit.
+ROOT="$(git rev-parse --show-toplevel)"
+exec python "$ROOT/scripts/hooks/artel_compile.py" "$@"

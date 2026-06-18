@@ -53,6 +53,7 @@ curl -fsSL http://<host>:8000/onboard | sh
 
 - [Features](#features)
 - [Mesh](#mesh)
+- [Compile mode](#compile-mode)
 - [Archivist](#archivist)
 - [Dashboard](#dashboard)
 - [Memory](#memory)
@@ -65,12 +66,13 @@ curl -fsSL http://<host>:8000/onboard | sh
 
 ## Features
 
-- **Shared memory** — semantic search across all agents. Four types with different time horizons: `memory` (default, decays), `doc` (stable reference, archivist-promoted), `directive` (permanent standing instruction), `skill` (procedural, decays, never promoted). Confidence scores decay based on age and read frequency.
+- **Shared memory** — semantic search across all agents. Five types with different time horizons: `memory` (default, decays), `doc` (stable reference, archivist-promoted), `directive` (permanent standing instruction), `skill` (procedural, decays, never promoted), `compiled` (anchored to source code, recompiles instead of decaying). Confidence scores decay based on age and read frequency.
 - **Tasks** — create, claim, complete. Agents coordinate without a central scheduler.
 - **Messages** — async agent-to-agent inbox. Direct or broadcast.
 - **Session handoffs** — save state at session end, resume with full context on next start. Any agent can pick up where another left off across context resets and machine restarts.
 - **Feed subscriptions** — subscribe any RSS or Atom feed; new items land in memory automatically.
 - **Mesh** — link two instances and memory replicates as a CRDT. LAN peers discovered via mDNS.
+- **Compile mode** — anchor memory to source code. Authored notes decay over time; compiled notes are grounded in a symbol's content hash and recompile when the code changes, not when they age. Both live in one store on a continuum.
 - **Archivist** — optional background agent that synthesizes cross-agent findings, detects conflicts, and decays stale knowledge. Frequently-read entries are heat-protected and skipped during decay.
 
 ---
@@ -89,6 +91,40 @@ Each instance publishes memory as Atom and JSON Feed. Link two instances and mem
 Pinned by tests in `tests/test_feeds.py`.
 
 </details>
+
+---
+
+## Compile mode
+
+Mesh is one half of the symmetry: many agents converging on one shared truth. Compile mode is the other half — one shared truth converging on the code it describes. Where the mesh keeps instances consistent with each other, compile mode keeps memory consistent with the repo.
+
+Most agent memory is **authored**: a human or agent writes a note, and it slowly decays as it ages and goes unread. That's right for judgement, incidents, and intent — knowledge with no ground truth to check against. But a lot of what agents "remember" about a codebase is really a *description of code that already exists* — and that has a ground truth. **Compiled** memory is anchored to it.
+
+A pre-commit hook walks changed files with a deterministic AST compiler (no LLM), emits one **anchor** per symbol — module, function, class — and hashes each symbol's span. Each anchor mints or refreshes a `compiled` memory stamped with that hash and the commit SHA. When the code changes, the hash changes, and the note doesn't decay — it **recompiles**. Memory that's wrong about the code is rebuilt, not slowly forgotten.
+
+**Authored and compiled are endpoints of a continuum, not two modes.** They share one store, one search index, one API. A note can sit anywhere between — an authored insight that an agent later grounds against a symbol, a compiled fact a human annotates. The same `GET /memory/search` returns both.
+
+**The knowledge graph** is what makes the continuum real. Memories and code anchors are nodes of one heterogeneous graph; edges are typed:
+
+- `grounds` — an anchor grounds a memory in real code
+- `relies_on` — one node's meaning depends on another's (the dependency graph of meaning)
+- `applies_to` — an authored note applies to a region of code
+- `corroborates` / `contradicts` — agreement and tension between notes
+
+Invalidation propagates **backward along `relies_on`**, exactly like `gcc -MMD` incremental builds: change `g`, and every compiled note that relies on `g` is marked stale, transitively. The module anchor hashes the file's *shape* (its sorted imports and top-level symbols), not its bytes, so editing one function body doesn't restale the whole module.
+
+**Viability is connectivity — derived, never stored.** There's no "groundedness" score. An ungrounded memory is just a bare node on the graph, and a bare node is forgettable. The more a memory is connected — fresh groundings, corroborations, things that rely on it — the more viable it is; contradictions and stale groundings pull it down. `GET /graph/:id` returns the live computation.
+
+```bash
+# one-time: install the pre-commit hook
+ln -s ../../scripts/hooks/pre-commit .git/hooks/pre-commit
+
+# inspect compile health and the graph
+curl "$ARTEL/compile/stale?project=myrepo"        # notes whose code moved out from under them
+curl "$ARTEL/graph/$NODE_ID"                       # node, edges, live viability
+```
+
+Pinned by tests in `tests/test_compile.py`.
 
 ---
 
