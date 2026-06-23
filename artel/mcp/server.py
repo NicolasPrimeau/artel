@@ -543,6 +543,7 @@ async def memory_search(
     project: str | None = None,
     tag: str | None = None,
     limit: int = 10,
+    max_content_length: int | None = None,
 ) -> str:
     """Search shared memory by meaning. Call this before starting work.
 
@@ -555,6 +556,7 @@ async def memory_search(
         project: Restrict to a project. Defaults to MCP_PROJECT if set.
         tag: Restrict to entries with this tag.
         limit: How many results (default 10, max 50).
+        max_content_length: Truncate each entry's content to this many characters. Use when pulling results into an LLM context and large entries would dominate. Full content still accessible via memory_get.
     """
     c = _http()
     try:
@@ -564,6 +566,8 @@ async def memory_search(
             params["project"] = effective_project
         if tag:
             params["tag"] = tag
+        if max_content_length is not None:
+            params["max_content_length"] = max_content_length
         r = await c.get("/memory/search", params=params)
         r.raise_for_status()
     except _HTTPX_ERRORS as e:

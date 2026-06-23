@@ -200,6 +200,7 @@ async def search_memory(
     agent: str | None = Query(default=None),
     max_distance: float | None = Query(default=None),
     confidence_min: float | None = Query(default=None, ge=0.0, le=1.0),
+    max_content_length: int | None = Query(default=None, gt=0),
     agent_id: str = ReaderDep,
 ):
     project = norm_project(project)
@@ -337,7 +338,12 @@ async def search_memory(
                         "WHERE id=?",
                         (hid,),
                     )
-    return [_row_to_entry(r) for r in out]
+    entries = [_row_to_entry(r) for r in out]
+    if max_content_length is not None:
+        for e in entries:
+            if len(e.content) > max_content_length:
+                e.content = e.content[:max_content_length]
+    return entries
 
 
 @router.get("", response_model=list[MemoryEntry], summary="List memory with optional filters")
