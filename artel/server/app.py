@@ -36,6 +36,7 @@ from .mdns import MDNSService
 from .routes.agents import router as agents_router
 from .routes.archivist import router as archivist_router
 from .routes.compile import router as compile_router
+from .routes.decisions import router as decisions_router
 from .routes.events import router as events_router
 from .routes.feeds import router as feeds_router
 from .routes.logs import router as logs_router
@@ -214,6 +215,7 @@ app.include_router(onboard_router)
 app.include_router(memory_router)
 app.include_router(compile_router)
 app.include_router(tasks_router)
+app.include_router(decisions_router)
 app.include_router(messages_router)
 app.include_router(events_router)
 app.include_router(sessions_router)

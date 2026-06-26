@@ -70,7 +70,7 @@ class AmbiguousId(Exception):
     pass
 
 
-_RESOLVABLE_TABLES = {"tasks", "memory", "task_comments", "messages", "agents"}
+_RESOLVABLE_TABLES = {"tasks", "memory", "task_comments", "messages", "agents", "decisions"}
 _MIN_PREFIX_LEN = 4
 
 

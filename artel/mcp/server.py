@@ -1270,16 +1270,19 @@ async def task_list(
     status: str | None = None,
     project: str | None = None,
     tag: str | None = None,
+    unblocked: bool = False,
 ) -> str:
     """List tasks. Call with status="open" to find work that needs doing.
 
     Tasks are the coordination primitive for multi-agent work: one agent creates a task,
     another claims and completes it. Check for open tasks before creating new ones.
+    Use unblocked=True to filter to only tasks whose dependencies are all completed.
 
     Args:
         status: open, claimed, completed, or failed. Omit for all.
         project: Filter by project name.
         tag: Filter to tasks carrying this tag.
+        unblocked: If True, only return tasks with no incomplete dependencies.
     """
     c = _http()
     try:
@@ -1290,6 +1293,8 @@ async def task_list(
             params["project"] = project
         if tag:
             params["tag"] = tag
+        if unblocked:
+            params["unblocked"] = "true"
         r = await c.get("/tasks", params=params)
         r.raise_for_status()
     except _HTTPX_ERRORS as e:
@@ -1300,6 +1305,7 @@ async def task_list(
     return "\n".join(
         f"[{t['id']}] [{t['status']}] [{t['priority']}] {t['title']}"
         + (f" (assigned: {t['assigned_to']})" if t.get("assigned_to") else "")
+        + (f" blocked_by={t['depends_on']}" if t.get("depends_on") else "")
         + (f" tags={','.join(t['tags'])}" if t.get("tags") else "")
         for t in tasks
     )
@@ -1315,6 +1321,7 @@ async def task_create(
     project: str | None = None,
     priority: str = "normal",
     tags: list[str] | None = None,
+    depends_on: list[str] | None = None,
 ) -> str:
     """Create a task for yourself or another agent to pick up.
 
@@ -1329,6 +1336,7 @@ async def task_create(
         project: Project scope. Defaults to MCP_PROJECT if set.
         priority: low, normal (default), or high.
         tags: Labels for filtering, e.g. ["writing", "infra"].
+        depends_on: Task IDs that must be completed before this task is unblocked.
     """
     c = _http()
     try:
@@ -1341,13 +1349,15 @@ async def task_create(
                 "project": settings.resolve_project(project),
                 "priority": priority,
                 "tags": tags or [],
+                "depends_on": depends_on or [],
             },
         )
         r.raise_for_status()
     except _HTTPX_ERRORS as e:
         return _err(e)
     t = r.json()
-    return f"created [{t['id']}] [{t['priority']}] {t['title']}"
+    suffix = f" blocked_by={t['depends_on']}" if t.get("depends_on") else ""
+    return f"created [{t['id']}] [{t['priority']}] {t['title']}{suffix}"
 
 
 @mcp.tool(
@@ -1565,6 +1575,177 @@ async def task_update(
         return _err(e)
     t = r.json()
     return f"updated [{t['id']}] {t['title']}"
+
+
+# ── Task dependencies ─────────────────────────────────────────────────────────
+
+
+@mcp.tool(
+    structured_output=True, annotations=ToolAnnotations(destructiveHint=False, openWorldHint=False)
+)
+async def task_add_dependency(task_id: str, depends_on: str) -> str:
+    """Mark a task as blocked by another task.
+
+    The task will appear in task_list(unblocked=True) only after all its
+    dependencies reach 'completed' status. Use to model prerequisite chains
+    before claiming downstream work.
+
+    Args:
+        task_id: The task that is blocked.
+        depends_on: The task it must wait for.
+    """
+    c = _http()
+    try:
+        r = await c.post(f"/tasks/{task_id}/dependencies", json={"depends_on": depends_on})
+        r.raise_for_status()
+    except _HTTPX_ERRORS as e:
+        return _err(e)
+    t = r.json()
+    return f"[{task_id}] now depends on [{depends_on}] — blocked_by={t.get('depends_on', [])}"
+
+
+@mcp.tool(
+    structured_output=True,
+    annotations=ToolAnnotations(destructiveHint=False, idempotentHint=True, openWorldHint=False),
+)
+async def task_remove_dependency(task_id: str, dep_id: str) -> str:
+    """Remove a dependency between two tasks.
+
+    Args:
+        task_id: The blocked task.
+        dep_id: The dependency task ID to remove.
+    """
+    c = _http()
+    try:
+        r = await c.delete(f"/tasks/{task_id}/dependencies/{dep_id}")
+        r.raise_for_status()
+    except _HTTPX_ERRORS as e:
+        return _err(e)
+    return f"dependency [{dep_id}] removed from [{task_id}]"
+
+
+# ── Decisions ─────────────────────────────────────────────────────────────────
+
+
+@mcp.tool(
+    structured_output=True, annotations=ToolAnnotations(destructiveHint=False, openWorldHint=False)
+)
+async def decision_write(
+    decision: str,
+    rationale: str,
+    alternatives: list[str] | None = None,
+    project: str | None = None,
+    task_id: str | None = None,
+) -> str:
+    """Record an irreversible decision with its rationale.
+
+    Decisions are append-only — they cannot be updated or deleted. Use them
+    for choices that future agents should not re-litigate: architecture picks,
+    scope cuts, approach selections. Memory captures what is true; decisions
+    capture what was chosen and why.
+
+    Args:
+        decision: What was decided, stated plainly. E.g. "Use SQLite over Postgres."
+        rationale: Why this choice was made over alternatives.
+        alternatives: Other options that were considered and rejected.
+        project: Project scope. Defaults to MCP_PROJECT if set.
+        task_id: Optional task this decision belongs to.
+    """
+    c = _http()
+    try:
+        r = await c.post(
+            "/decisions",
+            json={
+                "decision": decision,
+                "rationale": rationale,
+                "alternatives": alternatives or [],
+                "project": settings.resolve_project(project),
+                "task_id": task_id,
+            },
+        )
+        r.raise_for_status()
+    except _HTTPX_ERRORS as e:
+        return _err(e)
+    d = r.json()
+    return f"recorded [{d['id']}] {d['decision']}"
+
+
+@mcp.tool(
+    structured_output=True,
+    annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False),
+)
+async def decision_list(
+    project: str | None = None,
+    task_id: str | None = None,
+    limit: int = 20,
+) -> str:
+    """List recorded decisions, most recent first.
+
+    Read before starting work on something already decided — this is where
+    settled questions live. Complements memory_search() for factual context.
+
+    Args:
+        project: Filter by project. Defaults to MCP_PROJECT if set.
+        task_id: Filter to decisions tied to a specific task.
+        limit: Max results (default 20, max 200).
+    """
+    c = _http()
+    try:
+        params: dict = {"limit": limit}
+        if project:
+            params["project"] = project
+        elif settings.resolve_project(None):
+            params["project"] = settings.resolve_project(None)
+        if task_id:
+            params["task_id"] = task_id
+        r = await c.get("/decisions", params=params)
+        r.raise_for_status()
+    except _HTTPX_ERRORS as e:
+        return _err(e)
+    decisions = r.json()
+    if not decisions:
+        return "No decisions recorded."
+    lines = []
+    for d in decisions:
+        line = f"[{d['id']}] {d['decision']}"
+        if d.get("task_id"):
+            line += f" (task: {d['task_id']})"
+        lines.append(line)
+        lines.append(f"  rationale: {d['rationale']}")
+        if d.get("alternatives"):
+            lines.append(f"  alternatives considered: {', '.join(d['alternatives'])}")
+    return "\n".join(lines)
+
+
+@mcp.tool(
+    structured_output=True,
+    annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False),
+)
+async def decision_get(decision_id: str) -> str:
+    """Fetch a single decision by ID.
+
+    Args:
+        decision_id: The UUID of the decision. Short prefixes (min 4 chars) are resolved.
+    """
+    c = _http()
+    try:
+        r = await c.get(f"/decisions/{decision_id}")
+        r.raise_for_status()
+    except _HTTPX_ERRORS as e:
+        return _err(e)
+    d = r.json()
+    lines = [
+        f"[{d['id']}] {d['decision']}",
+        f"recorded by: {d['agent_id']} at {d['created_at']}",
+        f"rationale: {d['rationale']}",
+    ]
+    if d.get("alternatives"):
+        lines.append(f"alternatives considered: {', '.join(d['alternatives'])}")
+    if d.get("task_id"):
+        lines.append(f"task: {d['task_id']}")
+    if d.get("project"):
+        lines.append(f"project: {d['project']}")
+    return "\n".join(lines)
 
 
 # ── Events ───────────────────────────────────────────────────────────────────
