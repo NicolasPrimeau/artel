@@ -11,7 +11,7 @@
       "name": "artel",
       "source": "./",
       "description": "Shared semantic memory, tasks, agent-to-agent messages, and session handoffs for AI agent fleets. Bundles the Artel MCP server wiring and the recommended session hooks.",
-      "version": "0.26.1",
+      "version": "0.27.0",
       "homepage": "https://github.com/NicolasPrimeau/artel",
       "repository": "https://github.com/NicolasPrimeau/artel",
       "license": "MIT",
