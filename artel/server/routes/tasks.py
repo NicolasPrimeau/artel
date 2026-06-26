@@ -24,6 +24,21 @@ from ..models import (
     new_id,
 )
 
+
+def _fetch_deps(db: sqlite3.Connection, task_ids: list[str]) -> dict[str, list[str]]:
+    if not task_ids:
+        return {}
+    placeholders = ",".join("?" * len(task_ids))
+    rows = db.execute(
+        f"SELECT task_id, depends_on FROM task_deps WHERE task_id IN ({placeholders})",
+        task_ids,
+    ).fetchall()
+    result: dict[str, list[str]] = {tid: [] for tid in task_ids}
+    for r in rows:
+        result[r["task_id"]].append(r["depends_on"])
+    return result
+
+
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 
@@ -45,7 +60,7 @@ def _require_project_membership(agent_id: str, project: str | None) -> None:
         raise HTTPException(status_code=403, detail="not a member of this project")
 
 
-def _row_to_task(row: sqlite3.Row) -> TaskEntry:
+def _row_to_task(row: sqlite3.Row, depends_on: list[str] | None = None) -> TaskEntry:
     return TaskEntry(
         id=row["id"],
         title=row["title"],
@@ -58,6 +73,7 @@ def _row_to_task(row: sqlite3.Row) -> TaskEntry:
         priority=row["priority"],
         due_at=row["due_at"],
         tags=json.loads(row["tags"] or "[]"),
+        depends_on=depends_on or [],
         created_at=row["created_at"],
         updated_at=row["updated_at"],
     )
@@ -99,7 +115,8 @@ async def get_task(task_id: str, agent_id: str = ReaderDep):
         allowed = _memberships(agent_id)
         if allowed is not None and row["project"] not in allowed:
             raise HTTPException(status_code=403, detail="not a member of this project")
-    return _row_to_task(row)
+    deps = _fetch_deps(db, [task_id])
+    return _row_to_task(row, deps.get(task_id))
 
 
 @router.post("", response_model=TaskEntry, status_code=201, summary="Create a task")
@@ -129,9 +146,15 @@ async def create_task(body: TaskCreate, agent_id: str = ActorDep):
                 json.dumps(body.tags),
             ),
         )
+        for dep_id in body.depends_on:
+            db.execute(
+                "INSERT OR IGNORE INTO task_deps (task_id, depends_on) VALUES (?,?)",
+                (task_id, dep_id),
+            )
         _emit_event(db, "task.created", agent_id, {"task_id": task_id})
     row = db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
-    return _row_to_task(row)
+    deps = _fetch_deps(db, [task_id])
+    return _row_to_task(row, deps.get(task_id))
 
 
 @router.get("", response_model=list[TaskEntry], summary="List tasks with optional filters")
@@ -140,6 +163,7 @@ async def list_tasks(
     agent: str | None = Query(default=None),
     project: str | None = Query(default=None),
     tag: str | None = Query(default=None),
+    unblocked: bool = Query(default=False),
     agent_id: str = ReaderDep,
 ):
     project = norm_project(project)
@@ -166,9 +190,17 @@ async def list_tasks(
     if tag:
         sql += " AND EXISTS (SELECT 1 FROM json_each(tags) WHERE value=?)"
         params.append(tag)
+    if unblocked:
+        sql += (
+            " AND NOT EXISTS ("
+            "SELECT 1 FROM task_deps d JOIN tasks dt ON dt.id=d.depends_on"
+            " WHERE d.task_id=tasks.id AND dt.status!='completed')"
+        )
     sql += " ORDER BY created_at DESC"
     rows = db.execute(sql, params).fetchall()
-    return [_row_to_task(r) for r in rows]
+    task_ids = [r["id"] for r in rows]
+    deps_map = _fetch_deps(db, task_ids)
+    return [_row_to_task(r, deps_map.get(r["id"])) for r in rows]
 
 
 @router.post("/{task_id}/claim", response_model=TaskEntry, summary="Claim an open task")
@@ -416,3 +448,52 @@ async def list_comments(task_id: str, agent_id: str = ReaderDep):
         (task_id,),
     ).fetchall()
     return [_row_to_comment(r) for r in rows]
+
+
+@router.post(
+    "/{task_id}/dependencies",
+    response_model=TaskEntry,
+    status_code=201,
+    summary="Add a dependency to a task (task will be blocked until the dependency is completed)",
+)
+async def add_dependency(
+    task_id: str, depends_on: str = Body(..., embed=True), agent_id: str = ActorDep
+):
+    task_id = _resolve_task(task_id)
+    db = get_db()
+    row = db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="not found")
+    _require_project_membership(agent_id, row["project"])
+    if not db.execute("SELECT 1 FROM tasks WHERE id=?", (depends_on,)).fetchone():
+        raise HTTPException(status_code=404, detail="dependency task not found")
+    if depends_on == task_id:
+        raise HTTPException(status_code=400, detail="task cannot depend on itself")
+    with db:
+        db.execute(
+            "INSERT OR IGNORE INTO task_deps (task_id, depends_on) VALUES (?,?)",
+            (task_id, depends_on),
+        )
+    deps = _fetch_deps(db, [task_id])
+    return _row_to_task(row, deps.get(task_id))
+
+
+@router.delete(
+    "/{task_id}/dependencies/{dep_id}",
+    response_model=TaskEntry,
+    summary="Remove a dependency from a task",
+)
+async def remove_dependency(task_id: str, dep_id: str, agent_id: str = ActorDep):
+    task_id = _resolve_task(task_id)
+    db = get_db()
+    row = db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="not found")
+    _require_project_membership(agent_id, row["project"])
+    with db:
+        db.execute(
+            "DELETE FROM task_deps WHERE task_id=? AND depends_on=?",
+            (task_id, dep_id),
+        )
+    deps = _fetch_deps(db, [task_id])
+    return _row_to_task(row, deps.get(task_id))

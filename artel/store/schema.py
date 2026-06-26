@@ -62,6 +62,24 @@ CREATE TABLE IF NOT EXISTS task_comments (
     created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 
+CREATE TABLE IF NOT EXISTS task_deps (
+    task_id     TEXT NOT NULL,
+    depends_on  TEXT NOT NULL,
+    created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    PRIMARY KEY (task_id, depends_on)
+);
+
+CREATE TABLE IF NOT EXISTS decisions (
+    id           TEXT PRIMARY KEY,
+    project      TEXT,
+    agent_id     TEXT NOT NULL,
+    task_id      TEXT,
+    decision     TEXT NOT NULL,
+    rationale    TEXT NOT NULL,
+    alternatives TEXT NOT NULL DEFAULT '[]',
+    created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+
 CREATE TABLE IF NOT EXISTS messages (
     id          TEXT PRIMARY KEY,
     from_agent  TEXT NOT NULL,
@@ -106,6 +124,12 @@ CREATE INDEX IF NOT EXISTS idx_memory_deleted   ON memory (deleted_at);
 CREATE INDEX IF NOT EXISTS idx_tasks_status     ON tasks (status);
 CREATE INDEX IF NOT EXISTS idx_tasks_assigned   ON tasks (assigned_to);
 CREATE INDEX IF NOT EXISTS idx_task_comments    ON task_comments (task_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_task_deps_task   ON task_deps (task_id);
+CREATE INDEX IF NOT EXISTS idx_task_deps_dep    ON task_deps (depends_on);
+CREATE INDEX IF NOT EXISTS idx_decisions_project ON decisions (project);
+CREATE INDEX IF NOT EXISTS idx_decisions_task    ON decisions (task_id);
+CREATE INDEX IF NOT EXISTS idx_decisions_agent   ON decisions (agent_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_decisions_created ON decisions (created_at);
 CREATE TABLE IF NOT EXISTS message_reads (
     agent_id    TEXT NOT NULL,
     message_id  TEXT NOT NULL,

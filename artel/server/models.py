@@ -144,6 +144,7 @@ class TaskCreate(BaseModel):
     assigned_to: str | None = None
     due_at: str | None = None
     tags: list[str] = []
+    depends_on: list[str] = []
 
 
 class TaskEntry(BaseModel):
@@ -158,8 +159,28 @@ class TaskEntry(BaseModel):
     priority: Priority
     due_at: str | None
     tags: list[str]
+    depends_on: list[str] = []
     created_at: str
     updated_at: str
+
+
+class DecisionCreate(BaseModel):
+    decision: str
+    rationale: str
+    alternatives: list[str] = []
+    project: ProjectName = None
+    task_id: str | None = None
+
+
+class DecisionEntry(BaseModel):
+    id: str
+    project: str | None
+    agent_id: str
+    task_id: str | None
+    decision: str
+    rationale: str
+    alternatives: list[str]
+    created_at: str
 
 
 class TaskUpdate(BaseModel):
