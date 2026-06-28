@@ -94,7 +94,7 @@ class AgentAuthMiddleware:
 
         if scope["type"] == "http":
             path = scope.get("path", "")
-            if not path.startswith("/mcp"):
+            if not path.startswith("/mcp") and not path.startswith("/sse"):
                 await _send_json(send, 404, {"detail": "not found"})
                 return
 

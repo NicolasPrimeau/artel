@@ -43,6 +43,7 @@ artel = "artel.server.__main__:main"
 artel-archivist = "artel.archivist.__main__:main"
 artel-mcp = "artel.mcp.__main__:main"
 artel-mdns = "artel.server.mdns_announce:main"
+artel-watch = "artel.watch:main"
 
 [dependency-groups]
 dev = [

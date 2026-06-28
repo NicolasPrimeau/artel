@@ -168,6 +168,25 @@ if not refreshed:
 else:
     print()
     print('start a new Claude Code session to reconnect')
+
+opencode_cfg = {{
+    'mcp': {{
+        'artel': {{
+            'type': 'sse',
+            'url': mcp_url + '/sse/',
+            'headers': {{'x-agent-id': aid, 'x-api-key': akey}},
+        }}
+    }}
+}}
+import shutil
+if shutil.which('opencode'):
+    print()
+    print('── OpenCode detected ──────────────────────────────────────────')
+    print('Add to your OpenCode config (opencode.json or ~/.config/opencode/config.json):')
+    print(json.dumps(opencode_cfg, indent=2))
+    print()
+    print('Wake daemon (spawns opencode when a message arrives):')
+    print('  MCP_AGENT_ID={} MCP_AGENT_KEY={} ARTEL_URL={} artel-watch'.format(aid, akey, url))
 PYEOF
 """
 

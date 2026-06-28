@@ -13,6 +13,7 @@ import mcp.types as mcp_types
 from mcp.server.fastmcp import FastMCP
 from mcp.server.session import ServerSession
 from mcp.types import ToolAnnotations
+from pydantic import AnyUrl
 
 from ..store.db import get_db
 from .config import settings
@@ -252,6 +253,10 @@ async def _deliver_notification(to_agent: str, msg: str) -> None:
         try:
             await session.send_log_message("warning", msg)
             delivered_any = True
+            try:
+                await session.send_resource_updated(AnyUrl(f"artel://inbox/{aid}"))
+            except Exception:
+                pass
         except Exception as e:
             log.debug("notification failed for %s, dropping session: %s", aid, e)
             _sessions.pop(aid, None)
@@ -1077,20 +1082,37 @@ async def agent_delete() -> str:
     )
 
 
+@mcp.resource(
+    "artel://inbox/{recipient}",
+    name="inbox",
+    description="Unread messages for this agent. Subscribe to receive notifications/resources/updated when new messages arrive.",
+    mime_type="application/json",
+)
+async def inbox_resource(recipient: str) -> str:
+    aid = _agent_id.get(settings.mcp_agent_id)
+    if aid != recipient:
+        return json.dumps({"error": "forbidden"})
+    c = _http()
+    try:
+        r = await c.get("/messages/inbox")
+        r.raise_for_status()
+        return json.dumps(r.json())
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+
+
 @mcp.tool(
     structured_output=True,
     annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False),
 )
 def inbox_cron_setup() -> str:
-    """Get instructions for scheduling automatic inbox checks via Claude Code cron.
+    """Get instructions for scheduling automatic inbox checks.
 
-    Call this once during your first session to set up a recurring inbox check.
-    The cron will run a new Claude Code session on a schedule to check for messages
-    and act on them — so other agents can reach you even when you're idle.
-
-    Returns the CronCreate call you should make to set this up.
+    Returns setup instructions for both Claude Code (CronCreate) and OpenCode
+    (artel-watch daemon) so other agents can reach you even when you're idle.
     """
     agent_id = _agent_id.get(settings.mcp_agent_id)
+    artel_url = settings.artel_url
     prompt = (
         f"You are {agent_id}, an AI agent connected to Artel. "
         "Check your Artel inbox using the message_inbox() MCP tool. "
@@ -1098,11 +1120,35 @@ def inbox_cron_setup() -> str:
         "Also check task_list(status='open') for any new tasks assigned to you."
     )
     return (
-        f"To schedule automatic inbox checks, call CronCreate with:\n\n"
-        f"  schedule: every 30 minutes (or your preferred interval)\n"
+        f"── Claude Code (CronCreate) ──────────────────────────────────\n"
+        f"Call CronCreate with:\n"
+        f"  schedule: every 30 minutes\n"
         f"  prompt: {prompt!r}\n\n"
-        "This creates a recurring Claude Code session that checks your inbox and open tasks. "
-        "You only need to do this once — the cron persists across sessions."
+        f"── OpenCode (artel-watch daemon) ────────────────────────────\n"
+        f"artel-watch subscribes to your Artel event stream and spawns `opencode`\n"
+        f"whenever a message arrives addressed to you. Run it in a background shell:\n\n"
+        f"  MCP_AGENT_ID={agent_id!r} \\\n"
+        f"  MCP_AGENT_KEY='<your-key>' \\\n"
+        f"  ARTEL_URL={artel_url!r} \\\n"
+        f"  ARTEL_WAKE_CMD='opencode' \\\n"
+        f"  artel-watch\n\n"
+        f"Or as a systemd user unit (add to ~/.config/systemd/user/artel-watch.service):\n\n"
+        f"  [Unit]\n"
+        f"  Description=Artel wake daemon for {agent_id}\n"
+        f"  After=network.target\n\n"
+        f"  [Service]\n"
+        f"  Environment=MCP_AGENT_ID={agent_id}\n"
+        f"  Environment=ARTEL_URL={artel_url}\n"
+        f"  EnvironmentFile=%h/.config/artel/{agent_id}\n"
+        f"  ExecStart=artel-watch\n"
+        f"  Restart=always\n\n"
+        f"  [Install]\n"
+        f"  WantedBy=default.target\n\n"
+        f"Then: systemctl --user enable --now artel-watch\n\n"
+        f"── MCP resource subscription ────────────────────────────────\n"
+        f"MCP clients that support resource subscriptions can also subscribe to:\n"
+        f"  artel://inbox/{agent_id}\n"
+        f"The server pushes notifications/resources/updated when messages arrive."
     )
 
 
