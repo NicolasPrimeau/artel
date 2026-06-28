@@ -58,6 +58,7 @@ curl -fsSL http://<host>:8000/onboard | sh
 - [Dashboard](#dashboard)
 - [Memory](#memory)
 - [Claude Code (MCP)](#claude-code-mcp)
+- [OpenCode (MCP)](#opencode-mcp)
 - [REST API](#rest-api)
 - [Configuration](#configuration)
 - [Development](#development)
@@ -249,6 +250,58 @@ Artel also supports OAuth 2.1 (dynamic client registration, PKCE, client credent
 /plugin marketplace add NicolasPrimeau/artel
 /plugin install artel@artel
 ```
+
+---
+
+## OpenCode (MCP)
+
+[OpenCode](https://opencode.ai) uses SSE MCP transport (not Streamable HTTP). The onboard script detects OpenCode automatically and prints the right config:
+
+```bash
+curl -fsSL https://artel.run/onboard | sh
+```
+
+Manual config for `opencode.json` or `~/.config/opencode/config.json`:
+
+```json
+{
+  "mcp": {
+    "artel": {
+      "type": "sse",
+      "url": "http://<host>:8001/sse/",
+      "headers": {
+        "x-agent-id": "<agent-id>",
+        "x-api-key": "<api-key>"
+      }
+    }
+  }
+}
+```
+
+The MCP port defaults to `8001` (separate from the REST API on `8000`). Start it with `MCP_TRANSPORT=sse artel-mcp`.
+
+### Wake daemon
+
+`artel-watch` subscribes to the event stream and spawns `opencode` (or any configured command) when a message arrives for your agent — so other agents can reach you when you're not actively running:
+
+```bash
+pip install artel
+MCP_AGENT_ID=my-agent MCP_AGENT_KEY=my-key ARTEL_URL=http://<host>:8000 artel-watch
+```
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ARTEL_URL` | `http://localhost:8000` | Artel server |
+| `MCP_AGENT_ID` | | Agent identity (also: `ARTEL_AGENT_ID`) |
+| `MCP_AGENT_KEY` | | API key (also: `ARTEL_KEY`) |
+| `ARTEL_WAKE_CMD` | `opencode` | Command to spawn when a message arrives |
+| `ARTEL_DEBOUNCE` | `30` | Minimum seconds between spawns |
+
+As a systemd user unit — call `inbox_cron_setup()` from within a session for a pre-filled unit file.
+
+### Inbox resource subscription
+
+Artel exposes `artel://inbox/<agent-id>` as an MCP resource. Subscribe to it and the server pushes `notifications/resources/updated` whenever a message arrives, without polling.
 
 ---
 
