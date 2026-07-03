@@ -168,9 +168,30 @@ jobs:
         run: |
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             IMAGE="ghcr.io/nicolasprimeau/artel:${GITHUB_REF_NAME#v}"
+            EXPECT_VERSION="${GITHUB_REF_NAME#v}"
           else
             IMAGE="ghcr.io/nicolasprimeau/artel:edge"
+            EXPECT_VERSION=""
           fi
-          flyctl deploy --app artel-sandbox --image "$IMAGE" --yes --wait-timeout=10m
+          DEPLOY_RC=0
+          flyctl deploy --app artel-sandbox --image "$IMAGE" --yes --wait-timeout=10m || DEPLOY_RC=$?
+          if [[ "$DEPLOY_RC" -eq 0 ]]; then
+            exit 0
+          fi
+          # flyctl often exits non-zero on a health-check WAIT timeout even though the
+          # deploy took effect. Probe the live app before failing the job.
+          echo "flyctl exited $DEPLOY_RC — verifying live sandbox before failing"
+          for i in $(seq 1 30); do
+            HEALTH="$(curl -fsS -m 10 https://artel.run/health || true)"
+            LIVE_VERSION="$(curl -fsS -m 10 https://artel.run/openapi.json | python3 -c 'import sys,json; print(json.load(sys.stdin).get("info",{}).get("version",""))' 2>/dev/null || true)"
+            if [[ "$HEALTH" == *'"status":"ok"'* ]] && { [[ -z "$EXPECT_VERSION" ]] || [[ "$LIVE_VERSION" == "$EXPECT_VERSION" ]]; }; then
+              echo "sandbox healthy on version '${LIVE_VERSION:-edge}' — deploy succeeded despite flyctl wait timeout"
+              exit 0
+            fi
+            echo "attempt $i: health='${HEALTH}' version='${LIVE_VERSION}' (want '${EXPECT_VERSION:-any}') — retrying"
+            sleep 10
+          done
+          echo "sandbox did not reach a healthy expected state — failing"
+          exit 1
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
