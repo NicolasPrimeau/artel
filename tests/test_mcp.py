@@ -475,3 +475,31 @@ async def test_compile_setup_returns_install_command(mcp):
     assert "/compile/install.sh" in result
     assert "ARTEL_AGENT_ID" in result
     assert "artel_compile.py" in result
+
+
+async def test_session_context_includes_knowledge_map(mcp):
+    await mcp.memory_write(
+        "A stable reference document about mesh", entry_type="doc", tags=["mesh"]
+    )
+    await mcp.memory_write("Another note about compile mode", entry_type="doc", tags=["compile"])
+    result = await mcp.session_context()
+    assert "## Knowledge map" in result
+    assert "A stable reference document about mesh" in result
+    assert "docs:" in result
+
+
+async def test_session_context_map_prefers_headline(mcp):
+    import artel.store.db as db_mod
+
+    write = await mcp.memory_write("raw first line of the body", entry_type="doc")
+    entry_id = _extract_id(write)
+    db = db_mod.get_db()
+    db.execute(
+        "UPDATE memory SET headline=?, headline_version=version WHERE id=?",
+        ("curated one-line summary", entry_id),
+    )
+    db.commit()
+    result = await mcp.session_context()
+    map_section = result.split("## Knowledge map", 1)[1].split("\n\n", 1)[0]
+    assert "curated one-line summary" in map_section
+    assert "raw first line of the body" not in map_section

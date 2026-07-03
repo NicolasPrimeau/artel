@@ -23,7 +23,15 @@ from ..auth import (
 )
 from ..broadcast import broadcast
 from ..config import settings
-from ..models import BulkMemoryDelete, EventEntry, MemoryEntry, MemoryPatch, MemoryWrite, new_id
+from ..models import (
+    BulkMemoryDelete,
+    EventEntry,
+    HeadlinePatch,
+    MemoryEntry,
+    MemoryPatch,
+    MemoryWrite,
+    new_id,
+)
 
 _ATOM_NS = "http://www.w3.org/2005/Atom"
 ET.register_namespace("", _ATOM_NS)
@@ -122,6 +130,8 @@ def _row_to_entry(row: sqlite3.Row) -> MemoryEntry:
         source_commit=row["source_commit"] if "source_commit" in keys else None,
         compiled_at=row["compiled_at"] if "compiled_at" in keys else None,
         stale=bool(row["stale"]) if "stale" in keys else False,
+        headline=row["headline"] if "headline" in keys else None,
+        headline_version=row["headline_version"] if "headline_version" in keys else 0,
     )
 
 
@@ -589,6 +599,34 @@ async def get_memory(
     row = db.execute(
         "SELECT * FROM memory WHERE id=? AND deleted_at IS NULL", (entry_id,)
     ).fetchone()
+    return _row_to_entry(row)
+
+
+@router.patch(
+    "/{entry_id}/headline",
+    response_model=MemoryEntry,
+    summary="Set a memory entry's headline (archivist only)",
+)
+async def patch_headline(
+    entry_id: str,
+    body: HeadlinePatch,
+    agent_id: str = ActorDep,
+):
+    if not can_curate_memory(agent_id):
+        raise HTTPException(status_code=403, detail="only the archivist may write headlines")
+    entry_id = _resolve_entry(entry_id)
+    db = get_db()
+    row = db.execute(
+        "SELECT * FROM memory WHERE id=? AND deleted_at IS NULL", (entry_id,)
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="not found")
+    with db:
+        db.execute(
+            "UPDATE memory SET headline=?, headline_version=? WHERE id=?",
+            (body.headline, body.headline_version, entry_id),
+        )
+    row = db.execute("SELECT * FROM memory WHERE id=?", (entry_id,)).fetchone()
     return _row_to_entry(row)
 
 

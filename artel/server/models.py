@@ -75,6 +75,13 @@ class MemoryEntry(BaseModel):
     source_commit: str | None = None
     compiled_at: str | None = None
     stale: bool = False
+    headline: str | None = None
+    headline_version: int = 0
+
+
+class HeadlinePatch(BaseModel):
+    headline: str
+    headline_version: int = Field(ge=0)
 
 
 class CompileDep(BaseModel):

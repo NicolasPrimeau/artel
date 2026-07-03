@@ -85,6 +85,14 @@ class ArtelClient:
         r = await self._request("PATCH", f"/memory/{entry_id}", json=fields)
         return r.json()
 
+    async def set_headline(self, entry_id: str, headline: str, headline_version: int) -> dict:
+        r = await self._request(
+            "PATCH",
+            f"/memory/{entry_id}/headline",
+            json={"headline": headline, "headline_version": headline_version},
+        )
+        return r.json()
+
     async def delete_memory(self, entry_id: str) -> None:
         await self._request("DELETE", f"/memory/{entry_id}")
 

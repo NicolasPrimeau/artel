@@ -1347,6 +1347,49 @@ async def run_promotion(client: ArtelClient) -> None:
         )
 
 
+_HEADLINE_SYSTEM = (
+    "You write a one-line summary of a memory entry for a table of contents. "
+    "The reader uses it to decide whether the entry is worth opening. "
+    "State what they would learn, concretely and specifically, in at most 15 words. "
+    "No trailing punctuation, no quotes, no prefix like 'This entry'. Output only the line."
+)
+_HEADLINE_BATCH = 25
+_HEADLINE_MAX_CHARS = 140
+
+
+async def run_headlines(client: ArtelClient) -> None:
+    if not is_configured():
+        return
+    candidates: dict[str, dict] = {}
+    for entry_type in ("doc", "directive"):
+        for e in await client.list_entries(type=entry_type, limit=500):
+            if e.get("headline") and e.get("headline_version", 0) >= e.get("version", 1):
+                continue
+            candidates.setdefault(e["id"], e)
+
+    written = 0
+    for e in list(candidates.values())[:_HEADLINE_BATCH]:
+        try:
+            line = (await complete(_HEADLINE_SYSTEM, e["content"], max_tokens=64)).strip()
+        except Exception as ex:
+            log.warning("headline generation failed for %s: %s", e["id"], ex)
+            continue
+        if not line:
+            continue
+        line = line.splitlines()[0].strip().strip('"').rstrip(".")[:_HEADLINE_MAX_CHARS]
+        try:
+            await client.set_headline(e["id"], line, e.get("version", 1))
+            written += 1
+        except Exception as ex:
+            log.warning("headline write failed for %s: %s", e["id"], ex)
+    if written:
+        await client.log(
+            action="headline",
+            message=f"summarized {written} entr{'y' if written == 1 else 'ies'}",
+            details={"written": written},
+        )
+
+
 async def run_brief(client: ArtelClient) -> None:
     if not is_configured():
         return

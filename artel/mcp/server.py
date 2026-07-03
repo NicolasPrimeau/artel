@@ -360,6 +360,41 @@ def _fmt_memory(e: dict, full_content: bool = False) -> str:
     return f"{meta}\n{content}"
 
 
+def _title(e: dict) -> str:
+    headline = e.get("headline")
+    if headline:
+        return headline
+    return e["content"].splitlines()[0].lstrip("# ").strip()
+
+
+def _knowledge_map(project: str, entries: list[dict]) -> str | None:
+    if not entries:
+        return None
+    tag_counts: dict[str, int] = {}
+    docs: list[dict] = []
+    directives: list[dict] = []
+    for e in entries:
+        for t in e.get("tags") or []:
+            tag_counts[t] = tag_counts.get(t, 0) + 1
+        if e["type"] == "doc":
+            docs.append(e)
+        elif e["type"] == "directive":
+            directives.append(e)
+    lines = [f"## Knowledge map — {project} ({len(entries)} entries)"]
+    shared = {t: n for t, n in tag_counts.items() if n > 1}
+    top = sorted((shared or tag_counts).items(), key=lambda kv: (-kv[1], kv[0]))[:20]
+    if top:
+        lines.append("tags: " + "  ".join(f"{t}({n})" for t, n in top))
+    if docs:
+        docs.sort(key=lambda e: e["confidence"], reverse=True)
+        lines.append("docs:")
+        lines += [f"  · {_title(e)[:80]}" for e in docs[:15]]
+    if directives:
+        lines.append(f"directives ({len(directives)}):")
+        lines += [f"  · {_title(e)[:120]}" for e in directives[:10]]
+    return "\n".join(lines)
+
+
 # ── Session ──────────────────────────────────────────────────────────────────
 
 
@@ -415,6 +450,18 @@ async def session_context(agent_id: str | None = None) -> str:
                 parts.append(f"## Tasks ({project})\n" + "\n".join(task_lines))
         except _HTTPX_ERRORS:
             pass
+
+    try:
+        map_params: dict = {"limit": 500}
+        if project:
+            map_params["project"] = project
+        map_r = await c.get("/memory", params=map_params)
+        map_r.raise_for_status()
+        map_section = _knowledge_map(project or "all accessible", map_r.json())
+        if map_section:
+            parts.append(map_section)
+    except _HTTPX_ERRORS:
+        pass
 
     h = data.get("last_handoff")
     if h:

@@ -5,7 +5,12 @@ import pytest_asyncio
 from httpx import AsyncClient
 
 import artel.store.db as db_mod
-from artel.archivist.synthesis import on_task_completed, run_synthesis, run_task_triage
+from artel.archivist.synthesis import (
+    on_task_completed,
+    run_headlines,
+    run_synthesis,
+    run_task_triage,
+)
 
 ARCHIVIST_ID = "test-archivist"
 
@@ -61,6 +66,22 @@ class _ScenarioArchivistClient:
 
     async def patch_memory(self, entry_id: str, **fields) -> dict:
         r = await self._http.patch(f"/memory/{entry_id}", json=fields)
+        r.raise_for_status()
+        return r.json()
+
+    async def list_entries(self, type=None, limit=100) -> list[dict]:
+        params: dict = {"limit": limit}
+        if type:
+            params["type"] = type
+        r = await self._http.get("/memory", params=params)
+        r.raise_for_status()
+        return r.json()
+
+    async def set_headline(self, entry_id: str, headline: str, headline_version: int) -> dict:
+        r = await self._http.patch(
+            f"/memory/{entry_id}/headline",
+            json={"headline": headline, "headline_version": headline_version},
+        )
         r.raise_for_status()
         return r.json()
 
@@ -787,3 +808,53 @@ async def test_on_task_completed_llm_updates_existing_memory(arch_scenario):
 
     updated = await agent_a.get_memory(mem["id"])
     assert "OAuth2" in updated["content"]
+
+
+async def _run_headlines_mocked(client, llm_response: str):
+    with (
+        patch("artel.archivist.synthesis.is_configured", return_value=True),
+        patch(
+            "artel.archivist.synthesis.complete",
+            new=AsyncMock(return_value=llm_response),
+        ),
+    ):
+        await run_headlines(client)
+
+
+async def test_curator_headline_op(arch_scenario):
+    scenario, arch_client, arch_http = arch_scenario
+
+    doc = await arch_client.write_memory(
+        "The archivist enforces a single-curator lease so only one instance mutates memory.",
+        type="doc",
+        tags=["archivist"],
+    )
+    assert doc.get("headline") is None
+
+    await _run_headlines_mocked(arch_client, "single-curator lease keeps one archivist mutating")
+
+    updated = await arch_client.get_memory(doc["id"])
+    assert updated["headline"] == "single-curator lease keeps one archivist mutating"
+    assert updated["headline_version"] == updated["version"]
+
+    # a fresh headline is not regenerated on the next pass
+    await _run_headlines_mocked(arch_client, "SHOULD NOT OVERWRITE")
+    stable = await arch_client.get_memory(doc["id"])
+    assert stable["headline"] == "single-curator lease keeps one archivist mutating"
+
+
+async def test_headline_regenerates_after_content_edit(arch_scenario):
+    scenario, arch_client, arch_http = arch_scenario
+
+    doc = await arch_client.write_memory("Original body about mesh sync.", type="doc")
+    await _run_headlines_mocked(arch_client, "mesh sync summary v1")
+    v1 = await arch_client.get_memory(doc["id"])
+    assert v1["headline"] == "mesh sync summary v1"
+
+    # editing content bumps version past headline_version, marking it stale
+    await arch_client.patch_memory(doc["id"], content="Rewritten body about CRDT convergence.")
+    await _run_headlines_mocked(arch_client, "CRDT convergence summary v2")
+
+    v2 = await arch_client.get_memory(doc["id"])
+    assert v2["headline"] == "CRDT convergence summary v2"
+    assert v2["headline_version"] == v2["version"]

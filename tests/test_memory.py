@@ -573,3 +573,36 @@ async def test_write_no_project_stays_global_without_membership(client, mem_payl
     r = await client.post("/memory", json=mem_payload, headers=HEADERS)
     assert r.status_code == 201
     assert r.json()["project"] is None
+
+
+async def _make_archivist(client):
+    from artel.store.db import get_db
+
+    get_db().execute("UPDATE agents SET role='archivist' WHERE id=?", (AGENT2,))
+    get_db().commit()
+
+
+async def test_headline_requires_curator(client, mem_payload):
+    entry = (await client.post("/memory", json=mem_payload, headers=HEADERS)).json()
+    r = await client.patch(
+        f"/memory/{entry['id']}/headline",
+        json={"headline": "a summary", "headline_version": entry["version"]},
+        headers=HEADERS,
+    )
+    assert r.status_code == 403
+
+
+async def test_archivist_sets_headline_without_version_bump(client, mem_payload):
+    await _make_archivist(client)
+    entry = (await client.post("/memory", json=mem_payload, headers=HEADERS)).json()
+    r = await client.patch(
+        f"/memory/{entry['id']}/headline",
+        json={"headline": "capital-of-France fact", "headline_version": entry["version"]},
+        headers=HEADERS2,
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["headline"] == "capital-of-France fact"
+    assert body["version"] == entry["version"]
+    got = (await client.get(f"/memory/{entry['id']}", headers=HEADERS)).json()
+    assert got["headline"] == "capital-of-France fact"

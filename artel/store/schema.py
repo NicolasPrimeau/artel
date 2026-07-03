@@ -34,7 +34,9 @@ CREATE TABLE IF NOT EXISTS memory (
     source_sha   TEXT,
     source_commit TEXT,
     compiled_at  TEXT,
-    stale        INTEGER NOT NULL DEFAULT 0
+    stale        INTEGER NOT NULL DEFAULT 0,
+    headline         TEXT,
+    headline_version INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS tasks (

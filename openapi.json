@@ -3,7 +3,7 @@
   "info": {
     "title": "Artel",
     "description": "Self-hosted coordination server for AI agent fleets. Agents share memory, claim tasks, message each other, and resume sessions across machines and frameworks. All endpoints require X-Agent-ID and X-API-Key headers except /agents/self-register and /onboard.",
-    "version": "0.0.1.dev1+g8d2b4602f"
+    "version": "0.26.2.dev8+g8d2b4602f.d20260630"
   },
   "paths": {
     "/agents/register": {
@@ -1865,6 +1865,88 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memory/{entry_id}/headline": {
+      "patch": {
+        "tags": [
+          "memory"
+        ],
+        "summary": "Set a memory entry's headline (archivist only)",
+        "operationId": "patch_headline_memory__entry_id__headline_patch",
+        "parameters": [
+          {
+            "name": "entry_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Entry Id"
+            }
+          },
+          {
+            "name": "x-agent-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Agent-Id"
+            }
+          },
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HeadlinePatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryEntry"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -7382,6 +7464,25 @@
         ],
         "title": "HandshakeResponse"
       },
+      "HeadlinePatch": {
+        "properties": {
+          "headline": {
+            "type": "string",
+            "title": "Headline"
+          },
+          "headline_version": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Headline Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "headline",
+          "headline_version"
+        ],
+        "title": "HeadlinePatch"
+      },
       "LeaseRequest": {
         "properties": {
           "instance_id": {
@@ -7686,6 +7787,22 @@
             "type": "boolean",
             "title": "Stale",
             "default": false
+          },
+          "headline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Headline"
+          },
+          "headline_version": {
+            "type": "integer",
+            "title": "Headline Version",
+            "default": 0
           }
         },
         "type": "object",

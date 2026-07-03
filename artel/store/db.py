@@ -283,6 +283,14 @@ def _migrate(conn: sqlite3.Connection) -> None:
     conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_compiled ON memory (type, stale)")
     conn.commit()
 
+    mem_cols = {r[1] for r in conn.execute("PRAGMA table_info(memory)").fetchall()}
+    if "headline" not in mem_cols:
+        conn.execute("ALTER TABLE memory ADD COLUMN headline TEXT")
+        conn.commit()
+    if "headline_version" not in mem_cols:
+        conn.execute("ALTER TABLE memory ADD COLUMN headline_version INTEGER NOT NULL DEFAULT 0")
+        conn.commit()
+
     _canonicalize_projects(conn)
     _migrate_project_roles(conn)
 
