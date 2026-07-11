@@ -5,7 +5,7 @@ import pathlib
 import socket
 
 from .client import ArtelClient
-from .compaction import run_capture_compaction
+from .compaction import run_capture_compaction, run_capture_refinement
 from .config import settings
 from .conflict import check_and_merge
 from .llm import is_configured
@@ -111,6 +111,7 @@ async def _scheduler(client: ArtelClient) -> None:
             (run_synthesis, "synthesis"),
             (decay_confidence, "decay"),
             (run_promotion, "promotion"),
+            (run_capture_refinement, "capture_refinement"),
             (run_headlines, "headlines"),
             (run_compilation, "compilation"),
             (run_task_triage, "task_triage"),
