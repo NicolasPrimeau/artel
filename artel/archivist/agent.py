@@ -5,6 +5,7 @@ import pathlib
 import socket
 
 from .client import ArtelClient
+from .compaction import run_capture_compaction
 from .config import settings
 from .conflict import check_and_merge
 from .llm import is_configured
@@ -105,6 +106,7 @@ async def _scheduler(client: ArtelClient) -> None:
     while True:
         await _is_leader.wait()
         for fn, name in (
+            (run_capture_compaction, "capture_compaction"),
             (run_feed_triage, "feed_triage"),
             (run_synthesis, "synthesis"),
             (decay_confidence, "decay"),

@@ -258,6 +258,19 @@ class CaptureAck(BaseModel):
     expires_at: str
 
 
+class CaptureRecord(BaseModel):
+    id: str
+    agent_id: str
+    session_id: str | None
+    project: str | None
+    content: str
+    created_at: str
+
+
+class CaptureDigest(BaseModel):
+    ids: list[str]
+
+
 class Participant(BaseModel):
     agent_id: str
     last_seen: str | None

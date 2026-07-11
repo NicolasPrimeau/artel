@@ -135,6 +135,14 @@ class ArtelClient:
         r = await self._request("GET", "/memory/delta", params={"since": since})
         return r.json()
 
+    async def list_pending_captures(self, limit: int = 50) -> list[dict]:
+        r = await self._request("GET", "/captures", params={"limit": limit})
+        return r.json()
+
+    async def digest_captures(self, ids: list[str]) -> dict:
+        r = await self._request("POST", "/captures/digest", json={"ids": ids})
+        return r.json()
+
     async def get_task(self, task_id: str) -> dict:
         r = await self._request("GET", f"/tasks/{task_id}")
         return r.json()

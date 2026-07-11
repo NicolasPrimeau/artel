@@ -2,7 +2,7 @@ import pytest
 
 import artel.store.db as db_mod
 
-from .conftest import HEADERS
+from .conftest import HEADERS, TEST_AGENT
 
 
 @pytest.mark.asyncio
@@ -49,3 +49,32 @@ async def test_capture_stored_but_not_searchable_or_fed(client):
 async def test_capture_ttl_clamped(client):
     r = await client.post("/captures", json={"content": "x", "ttl_hours": 100000}, headers=HEADERS)
     assert r.status_code == 201  # oversized TTL is clamped, not rejected
+
+
+@pytest.mark.asyncio
+async def test_capture_queue_is_archivist_only(client):
+    r = await client.post("/captures", json={"content": "slice for archivist"}, headers=HEADERS)
+    cid = r.json()["id"]
+
+    # a plain agent may append but cannot read or drain the queue
+    assert (await client.get("/captures", headers=HEADERS)).status_code == 403
+    assert (
+        await client.post("/captures/digest", json={"ids": [cid]}, headers=HEADERS)
+    ).status_code == 403
+
+    # with the archivist role: can list pending and mark digested
+    db = db_mod.get_db()
+    db.execute("UPDATE agents SET role='archivist' WHERE id=?", (TEST_AGENT,))
+    db.commit()
+
+    listed = await client.get("/captures", headers=HEADERS)
+    assert listed.status_code == 200
+    assert any(c["id"] == cid for c in listed.json())
+
+    d = await client.post("/captures/digest", json={"ids": [cid]}, headers=HEADERS)
+    assert d.status_code == 200
+    assert d.json()["digested"] == 1
+
+    # digested -> no longer pending
+    again = await client.get("/captures", headers=HEADERS)
+    assert all(c["id"] != cid for c in again.json())
