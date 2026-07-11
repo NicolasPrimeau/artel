@@ -13,6 +13,7 @@ Per-session dedup: each entry/message is surfaced at most once per session_id, s
 the same memory or unread message does not re-inject on every prompt.
 """
 
+import fcntl
 import glob
 import json
 import os
@@ -256,6 +257,155 @@ def cmd_status():
     sys.stdout.write(line)
 
 
+# --- capture drain (off the agent's hot path) ---------------------------------------
+# The Stop/PreCompact hook only appends its payload to a local spool and forks this
+# drainer detached. The drainer compresses each session's new transcript slice and
+# ships it to /captures. flock keeps a single drainer at a time; a per-session byte
+# cursor means nothing is shipped twice; a size floor holds back trivial slices until
+# they grow or a PreCompact forces a flush.
+
+_CAPTURE_MIN_CHARS = 400
+_CAPTURE_CAP = 8000
+
+
+def _spool_dir():
+    d = os.environ.get("ARTEL_SPOOL") or os.path.join(os.path.expanduser("~"), ".artel", "spool")
+    os.makedirs(d, exist_ok=True)
+    return d
+
+
+def compress_transcript(lines):
+    """Best-effort reduce raw transcript JSONL into a readable slice: keep user text +
+    assistant reasoning + tool names; drop bulky tool outputs and file dumps."""
+    out = []
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            ev = json.loads(line)
+        except Exception:
+            continue
+        msg = ev.get("message") if isinstance(ev.get("message"), dict) else ev
+        role = msg.get("role") or ev.get("type") or "?"
+        content = msg.get("content")
+        texts = []
+        if isinstance(content, str):
+            texts.append(content)
+        elif isinstance(content, list):
+            for block in content:
+                if not isinstance(block, dict):
+                    continue
+                if block.get("type") == "text" and block.get("text"):
+                    texts.append(block["text"])
+                elif block.get("type") == "tool_use":
+                    texts.append(f"[tool:{block.get('name', '?')}]")
+                # tool_result / large outputs are intentionally dropped
+        joined = " ".join(t for t in texts if t).strip()
+        if joined:
+            out.append(f"{role}: {joined}")
+    return "\n".join(out)[:_CAPTURE_CAP]
+
+
+def _post_capture(content, session_id):
+    base = _cfg("CLAUDE_PLUGIN_OPTION_ARTEL_URL", "ARTEL_URL").rstrip("/")
+    req = urllib.request.Request(
+        base + "/captures",
+        method="POST",
+        data=json.dumps({"content": content, "session_id": session_id}).encode(),
+        headers={
+            "content-type": "application/json",
+            "x-agent-id": _cfg("CLAUDE_PLUGIN_OPTION_AGENT_ID", "ARTEL_AGENT_ID"),
+            "x-api-key": _cfg("CLAUDE_PLUGIN_OPTION_API_KEY", "ARTEL_API_KEY"),
+        },
+    )
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        return resp.status in (200, 201)
+
+
+def _drain_session(session_id, transcript_path, force, spool):
+    if not transcript_path or not os.path.exists(transcript_path):
+        return
+    cursor_path = os.path.join(spool, f"cursor-{session_id}")
+    try:
+        offset = int(open(cursor_path).read().strip())
+    except (OSError, ValueError):
+        offset = 0
+    size = os.path.getsize(transcript_path)
+    if size <= offset:  # nothing new, or the file rotated smaller — resync
+        if size < offset:
+            _write_text(cursor_path, str(size))
+        return
+    with open(transcript_path, "rb") as fh:
+        fh.seek(offset)
+        data = fh.read()
+        new_offset = fh.tell()
+    content = compress_transcript(data.decode("utf-8", "replace").splitlines())
+    if not content:
+        _write_text(cursor_path, str(new_offset))  # advance past dropped content
+        return
+    if len(content) < _CAPTURE_MIN_CHARS and not force:
+        return  # accumulate: leave the cursor so it grows until floor or a forced flush
+    try:
+        if _post_capture(content, session_id):
+            _write_text(cursor_path, str(new_offset))
+    except Exception:
+        pass  # leave the cursor; the next drain retries
+
+
+def _write_text(path, text):
+    try:
+        with open(path, "w") as fh:
+            fh.write(text)
+    except OSError:
+        pass
+
+
+def cmd_drain():
+    spool = _spool_dir()
+    lock = open(os.path.join(spool, ".drain.lock"), "w")
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        return  # another drainer already holds the lock
+    try:
+        incoming = os.path.join(spool, "incoming.jsonl")
+        work = os.path.join(spool, "processing.jsonl")
+        if os.path.exists(incoming):
+            try:
+                os.replace(incoming, work)
+            except OSError:
+                pass
+        if not os.path.exists(work):
+            return
+        sessions: dict = {}
+        with open(work, errors="replace") as fh:
+            for line in fh:
+                try:
+                    ev = json.loads(line)
+                except Exception:
+                    continue
+                sid, path = ev.get("session_id"), ev.get("transcript_path")
+                if not sid or not path:
+                    continue
+                info = sessions.setdefault(sid, {"path": path, "force": False})
+                info["path"] = path
+                if (ev.get("hook_event_name") or "").lower().startswith("precompact"):
+                    info["force"] = True
+        for sid, info in sessions.items():
+            try:
+                _drain_session(sid, info["path"], info["force"], spool)
+            except Exception:
+                pass
+        try:
+            os.remove(work)
+        except OSError:
+            pass
+    finally:
+        fcntl.flock(lock, fcntl.LOCK_UN)
+        lock.close()
+
+
 def main():
     if not configured():
         return
@@ -266,6 +416,7 @@ def main():
         "inbox": cmd_inbox,
         "stop": cmd_stop,
         "status": cmd_status,
+        "drain": cmd_drain,
     }.get(kind)
     if handler:
         try:

@@ -48,7 +48,7 @@ def test_marketplace_entry():
 
 def test_hooks_wired_and_scripts_executable():
     hooks = _HOOKS["hooks"]
-    assert set(hooks) == {"SessionStart", "UserPromptSubmit", "PreToolUse", "Stop"}
+    assert set(hooks) == {"SessionStart", "UserPromptSubmit", "PreToolUse", "Stop", "PreCompact"}
     referenced = []
     for groups in hooks.values():
         for group in groups:
@@ -101,7 +101,8 @@ def test_shared_hook_module_and_helpers_present():
     for kind in ("recall", "gotcha", "inbox", "stop", "status"):
         assert f'"{kind}"' in body, f"module missing dispatch for {kind}"
     assert "seen_filter" in body, "module missing per-session dedup"
-    for extra in ("artel-statusline.sh", "artel-doctor.sh"):
+    assert '"drain"' in body, "module missing capture drain dispatch"
+    for extra in ("artel-statusline.sh", "artel-doctor.sh", "artel-capture.sh", "artel-drain.sh"):
         script = scripts / extra
         assert script.is_file(), f"missing {extra}"
         assert os.access(script, os.X_OK), f"{extra} not executable"

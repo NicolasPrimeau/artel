@@ -45,10 +45,29 @@
         ]
       }
     ],
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/artel-capture.sh",
+            "timeout": 5,
+            "statusMessage": "Capturing session before compaction…"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "matcher": "",
         "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/artel-capture.sh",
+            "timeout": 5,
+            "statusMessage": "Capturing session…"
+          },
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/artel-stop.sh",

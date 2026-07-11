@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.31.0] — 2026-07-11
+
+### Plugin
+
+- Session capture, fully off the agent's hot path. New `Stop` + `PreCompact` hook `artel-capture.sh` spools the hook payload to a local file and forks a detached drainer, then exits — no parsing and no network on the hot path (measured ~10ms). The drainer (`artel-drain.sh`) compresses each session's new transcript slice (keeps user text + assistant reasoning + tool names; drops bulky tool output) and ships it to `POST /captures`, throttled by an `flock` and a per-session byte cursor so nothing is shipped twice. A size floor holds back trivial slices until they grow or a `PreCompact` forces a flush. The spool file is a durable WAL: if a drainer dies, the next capture hook's drainer picks up the accumulated payloads.
+- Requires the server-side captures ingest queue + archivist compaction (v0.28+ server); capture is inert without it.
+
 ## [0.30.1] — 2026-07-10
 
 ### Plugin
