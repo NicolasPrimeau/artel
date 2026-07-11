@@ -119,6 +119,22 @@ CREATE TABLE IF NOT EXISTS project_members (
     PRIMARY KEY (project_id, agent_id)
 );
 
+-- captures: raw session-slice ingest queue. Local-only work queue processed by the
+-- archivist into memory; deliberately NOT embedded, NOT FTS-indexed, NOT in the CRDT
+-- feed, and NOT surfaced by memory_search. digested_at NULL = pending; expires_at TTL.
+CREATE TABLE IF NOT EXISTS captures (
+    id          TEXT PRIMARY KEY,
+    agent_id    TEXT NOT NULL,
+    session_id  TEXT,
+    project     TEXT,
+    content     TEXT NOT NULL,
+    created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    digested_at TEXT,
+    expires_at  TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_captures_pending ON captures (digested_at, created_at);
+CREATE INDEX IF NOT EXISTS idx_captures_expires ON captures (expires_at);
+
 CREATE INDEX IF NOT EXISTS idx_memory_agent     ON memory (agent_id);
 CREATE INDEX IF NOT EXISTS idx_memory_project   ON memory (project);
 CREATE INDEX IF NOT EXISTS idx_memory_updated   ON memory (updated_at);

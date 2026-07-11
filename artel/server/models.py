@@ -246,6 +246,18 @@ class EventEntry(BaseModel):
     created_at: str
 
 
+class CaptureCreate(BaseModel):
+    content: str
+    session_id: str | None = None
+    project: str | None = None
+    ttl_hours: int = 72
+
+
+class CaptureAck(BaseModel):
+    id: str
+    expires_at: str
+
+
 class Participant(BaseModel):
     agent_id: str
     last_seen: str | None

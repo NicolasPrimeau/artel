@@ -1961,6 +1961,79 @@
         }
       }
     },
+    "/captures": {
+      "post": {
+        "tags": [
+          "captures"
+        ],
+        "summary": "Append a raw session capture to the ingest queue",
+        "operationId": "create_capture_captures_post",
+        "parameters": [
+          {
+            "name": "x-agent-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Agent-Id"
+            }
+          },
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaptureCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptureAck"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/compile": {
       "post": {
         "tags": [
@@ -6679,6 +6752,64 @@
           "ids"
         ],
         "title": "BulkMemoryDelete"
+      },
+      "CaptureAck": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "expires_at": {
+            "type": "string",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "expires_at"
+        ],
+        "title": "CaptureAck"
+      },
+      "CaptureCreate": {
+        "properties": {
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          },
+          "ttl_hours": {
+            "type": "integer",
+            "title": "Ttl Hours",
+            "default": 72
+          }
+        },
+        "type": "object",
+        "required": [
+          "content"
+        ],
+        "title": "CaptureCreate"
       },
       "CompileCheckRequest": {
         "properties": {
