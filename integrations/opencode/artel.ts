@@ -21,7 +21,7 @@ async function artelGet(path: string): Promise<unknown | null> {
   try {
     const res = await fetch(baseUrl() + path, {
       headers: headers(),
-      signal: AbortSignal.timeout(6000),
+      signal: AbortSignal.timeout(3000),
     })
     if (!res.ok) return null
     return await res.json()
@@ -29,6 +29,10 @@ async function artelGet(path: string): Promise<unknown | null> {
     return null
   }
 }
+
+// surfaced-once dedup for the lifetime of the opencode session (process)
+const surfaced = new Set<string>()
+const fresh = (key: string) => (surfaced.has(key) ? false : (surfaced.add(key), true))
 
 const clip = (s: unknown, n: number) => String(s ?? "").replace(/\s+/g, " ").slice(0, n)
 
@@ -47,9 +51,11 @@ export const ArtelPlugin: Plugin = async ({ client }) => {
   }
 
   const inboxLine = (msgs: unknown): string | null => {
-    if (!Array.isArray(msgs) || msgs.length === 0) return null
-    const lines = msgs.slice(0, 10).map((m: any) => `${m.from_agent ?? "?"}: ${m.body ?? ""}`)
-    return `[Artel] ${msgs.length} unread message(s): ${lines.join(" | ")}`
+    if (!Array.isArray(msgs)) return null
+    const unseen = msgs.filter((m: any) => fresh("msg:" + (m.id ?? `${m.from_agent}:${m.body}`)))
+    if (unseen.length === 0) return null
+    const lines = unseen.slice(0, 10).map((m: any) => `${m.from_agent ?? "?"}: ${m.body ?? ""}`)
+    return `[Artel] ${unseen.length} new message(s): ${lines.join(" | ")}`
   }
 
   return {
@@ -80,7 +86,8 @@ export const ArtelPlugin: Plugin = async ({ client }) => {
       if (!Array.isArray(results)) return
       const hits = results.filter((e: any) => {
         const c = String(e?.content || "").toLowerCase()
-        return c.includes(name.toLowerCase()) || (stem.length >= 4 && c.includes(stem.toLowerCase()))
+        const match = c.includes(name.toLowerCase()) || (stem.length >= 4 && c.includes(stem.toLowerCase()))
+        return match && fresh(`gotcha:${name}:${e?.id}`)
       })
       if (hits.length === 0) return
       await surface(`[Artel] Notes on ${name}: ${hits.slice(0, 2).map((e: any) => clip(e.content, 180)).join(" | ")}`)

@@ -251,6 +251,16 @@ Artel also supports OAuth 2.1 (dynamic client registration, PKCE, client credent
 /plugin install artel@artel
 ```
 
+The plugin wires the Artel MCP server plus ambient hooks: it loads your last handoff at session start, checks your inbox, surfaces relevant memory and skills on each prompt, shows file-anchored notes before edits, and delivers unread messages before the agent stops. Slash commands: `/artel-recall`, `/artel-remember`, `/artel-handoff`, `/artel-tasks`.
+
+Optional statusline (open tasks + unread messages) — add to `settings.json`:
+
+```json
+"statusLine": { "type": "command", "command": "/path/to/artel/scripts/artel-statusline.sh" }
+```
+
+Not seeing anything? Run `scripts/artel-doctor.sh` to check config and connectivity.
+
 ---
 
 ## OpenCode (MCP)

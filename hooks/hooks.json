@@ -7,7 +7,7 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/artel-session-start.sh",
-            "timeout": 15,
+            "timeout": 12,
             "statusMessage": "Loading Artel session context…"
           }
         ]
@@ -20,13 +20,13 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/artel-check-inbox.sh",
-            "timeout": 8,
+            "timeout": 5,
             "statusMessage": "Checking Artel inbox…"
           },
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/artel-recall.sh",
-            "timeout": 8,
+            "timeout": 5,
             "statusMessage": "Recalling relevant Artel memory…"
           }
         ]
@@ -39,7 +39,7 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/artel-pretool-gotcha.sh",
-            "timeout": 6,
+            "timeout": 5,
             "statusMessage": "Checking Artel notes for this file…"
           }
         ]
@@ -52,7 +52,7 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/artel-stop.sh",
-            "timeout": 6,
+            "timeout": 5,
             "statusMessage": "Checking Artel inbox before stopping…"
           }
         ]

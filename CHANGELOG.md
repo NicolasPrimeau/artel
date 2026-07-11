@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.30.1] — 2026-07-10
+
+### Plugin
+
+- Per-session dedup across all push hooks — a given memory, gotcha, or unread message is surfaced at most once per session, so recall/inbox/gotcha no longer re-inject the same context on every prompt or every edit to the same file. Shared logic now lives in `scripts/_artel_hooks.py`; the hook scripts are thin wrappers.
+- Snappier, fail-fast timeouts on the prompt/edit/stop hooks (3s internal, 5s hook cap) so a slow or down Artel degrades gracefully instead of stalling each prompt.
+- Tighter recall relevance: skips trivial/acknowledgement prompts, and injects fewer, higher-signal hits. (Deliberately does not use `max_distance`, which would drop keyword-only matches.)
+- New `scripts/artel-statusline.sh` — optional Claude Code statusline showing open task and unread message counts, cached ~10s. Wire into `settings.json` `statusLine`.
+- New `scripts/artel-doctor.sh` — diagnoses config + connectivity (server reachable, credentials valid) so a silent no-op is easy to debug. Never prints the API key.
+- opencode plugin: matching in-session dedup and 3s timeout.
+
 ## [0.30.0] — 2026-07-10
 
 ### Plugin

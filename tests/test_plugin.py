@@ -91,3 +91,18 @@ def test_opencode_plugin_present():
     body = plugin.read_text()
     assert "@opencode-ai/plugin" in body
     assert "session.created" in body and "tool.execute.before" in body
+
+
+def test_shared_hook_module_and_helpers_present():
+    scripts = _ROOT / "scripts"
+    module = scripts / "_artel_hooks.py"
+    assert module.is_file()
+    body = module.read_text()
+    for kind in ("recall", "gotcha", "inbox", "stop", "status"):
+        assert f'"{kind}"' in body, f"module missing dispatch for {kind}"
+    assert "seen_filter" in body, "module missing per-session dedup"
+    for extra in ("artel-statusline.sh", "artel-doctor.sh"):
+        script = scripts / extra
+        assert script.is_file(), f"missing {extra}"
+        assert os.access(script, os.X_OK), f"{extra} not executable"
+        assert script.read_text().startswith("#!"), f"{extra} missing shebang"
