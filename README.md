@@ -5,14 +5,19 @@
 [![Glama](https://glama.ai/mcp/servers/NicolasPrimeau/artel/badges/score.svg)](https://glama.ai/mcp/servers/NicolasPrimeau/artel)
 [![smithery badge](https://smithery.ai/badge/nicolas-primeau/artel)](https://smithery.ai/servers/nicolas-primeau/artel)
 
-Self-hosted coordination layer for AI agent fleets. Shared memory with semantic search, tasks, async messaging, and session handoffs. Instances mesh together via feeds and mDNS. An autonomous archivist keeps collective knowledge clean and coherent. Any agent that speaks HTTP or MCP can participate.
+Self-hosted coordination layer for AI agent fleets. A shared memory your agents read from and write to — with semantic search, tasks, async messaging, and session handoffs. The Claude Code plugin makes memory **ambient**: it pushes the right knowledge into a session at the right moment, and captures what happens back out — no agent has to remember to. Instances mesh together as CRDTs, compiled memory stays anchored to your code, and an autonomous archivist keeps the whole store clean and coherent. Any agent that speaks HTTP or MCP can join.
 
 ```
-agent-a (Claude Code)  ──┐
-agent-b (Claude API)   ──┤──  REST / MCP  ──  Artel Server  ──  SQLite + embeddings
-agent-c (AutoGen)      ──┘                      ├── shared memory + semantic search
-                                                 ├── tasks · messages · events
-                                                 └── archivist (synthesis · decay · merge)
+  Claude Code · opencode · Claude API · AutoGen
+        │   push: memory/skills/gotchas in  ┄  capture: sessions out
+        ▼
+   REST / MCP ──► Artel Server ──► SQLite (WAL) + embeddings
+                     ├── memory — semantic search · confidence decay · knowledge graph
+                     ├── captures queue ──► archivist compaction ──► memory
+                     ├── tasks · messages · events · session handoffs
+                     └── archivist — capture · synthesis · merge · decay · promote
+        │
+   mesh (CRDT feeds + mDNS) ◄──► other Artel instances
 ```
 
 ---
@@ -52,6 +57,8 @@ curl -fsSL http://<host>:8000/onboard | sh
 ## Table of contents
 
 - [Features](#features)
+- [The Claude Code plugin — ambient memory](#the-claude-code-plugin--ambient-memory)
+- [Capture](#capture)
 - [Mesh](#mesh)
 - [Compile mode](#compile-mode)
 - [Archivist](#archivist)
@@ -68,19 +75,66 @@ curl -fsSL http://<host>:8000/onboard | sh
 ## Features
 
 - **Shared memory** — semantic search across all agents. Five types with different time horizons: `memory` (default, decays), `doc` (stable reference, archivist-promoted), `directive` (permanent standing instruction), `skill` (procedural, decays, never promoted), `compiled` (anchored to source code, recompiles instead of decaying). Confidence scores decay based on age and read frequency.
-- **Tasks** — create, claim, complete. Agents coordinate without a central scheduler.
+- **Ambient plugin** — the Claude Code plugin turns memory from *pull* (tools an agent must call) into *push*: it injects relevant memory, matching skills, and file-anchored gotchas at the exact moment they help, delivers inbox messages, and captures sessions — all automatically.
+- **Capture** — a durable ingest queue absorbs raw session slices off the agent's hot path; the archivist compacts them into clean memory. The write side is as reliable as the read side, and a firehose of raw writes can never degrade the store.
+- **Tasks** — create, claim, complete, with dependencies. Agents coordinate without a central scheduler.
 - **Messages** — async agent-to-agent inbox. Direct or broadcast.
 - **Session handoffs** — save state at session end, resume with full context on next start. Any agent can pick up where another left off across context resets and machine restarts.
 - **Feed subscriptions** — subscribe any RSS or Atom feed; new items land in memory automatically.
 - **Mesh** — link two instances and memory replicates as a CRDT. LAN peers discovered via mDNS.
-- **Compile mode** — anchor memory to source code. Authored notes decay over time; compiled notes are grounded in a symbol's content hash and recompile when the code changes, not when they age. Both live in one store on a continuum.
-- **Archivist** — optional background agent that synthesizes cross-agent findings, detects conflicts, and decays stale knowledge. Frequently-read entries are heat-protected and skipped during decay.
+- **Compile mode** — anchor memory to source code. Compiled notes recompile when the code changes, not when they age.
+- **Archivist** — optional background agent that compacts captures, synthesizes cross-agent findings, detects conflicts, and decays stale knowledge.
+
+---
+
+## The Claude Code plugin — ambient memory
+
+By default Artel is **pull**: MCP tools an agent calls when it thinks to. Agents forget. The plugin adds the **push** half — it volunteers the right knowledge at the right moment, and captures what happens, so the value of the shared store no longer depends on agent discipline.
+
+```
+/plugin marketplace add NicolasPrimeau/artel
+/plugin install artel@artel
+```
+
+Every hook is config-gated, fail-safe (a missing or down server is harmless), tightly ranked (a few high-confidence results, deduped per session so nothing re-injects), and — where it matters — entirely off the agent's hot path.
+
+| When | What the plugin does |
+|------|----------------------|
+| **Session start** | injects your last handoff and what changed in memory while you were gone |
+| **Every prompt** | surfaces the most relevant memories and a matching skill, plus any new inbox messages |
+| **Before an edit** | shows memory anchored to *that file* — gotchas, decisions, prior findings — before you touch it |
+| **Before it stops** | delivers unread messages, so a teammate reaching you mid-run lands now, not next session |
+| **Every turn · before compaction** | captures the session slice for the archivist ([Capture](#capture)) — a ~10 ms local spool, never a network call on the hot path |
+
+**Slash commands:** `/artel-recall` (search shared memory), `/artel-remember` (write a fact), `/artel-handoff` (save a handoff), `/artel-tasks` (show or claim the next task).
+
+**Optional statusline** — open task and unread-message counts, cached, in your prompt. Add to `settings.json`:
+
+```json
+"statusLine": { "type": "command", "command": "/path/to/artel/scripts/artel-statusline.sh" }
+```
+
+Not seeing anything? Run `scripts/artel-doctor.sh` to check config and connectivity (it never prints your key).
+
+---
+
+## Capture
+
+The plugin surfaces memory *in*. Capture is the other direction — turning what happens in a session into durable memory *out* — without slowing the agent and without letting raw noise pollute the store.
+
+**A two-tier write.** Agents don't reliably write memories back, and pouring a high-pace firehose straight into `memory` would cost an embedding per raw slice and pollute both search and the mesh. So capture lands in a separate **ingest queue** (`captures`) that is deliberately *not* embedded, *not* full-text indexed, *not* replicated over the mesh, and *not* returned by search. Memory is protected structurally: **the archivist is the only path from the queue into memory.**
+
+**Off the hot path.** The `Stop` and `PreCompact` hooks do one thing — append the session payload to a local spool file and fork a detached drainer, then exit (~10 ms, no parsing, no network). The detached drainer compresses each session's new transcript slice (keeps the reasoning, drops bulky tool output), then ships it to the queue. The spool is a durable write-ahead log: if a drainer dies, the next hook's drainer picks up where it left off. Triggers are `Stop` (throttled by a per-session cursor and a size floor) and `PreCompact` (a forced flush right before context is evicted) — **never `SessionEnd`**, because agent sessions rarely end cleanly.
+
+**Leveled compaction (LSM-style).** The archivist drains the queue and integrates each slice into memory — extracting durable facts, reconciling against what already exists (update rather than duplicate), and attaching session provenance. A second, less frequent pass consolidates the provisional entries: merging duplicates, raising confidence when independent sessions corroborate the same fact, reconciling contradictions, and promoting stable knowledge — scoped to the recent delta so the cost stays bounded. Raw captures → provisional memory → consolidated, canonical memory, refined over time.
+
+The net effect: memory quality is decoupled from write volume. Writing fast only fills the queue; only the archivist's judgment turns a capture into memory.
 
 ---
 
 ## Mesh
 
-Each instance publishes memory as Atom and JSON Feed. Link two instances and memory replicates as a CRDT — keyed by immutable id, idempotent on ingest, no central coordinator. LAN peers discover each other via mDNS (`_artel._tcp.local.`) and link with one click. Each instance's archivist only synthesizes entries it originally wrote.
+Each instance publishes memory as Atom and JSON Feed. Link two instances and memory replicates as a CRDT — keyed by immutable id, idempotent on ingest, no central coordinator. LAN peers discover each other via mDNS (`_artel._tcp.local.`) and link with one click. Each instance's archivist only synthesizes entries it originally wrote. (Captures never cross the mesh — they are local ingest, not shared memory.)
 
 <details>
 <summary>Convergence guarantees</summary>
@@ -148,15 +202,15 @@ Every property above — SHA freshness, `relies_on` invalidation, module-shape s
 
 ## Archivist
 
-Optional background process — the server works without it.
+Optional background process — the server works without it. It is the curator of the shared store and the only writer that turns raw captures into memory.
 
-**With LLM configured:** detects semantic conflicts on write and merges them; periodically synthesizes cross-agent findings into shared doc entries.
+**With LLM configured:** compacts the capture queue into clean, deduplicated, provenance-tagged memory (minor pass) and consolidates provisional entries over time — merging duplicates, corroborating across sessions, promoting stable knowledge (major pass). Detects semantic conflicts on write and merges them; periodically synthesizes cross-agent findings into shared doc entries.
 
-**Without LLM (passive):** confidence decay and type promotion (memory → doc) based on age and read frequency.
+**Without LLM (passive):** confidence decay and type promotion (memory → doc) based on age and read frequency. Captures are left on the queue for a later LLM-configured run rather than discarded.
 
 **Adaptive decay:** every `GET /memory/:id` read increments a heat counter. Before decaying an entry the archivist computes `heat = read_count × 0.9^(weeks_since_last_read)` — entries above the threshold are skipped. The archivist also records six health metrics per cycle (utilization rate, decay regret, synthesis and merge counts, net growth, contradictions) for trend analysis.
 
-Supports Anthropic and any OpenAI-compatible provider.
+A single archivist holds a lease per deployment, so only one curates at a time. Supports Anthropic and any OpenAI-compatible provider.
 
 ---
 
@@ -220,7 +274,7 @@ Entries carry confidence scores (0.0–1.0) that decay if not reinforced. Proven
 
 ## Claude Code (MCP)
 
-The onboard script writes `.mcp.json` automatically. Manual config:
+The onboard script writes `.mcp.json` automatically, and the [plugin](#the-claude-code-plugin--ambient-memory) wires this up for you. Manual config:
 
 ```json
 {
@@ -243,23 +297,6 @@ Artel also supports OAuth 2.1 (dynamic client registration, PKCE, client credent
 
 [![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=artel&config=eyJ1cmwiOiJodHRwczovL2FydGVsLnJ1bi9tY3AiLCJoZWFkZXJzIjp7IngtYWdlbnQtaWQiOiJZT1VSX0FHRU5UX0lEIiwieC1hcGkta2V5IjoiWU9VUl9BUElfS0VZIn19)
 [![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_Artel-0098FF?logo=visualstudiocode&logoColor=white)](vscode:mcp/install?%7B%22name%22%3A%22artel%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A//artel.run/mcp%22%2C%22headers%22%3A%7B%22x-agent-id%22%3A%22YOUR_AGENT_ID%22%2C%22x-api-key%22%3A%22YOUR_API_KEY%22%7D%7D)
-
-### Claude Code plugin
-
-```
-/plugin marketplace add NicolasPrimeau/artel
-/plugin install artel@artel
-```
-
-The plugin wires the Artel MCP server plus ambient hooks: it loads your last handoff at session start, checks your inbox, surfaces relevant memory and skills on each prompt, shows file-anchored notes before edits, and delivers unread messages before the agent stops. Slash commands: `/artel-recall`, `/artel-remember`, `/artel-handoff`, `/artel-tasks`.
-
-Optional statusline (open tasks + unread messages) — add to `settings.json`:
-
-```json
-"statusLine": { "type": "command", "command": "/path/to/artel/scripts/artel-statusline.sh" }
-```
-
-Not seeing anything? Run `scripts/artel-doctor.sh` to check config and connectivity.
 
 ---
 
@@ -288,7 +325,7 @@ Manual config for `opencode.json` or `~/.config/opencode/config.json`:
 }
 ```
 
-The MCP port defaults to `8001` (separate from the REST API on `8000`). Start it with `MCP_TRANSPORT=sse artel-mcp`.
+The MCP port defaults to `8001` (separate from the REST API on `8000`). Start it with `MCP_TRANSPORT=sse artel-mcp`. A matching push-layer plugin for opencode lives in [`integrations/opencode/`](integrations/opencode/).
 
 ### Wake daemon
 
@@ -331,6 +368,11 @@ Memory
   DELETE /memory                     bulk soft delete (body: {"ids":[...]})
   GET    /memory/feed.atom           Atom 1.0 feed
   GET    /memory/feed.json           JSON Feed 1.1 (mesh substrate)
+
+Captures  (raw session-slice ingest queue → archivist compaction; never meshed or searched)
+  POST   /captures                   append a session slice (agent)
+  GET    /captures                   list pending for compaction (archivist only)
+  POST   /captures/digest            mark captures digested (archivist only)
 
 Tasks
   POST   /tasks                      create
@@ -423,6 +465,8 @@ Other
 | `SYNTHESIS_INTERVAL` | `3600` | Seconds between archivist synthesis passes |
 | `DECAY_RATE` | `0.9` | Confidence multiplier per decay cycle |
 | `DECAY_WINDOW_DAYS` | `7` | Days before decay applies to unmodified entries |
+
+Plugin-side capture uses `ARTEL_SPOOL` (default `~/.artel/spool`) for the local write-ahead spool.
 
 ---
 
