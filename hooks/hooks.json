@@ -22,6 +22,38 @@
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/artel-check-inbox.sh",
             "timeout": 8,
             "statusMessage": "Checking Artel inbox…"
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/artel-recall.sh",
+            "timeout": 8,
+            "statusMessage": "Recalling relevant Artel memory…"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/artel-pretool-gotcha.sh",
+            "timeout": 6,
+            "statusMessage": "Checking Artel notes for this file…"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/artel-stop.sh",
+            "timeout": 6,
+            "statusMessage": "Checking Artel inbox before stopping…"
           }
         ]
       }

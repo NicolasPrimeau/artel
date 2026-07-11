@@ -48,7 +48,7 @@ def test_marketplace_entry():
 
 def test_hooks_wired_and_scripts_executable():
     hooks = _HOOKS["hooks"]
-    assert set(hooks) == {"SessionStart", "UserPromptSubmit"}
+    assert set(hooks) == {"SessionStart", "UserPromptSubmit", "PreToolUse", "Stop"}
     referenced = []
     for groups in hooks.values():
         for group in groups:
@@ -62,3 +62,32 @@ def test_hooks_wired_and_scripts_executable():
         assert script.is_file(), f"missing hook script: {rel}"
         assert os.access(script, os.X_OK), f"hook script not executable: {rel}"
         assert script.read_text().startswith("#!"), f"hook script missing shebang: {rel}"
+
+
+def test_pretool_hook_targets_edit_tools():
+    groups = _HOOKS["hooks"]["PreToolUse"]
+    matchers = [g["matcher"] for g in groups]
+    assert any("Edit" in m and "Write" in m for m in matchers)
+
+
+def test_prompt_hooks_include_recall():
+    scripts = [h["command"] for g in _HOOKS["hooks"]["UserPromptSubmit"] for h in g["hooks"]]
+    assert any("artel-check-inbox.sh" in c for c in scripts)
+    assert any("artel-recall.sh" in c for c in scripts)
+
+
+def test_slash_commands_present():
+    cmd_dir = _ROOT / "commands"
+    expected = {"artel-recall", "artel-remember", "artel-handoff", "artel-tasks"}
+    found = {p.stem for p in cmd_dir.glob("*.md")}
+    assert expected <= found, f"missing commands: {expected - found}"
+    for p in cmd_dir.glob("*.md"):
+        assert p.read_text().startswith("---"), f"command missing frontmatter: {p.name}"
+
+
+def test_opencode_plugin_present():
+    plugin = _ROOT / "integrations" / "opencode" / "artel.ts"
+    assert plugin.is_file()
+    body = plugin.read_text()
+    assert "@opencode-ai/plugin" in body
+    assert "session.created" in body and "tool.execute.before" in body

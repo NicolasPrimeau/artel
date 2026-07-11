@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.30.0] — 2026-07-10
+
+### Plugin
+
+- Ambient push hooks so Artel volunteers what it knows instead of waiting to be asked:
+  - `UserPromptSubmit` now also runs `artel-recall.sh` — semantic-searches shared memory on each prompt and injects the top relevant memories plus any matching skill as context (alongside the existing inbox check).
+  - New `PreToolUse` hook `artel-pretool-gotcha.sh` (Edit/Write/MultiEdit/NotebookEdit) — surfaces memory anchored to the file about to be edited (gotchas, decisions, prior findings) before the change is made.
+- Both hooks are config-gated, read-only, tightly ranked (confidence floor, few results), and always exit 0 — a missing or down Artel server is harmless.
+- New `Stop` hook `artel-stop.sh` — delivers unread inbox messages at the natural stopping point so a teammate reaching the agent mid-run lands now, not next session. Honors `stop_hook_active` to avoid a re-block loop.
+- Slash commands: `/artel-recall`, `/artel-remember`, `/artel-handoff`, `/artel-tasks` — one-keystroke access to memory search, capture, handoff, and the task board (agent-driven capture, so quality stays high — no mechanical junk).
+
+### opencode
+
+- New opencode plugin (`integrations/opencode/artel.ts`) porting the push layer: session-start handoff + inbox, idle-time inbox, and file-anchored memory before edits, via the `@opencode-ai/plugin` event API. Read-only and fail-safe. Not yet exercised against a live opencode instance.
+
 ## [0.17.1] — 2026-05-27
 
 ### Canonical URL
