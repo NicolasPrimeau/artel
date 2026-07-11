@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.32.0] — 2026-07-11
+
+### Plugin
+
+- One-line, promptless install. New `GET /plugin/install` serves a script that registers an agent, persists `ARTEL_URL` / `ARTEL_AGENT_ID` / `ARTEL_API_KEY` to a sourced env file, then installs the plugin via the `claude` CLI (`claude plugin marketplace add` + `claude plugin install`) with a slash-command fallback. Whole install becomes `curl -fsSL <artel-url>/plugin/install | sh` — scriptable and agent-drivable, no interactive prompt and no slash commands required.
+- Plugin is now configured from `ARTEL_*` environment variables (via `${ARTEL_*}` substitution in the bundled MCP server and hooks) instead of the interactive `userConfig` prompt. `/plugin install` no longer blocks on a config dialog.
+
 ## [0.31.0] — 2026-07-11
 
 ### Plugin

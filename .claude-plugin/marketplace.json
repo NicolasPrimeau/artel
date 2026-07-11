@@ -10,8 +10,8 @@
     {
       "name": "artel",
       "source": "./",
-      "description": "Shared semantic memory, tasks, agent-to-agent messages, and session handoffs for AI agent fleets. Bundles the Artel MCP server wiring and the recommended session hooks: session context, inbox, memory/skill recall on each prompt, and file-anchored notes before edits.",
-      "version": "0.31.0",
+      "description": "Shared semantic memory, tasks, agent-to-agent messages, and session handoffs for AI agent fleets. Bundles the Artel MCP server and the ambient session hooks: session context, inbox, memory/skill recall on each prompt, file-anchored notes before edits, and off-hot-path session capture. Configured from ARTEL_* env — one-line install: curl -fsSL <artel-url>/plugin/install | sh.",
+      "version": "0.32.0",
       "homepage": "https://github.com/NicolasPrimeau/artel",
       "repository": "https://github.com/NicolasPrimeau/artel",
       "license": "MIT",

@@ -15,13 +15,9 @@ def test_plugin_identity():
         assert _PLUGIN[field]
 
 
-def test_user_config_shape():
-    uc = _PLUGIN["userConfig"]
-    assert set(uc) == {"artel_url", "agent_id", "api_key"}
-    for v in uc.values():
-        assert v["required"] is True
-    assert uc["api_key"]["sensitive"] is True
-    assert uc["artel_url"].get("sensitive", False) is False
+def test_env_configured_not_prompted():
+    # configured from ARTEL_* env (scriptable, no interactive prompt), not userConfig
+    assert "userConfig" not in _PLUGIN
 
 
 def test_mcp_server_endpoint_has_trailing_slash():
@@ -29,10 +25,10 @@ def test_mcp_server_endpoint_has_trailing_slash():
     assert artel["type"] == "http"
     # regression guard: the v0.4.0 manifest used "/mcp" with no slash, which
     # 400s behind a TLS-terminating proxy (redirect drops the POST body).
-    assert artel["url"] == "${user_config.artel_url}/mcp/"
+    assert artel["url"] == "${ARTEL_URL}/mcp/"
     assert artel["url"].endswith("/mcp/")
-    assert artel["headers"]["x-agent-id"] == "${CLAUDE_PLUGIN_OPTION_AGENT_ID}"
-    assert artel["headers"]["x-api-key"] == "${CLAUDE_PLUGIN_OPTION_API_KEY}"
+    assert artel["headers"]["x-agent-id"] == "${ARTEL_AGENT_ID}"
+    assert artel["headers"]["x-api-key"] == "${ARTEL_API_KEY}"
 
 
 def test_marketplace_entry():

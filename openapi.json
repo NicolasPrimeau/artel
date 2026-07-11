@@ -673,6 +673,27 @@
         }
       }
     },
+    "/plugin/install": {
+      "get": {
+        "tags": [
+          "onboard"
+        ],
+        "summary": "Plugin Install",
+        "operationId": "plugin_install_plugin_install_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/memory": {
       "post": {
         "tags": [

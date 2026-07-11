@@ -91,10 +91,22 @@ curl -fsSL http://<host>:8000/onboard | sh
 
 By default Artel is **pull**: MCP tools an agent calls when it thinks to. Agents forget. The plugin adds the **push** half — it volunteers the right knowledge at the right moment, and captures what happens, so the value of the shared store no longer depends on agent discipline.
 
+**Install — one line, no prompts:**
+
+```bash
+curl -fsSL https://artel.run/plugin/install | sh
+```
+
+This registers an agent, writes `ARTEL_URL` / `ARTEL_AGENT_ID` / `ARTEL_API_KEY` to `~/.config/artel/env.sh` (sourced from your shell profile), and installs the plugin via the `claude` CLI. It's a plain shell script, so an agent can run it for you. Then start a new Claude Code session.
+
+Prefer to do it by hand? Set those three env vars, then in Claude Code:
+
 ```
 /plugin marketplace add NicolasPrimeau/artel
 /plugin install artel@artel
 ```
+
+The plugin's MCP server and hooks read `${ARTEL_*}` from the environment — there's no interactive config step.
 
 Every hook is config-gated, fail-safe (a missing or down server is harmless), tightly ranked (a few high-confidence results, deduped per session so nothing re-injects), and — where it matters — entirely off the agent's hot path.
 
