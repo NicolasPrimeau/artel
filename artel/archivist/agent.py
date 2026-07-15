@@ -105,6 +105,12 @@ async def _lease_keeper(client: ArtelClient) -> None:
 async def _scheduler(client: ArtelClient) -> None:
     while True:
         await _is_leader.wait()
+        # Record metrics first (bounded) so observability survives even if a later
+        # pass stalls — the tail-of-cycle position is what silently went dark before.
+        try:
+            await asyncio.wait_for(capture_metrics(), timeout=30.0)
+        except Exception as e:
+            log.error("capture_metrics failed: %s", e)
         for fn, name in (
             (run_capture_compaction, "capture_compaction"),
             (run_feed_triage, "feed_triage"),
@@ -129,11 +135,6 @@ async def _scheduler(client: ArtelClient) -> None:
                 raise
             except Exception as e:
                 log.error("%s failed: %s", name, e)
-        if _is_leader.is_set():
-            try:
-                await capture_metrics()
-            except Exception as e:
-                log.error("capture_metrics failed: %s", e)
         await asyncio.sleep(settings.synthesis_interval)
 
 

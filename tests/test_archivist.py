@@ -91,6 +91,31 @@ class TestLlmConfig:
             out = await complete("sys", "user prompt")
         assert out == "merged 3 entries"
 
+    async def test_complete_times_out_and_tears_down_subprocess(self, monkeypatch):
+        import asyncio
+
+        import claude_agent_sdk as sdk
+
+        from artel.archivist.llm import complete
+
+        closed = {"v": False}
+
+        async def hanging_query(prompt, options):
+            try:
+                await asyncio.sleep(999)  # subprocess that never returns
+                yield None
+            finally:
+                closed["v"] = True  # generator teardown (kills the subprocess)
+
+        monkeypatch.setattr(sdk, "query", hanging_query)
+        with patch("artel.archivist.llm.settings") as s:
+            s.archivist_provider = "claude-sdk"
+            s.archivist_model = ""
+            s.archivist_api_key = ""
+            with pytest.raises(TimeoutError):
+                await complete("sys", "u", timeout=0.05)
+        assert closed["v"] is True  # a hung call is bounded AND cleaned up, not wedged
+
 
 class TestPassiveMode:
     @pytest.fixture

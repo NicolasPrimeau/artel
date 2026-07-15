@@ -1,9 +1,18 @@
+import asyncio
 import os
 
 from .config import settings
 
 _anthropic_client = None
 _openai_client = None
+
+# Hard ceiling on any single LLM call. The claude-sdk provider spawns a `claude`
+# subprocess that can hang (e.g. when the Max plan is rate-limited); a plain
+# asyncio.wait_for around a caller can't kill it, so we bound the call here and
+# terminate the subprocess on timeout. Keeps a stalled model call from wedging the
+# whole archivist cycle.
+_LLM_TIMEOUT = 180.0
+_CLEANUP_TIMEOUT = 10.0
 
 
 def _api_key() -> str:
@@ -28,45 +37,51 @@ def is_configured() -> bool:
     return bool(_api_key())
 
 
-async def complete(system: str, user: str, max_tokens: int = 2048) -> str:
-    model = settings.archivist_model or _default_model()
-    key = _api_key()
+async def _claude_sdk(system: str, user: str, model: str) -> str:
+    from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
 
-    if settings.archivist_provider == "claude-sdk":
-        from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
-
-        opts = ClaudeAgentOptions(
-            model=model,
-            system_prompt=system,
-            max_turns=1,
-            allowed_tools=[],
-            tools=[],
-        )
-        result = None
-        async for msg in query(prompt=user, options=opts):
+    opts = ClaudeAgentOptions(
+        model=model, system_prompt=system, max_turns=1, allowed_tools=[], tools=[]
+    )
+    agen = query(prompt=user, options=opts)
+    result = None
+    try:
+        async for msg in agen:
             if isinstance(msg, ResultMessage):
                 result = msg
-        if result is None or getattr(result, "is_error", False):
-            raise RuntimeError(f"claude-sdk: {getattr(result, 'result', 'no result')}")
-        return result.result or ""
+    finally:
+        # Always close the generator so a cancelled/timed-out call tears down the
+        # subprocess instead of leaving it hung. Bounded so cleanup can't wedge either.
+        aclose = getattr(agen, "aclose", None)
+        if aclose is not None:
+            try:
+                await asyncio.wait_for(aclose(), timeout=_CLEANUP_TIMEOUT)
+            except Exception:
+                pass
+    if result is None or getattr(result, "is_error", False):
+        raise RuntimeError(f"claude-sdk: {getattr(result, 'result', 'no result')}")
+    return result.result or ""
 
-    if settings.archivist_provider == "anthropic":
-        import anthropic
 
-        global _anthropic_client
-        if _anthropic_client is None:
-            _anthropic_client = anthropic.AsyncAnthropic(api_key=key)
-        msg = await _anthropic_client.messages.create(
-            model=model,
-            max_tokens=max_tokens,
-            system=system,
-            messages=[{"role": "user", "content": user}],
-        )
-        for block in msg.content:
-            if getattr(block, "type", None) == "text":
-                return block.text or ""
-        return ""
+async def _anthropic(system: str, user: str, model: str, max_tokens: int, key: str) -> str:
+    import anthropic
 
+    global _anthropic_client
+    if _anthropic_client is None:
+        _anthropic_client = anthropic.AsyncAnthropic(api_key=key)
+    msg = await _anthropic_client.messages.create(
+        model=model,
+        max_tokens=max_tokens,
+        system=system,
+        messages=[{"role": "user", "content": user}],
+    )
+    for block in msg.content:
+        if getattr(block, "type", None) == "text":
+            return block.text or ""
+    return ""
+
+
+async def _openai(system: str, user: str, model: str, max_tokens: int, key: str) -> str:
     import openai
 
     global _openai_client
@@ -78,9 +93,22 @@ async def complete(system: str, user: str, max_tokens: int = 2048) -> str:
     resp = await _openai_client.chat.completions.create(
         model=model,
         max_tokens=max_tokens,
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
+        messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
     )
     return resp.choices[0].message.content or ""
+
+
+async def complete(
+    system: str, user: str, max_tokens: int = 2048, timeout: float = _LLM_TIMEOUT
+) -> str:
+    model = settings.archivist_model or _default_model()
+    key = _api_key()
+    if settings.archivist_provider == "claude-sdk":
+        coro = _claude_sdk(system, user, model)
+    elif settings.archivist_provider == "anthropic":
+        coro = _anthropic(system, user, model, max_tokens, key)
+    else:
+        coro = _openai(system, user, model, max_tokens, key)
+    # Hard bound on every provider — a stalled call raises TimeoutError rather than
+    # hanging the caller (and the claude-sdk finally tears down its subprocess).
+    return await asyncio.wait_for(coro, timeout=timeout)
