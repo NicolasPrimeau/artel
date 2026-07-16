@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import JSONResponse, Response
 
-from ...store import graph, vclock
+from ...store import graph, merkle, vclock
 from ...store.db import AmbiguousId, fts_index, get_db, instance_id, norm_project, resolve_id
 from ...store.embeddings import embed
 from ..auth import (
@@ -51,6 +51,7 @@ def _fetch_feed_rows(
     limit: int,
     include_deleted: bool = False,
     mesh_project: str | None = None,
+    ids: list[str] | None = None,
 ):
     project = norm_project(project)
     mesh_project = norm_project(mesh_project) if mesh_project else mesh_project
@@ -86,6 +87,9 @@ def _fetch_feed_rows(
     if type_:
         clauses.append("type = ?")
         params.append(type_)
+    if ids:
+        clauses.append(f"id IN ({','.join('?' * len(ids))})")
+        params.extend(ids)
     params.append(limit)
     return db.execute(
         f"SELECT * FROM memory WHERE {' AND '.join(clauses)} ORDER BY updated_at DESC LIMIT ?",
@@ -561,6 +565,32 @@ async def memory_feed_atom(
     return Response(content=xml_bytes, media_type="application/atom+xml; charset=utf-8")
 
 
+@router.get("/merkle", summary="Merkle summary of memory for diff sync")
+async def memory_merkle(
+    project: str | None = Query(default=None),
+    bucket: str | None = Query(default=None),
+    auth: FeedAuth = Depends(feed_auth_dep),
+):
+    project = norm_project(project)
+    denied = False
+    if auth.mesh_project is not None:
+        if auth.mesh_project:
+            if project and project != auth.mesh_project:
+                denied = True
+            project = auth.mesh_project
+    else:
+        allowed = _memberships(auth.agent_id)
+        if project and allowed is not None and project not in allowed:
+            denied = True
+    db = get_db()
+    if bucket is not None:
+        entries = {} if denied else merkle.bucket_entries(db, project, bucket)
+        return {"bucket": bucket, "entries": entries}
+    if denied:
+        return {"root": merkle.EMPTY_ROOT, "buckets": {}}
+    return merkle.tree(db, project)
+
+
 @router.get("/feed.json", summary="JSON Feed of memory entries")
 async def memory_feed_json(
     project: str | None = Query(default=None),
@@ -568,9 +598,11 @@ async def memory_feed_json(
     type: str | None = Query(default=None),
     limit: int = Query(default=50, le=200),
     include_deleted: bool = Query(default=False),
+    ids: str | None = Query(default=None),
     auth: FeedAuth = Depends(feed_auth_dep),
 ):
     project = norm_project(project)
+    id_list = [i.strip() for i in ids.split(",") if i.strip()][:200] if ids else None
     db = get_db()
     rows = _fetch_feed_rows(
         db,
@@ -581,6 +613,7 @@ async def memory_feed_json(
         limit,
         include_deleted,
         mesh_project=auth.mesh_project,
+        ids=id_list,
     )
     base = settings.public_url or f"http://localhost:{settings.port}"
     iid = instance_id()

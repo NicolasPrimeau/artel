@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 import feedparser
 import httpx
 
-from ..store import graph, vclock
+from ..store import graph, merkle, vclock
 from ..store.db import fts_index, get_db, instance_id
 from ..store.embeddings import embed
 from .broadcast import broadcast
@@ -334,8 +334,61 @@ def _replicate_entry(db, feed: dict, meta: dict, content: str, tags: list, self_
     return apply_incoming or merge_only
 
 
+def _with_params(url: str, extra: str) -> str:
+    return f"{url}{'&' if '?' in url else '?'}{extra}"
+
+
+async def _merkle_sync(feed: dict) -> bool:
+    if "/memory/feed.json" not in feed["url"]:
+        return False
+    merkle_url = feed["url"].replace("/memory/feed.json", "/memory/merkle")
+    db = get_db()
+    count = 0
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=30) as client:
+            resp = await client.get(merkle_url)
+            if resp.status_code != 200:
+                return False
+            peer = resp.json()
+            if not isinstance(peer, dict) or "root" not in peer or "buckets" not in peer:
+                return False
+            local = merkle.tree(db, feed["project"])
+            want: list[str] = []
+            if peer["root"] != local["root"]:
+                for b, bh in peer["buckets"].items():
+                    if local["buckets"].get(b) == bh:
+                        continue
+                    bresp = await client.get(_with_params(merkle_url, f"bucket={b}"))
+                    bresp.raise_for_status()
+                    remote_entries = (bresp.json() or {}).get("entries") or {}
+                    local_entries = merkle.bucket_entries(db, feed["project"], b)
+                    want += [i for i, h in remote_entries.items() if local_entries.get(i) != h]
+            if want:
+                self_id = instance_id()
+                want = want[: feed["max_per_poll"]]
+                for start in range(0, len(want), 100):
+                    chunk = want[start : start + 100]
+                    fresp = await client.get(
+                        _with_params(feed["url"], "include_deleted=true&ids=" + ",".join(chunk))
+                    )
+                    fresp.raise_for_status()
+                    for it in fresp.json().get("items") or []:
+                        meta = it.get("_artel") or {}
+                        if _replicate_entry(
+                            db, feed, meta, it.get("content_text", ""), it.get("tags", []), self_id
+                        ):
+                            count += 1
+    except Exception as e:
+        log.warning("feed %s merkle sync failed, falling back to full feed: %s", feed["name"], e)
+        return False
+    _finish_poll(db, feed, count)
+    return True
+
+
 async def _poll_feed(feed: dict) -> None:
     feed_id = feed["id"]
+    if await _merkle_sync(feed):
+        return
     try:
         async with httpx.AsyncClient(follow_redirects=True, timeout=30) as client:
             resp = await client.get(feed["url"])
@@ -432,6 +485,11 @@ async def _poll_feed(feed: dict) -> None:
                 [(feed_id, g, now) for g in new_guids],
             )
 
+    _finish_poll(db, feed, count)
+
+
+def _finish_poll(db, feed: dict, count: int) -> None:
+    feed_id = feed["id"]
     with db:
         db.execute(
             "UPDATE feed_subscriptions SET last_fetched_at=? WHERE id=?",
