@@ -74,6 +74,16 @@ class AgentHandle:
         r.raise_for_status()
         return r.json()
 
+    async def recommended_tasks(self, **kwargs) -> list[dict]:
+        r = await self._http.get("/tasks/recommended", params=kwargs)
+        r.raise_for_status()
+        return r.json()
+
+    async def related_memory(self, entry_id: str, **kwargs) -> list[dict]:
+        r = await self._http.get(f"/memory/{entry_id}/related", params=kwargs)
+        r.raise_for_status()
+        return r.json()
+
     async def claim_task(self, task_id: str) -> dict:
         r = await self._http.post(f"/tasks/{task_id}/claim")
         r.raise_for_status()
