@@ -31,6 +31,7 @@ from ..store.embeddings import embeddings_ok
 from .auth import _SESSION_TTL, verify_ui_session
 from .config import settings
 from .feed_poller import run_poller
+from .gossip import run_gossip
 from .jwt_utils import verify_token
 from .mdns import MDNSService
 from .routes.agents import router as agents_router
@@ -119,10 +120,12 @@ async def lifespan(app: FastAPI):
         except Exception:
             pass
     poller = asyncio.create_task(run_poller())
+    gossiper = asyncio.create_task(run_gossip())
     async with _mcp_asgi.router.lifespan_context(_mcp_asgi):
         yield
     poller.cancel()
-    await asyncio.gather(poller, return_exceptions=True)
+    gossiper.cancel()
+    await asyncio.gather(poller, gossiper, return_exceptions=True)
     try:
         await mdns.stop()
     except Exception:

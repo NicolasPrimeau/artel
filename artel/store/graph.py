@@ -2,6 +2,8 @@ import sqlite3
 import uuid
 from datetime import UTC, datetime
 
+from . import hebbian
+
 GROUNDS = "grounds"
 RELIES_ON = "relies_on"
 APPLIES_TO = "applies_to"
@@ -213,6 +215,10 @@ _SPREAD_WEIGHTS = {
     CONTRADICTS: -0.7,
 }
 
+# Behavioral (Hebbian) edges carry less conductance than semantic ones: co-retrieval
+# is weaker evidence of relatedness than an archivist-asserted relation.
+_HEBBIAN_SCALE = 0.5
+
 
 def spread_activation(
     db: sqlite3.Connection,
@@ -244,6 +250,12 @@ def spread_activation(
                     continue
                 neighbor = e["dst"] if e["src"] == node else e["src"]
                 flow = act * weight * decay
+                if abs(flow) < min_activation:
+                    continue
+                activation[neighbor] = activation.get(neighbor, 0.0) + flow
+                nxt[neighbor] = nxt.get(neighbor, 0.0) + flow
+            for neighbor, w in hebbian.neighbors(db, node).items():
+                flow = act * w * _HEBBIAN_SCALE * decay
                 if abs(flow) < min_activation:
                     continue
                 activation[neighbor] = activation.get(neighbor, 0.0) + flow

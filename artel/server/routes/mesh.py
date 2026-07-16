@@ -5,10 +5,10 @@ import sqlite3
 from urllib.parse import quote
 
 import httpx
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 
-from ...store.db import get_db
-from ..auth import OwnerDep, ReaderDep
+from ...store.db import get_db, instance_id
+from ..auth import FeedAuth, OwnerDep, ReaderDep, feed_auth_dep
 from ..config import settings
 from ..feed_poller import _poll_feed
 from ..mdns import _local_ip, get_discovered, is_private_ip, remove_discovered
@@ -190,6 +190,36 @@ async def sync_peer(link_id: str, agent_id: str = OwnerDep):
     await _poll_feed(dict(row))
 
 
+@router.get("/gossip", summary="This instance's peer list, for transitive mesh discovery")
+async def gossip(auth: FeedAuth = Depends(feed_auth_dep)):
+    db = get_db()
+    rows = db.execute("SELECT peer_url, project FROM peer_links ORDER BY created_at").fetchall()
+    return {
+        "instance": instance_id(),
+        "url": (settings.public_url or "").rstrip("/"),
+        "peers": [{"peer_url": r["peer_url"], "project": r["project"]} for r in rows],
+    }
+
+
+async def _peer_vouches(db, via_url: str, initiator_base: str) -> bool:
+    row = db.execute(
+        "SELECT f.url FROM peer_links p JOIN feed_subscriptions f ON f.id=p.feed_id"
+        " WHERE p.peer_url=?",
+        (via_url.rstrip("/"),),
+    ).fetchone()
+    if not row or "/memory/feed.json" not in row["url"]:
+        return False
+    gossip_url = row["url"].replace("/memory/feed.json", "/mesh/gossip")
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=10) as client:
+            resp = await client.get(gossip_url)
+            resp.raise_for_status()
+            peers = resp.json().get("peers") or []
+    except Exception:
+        return False
+    return any((p.get("peer_url") or "").rstrip("/") == initiator_base for p in peers)
+
+
 # ── mDNS discovery & handshake ────────────────────────────────────────────────
 
 
@@ -239,17 +269,23 @@ def _create_peer_link(db, agent_id: str, peer_url: str, peer_token: str, project
     summary="Accept a mesh handshake from a LAN peer",
 )
 async def accept_handshake(body: HandshakeRequest, request: Request):
-    if not settings.mdns_enabled:
-        raise HTTPException(status_code=403, detail="mDNS not enabled")
-    client_ip = request.client.host if request.client else ""
-    if not is_private_ip(client_ip):
-        raise HTTPException(status_code=403, detail="handshake only allowed from private network")
-
     base = body.initiator_url.rstrip("/")
+    db = get_db()
+    vouched = bool(body.via) and base.startswith(("http://", "https://"))
+    if vouched:
+        vouched = await _peer_vouches(db, body.via, base)
+    if not vouched:
+        if not settings.mdns_enabled:
+            raise HTTPException(status_code=403, detail="mDNS not enabled")
+        client_ip = request.client.host if request.client else ""
+        if not is_private_ip(client_ip):
+            raise HTTPException(
+                status_code=403, detail="handshake only allowed from private network"
+            )
+
     if not base.startswith(("http://", "https://")):
         raise HTTPException(status_code=422, detail="initiator_url must be http(s)")
 
-    db = get_db()
     already = db.execute("SELECT 1 FROM peer_links WHERE peer_url=?", (base,)).fetchone()
     if already:
         raise HTTPException(status_code=409, detail="already linked")

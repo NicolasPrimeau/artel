@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import JSONResponse, Response
 
-from ...store import graph, merkle, vclock
+from ...store import decay, graph, hebbian, merkle, vclock
 from ...store.db import AmbiguousId, fts_index, get_db, instance_id, norm_project, resolve_id
 from ...store.embeddings import embed
 from ..auth import (
@@ -98,6 +98,10 @@ def _fetch_feed_rows(
 
 
 router = APIRouter(prefix="/memory", tags=["memory"])
+
+# Stigmergy: each retrieval deposits pheromone on the entry's trail; trails evaporate
+# with a short half-life so relevance must be continually re-earned, not just accumulated.
+_TRAIL_HALF_LIFE_DAYS = 7.0
 
 
 def _resolve_entry(entry_id: str) -> str:
@@ -286,11 +290,12 @@ async def search_memory(
     }
 
     now = datetime.now(UTC)
+    now_iso = now.isoformat()
 
     def _score(mid: str) -> float:
         r = rows[mid]
         conf = r["confidence"] if r["confidence"] is not None else 0.5
-        reads = r["read_count"] or 0
+        trail = decay.decayed(r["trail"] or 0.0, r["trail_at"], _TRAIL_HALF_LIFE_DAYS, now_iso)
         try:
             age_days = max(
                 0.0,
@@ -303,7 +308,7 @@ async def search_memory(
             age_days = 0.0
         recency = 0.5 ** (age_days / 45.0)
         return (
-            rrf[mid] * (0.4 + 0.6 * conf) * (1.0 + 0.15 * math.log1p(reads)) * (0.3 + 0.7 * recency)
+            rrf[mid] * (0.4 + 0.6 * conf) * (1.0 + 0.2 * math.log1p(trail)) * (0.3 + 0.7 * recency)
         )
 
     ordered = sorted((m for m in rrf if m in rows), key=_score, reverse=True)
@@ -344,6 +349,14 @@ async def search_memory(
                 hit_ids,
             )
             for hid in hit_ids:
+                r = rows[hid]
+                deposited = (
+                    decay.decayed(r["trail"] or 0.0, r["trail_at"], _TRAIL_HALF_LIFE_DAYS, now_iso)
+                    + 1.0
+                )
+                db.execute(
+                    "UPDATE memory SET trail=?, trail_at=? WHERE id=?", (deposited, now_iso, hid)
+                )
                 cur = db.execute(
                     "INSERT OR IGNORE INTO memory_reads (memory_id, agent_id) VALUES (?, ?)",
                     (hid, agent_id),
@@ -354,6 +367,7 @@ async def search_memory(
                         "WHERE id=?",
                         (hid,),
                     )
+            hebbian.reinforce(db, hit_ids[:5], now_iso)
     entries = [_row_to_entry(r) for r in out]
     if max_content_length is not None:
         for e in entries:
@@ -680,6 +694,14 @@ async def get_memory(
             (entry_id,),
         )
         if agent_id != settings.archivist_agent_id:
+            now_iso = datetime.now(UTC).isoformat()
+            deposited = (
+                decay.decayed(row["trail"] or 0.0, row["trail_at"], _TRAIL_HALF_LIFE_DAYS, now_iso)
+                + 1.0
+            )
+            db.execute(
+                "UPDATE memory SET trail=?, trail_at=? WHERE id=?", (deposited, now_iso, entry_id)
+            )
             cur = db.execute(
                 "INSERT OR IGNORE INTO memory_reads (memory_id, agent_id) VALUES (?, ?)",
                 (entry_id, agent_id),

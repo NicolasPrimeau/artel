@@ -424,6 +424,7 @@ class HandshakeRequest(BaseModel):
     initiator_url: str
     initiator_token: str
     project: ProjectName = None
+    via: str | None = None
 
 
 class HandshakeResponse(BaseModel):

@@ -127,6 +127,14 @@ def _migrate(conn: sqlite3.Connection) -> None:
     if "vclock" not in mem_cols:
         conn.execute("ALTER TABLE memory ADD COLUMN vclock TEXT")
         conn.commit()
+    if "trail" not in mem_cols:
+        conn.execute("ALTER TABLE memory ADD COLUMN trail REAL NOT NULL DEFAULT 0")
+        conn.execute("ALTER TABLE memory ADD COLUMN trail_at TEXT")
+        conn.execute(
+            "UPDATE memory SET trail = MIN(read_count, 10), trail_at = last_read_at"
+            " WHERE read_count > 0"
+        )
+        conn.commit()
     if "role" not in agent_cols:
         conn.execute(
             "ALTER TABLE agents ADD COLUMN role TEXT NOT NULL DEFAULT 'agent' CHECK (role IN ('owner', 'agent'))"

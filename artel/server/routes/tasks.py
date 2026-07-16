@@ -3,6 +3,7 @@ import sqlite3
 
 from fastapi import APIRouter, Body, HTTPException, Query
 
+from ...store import affinity
 from ...store.db import AmbiguousId, get_db, norm_project, resolve_id
 from ..auth import (
     ActorDep,
@@ -102,6 +103,52 @@ def _add_comment(db: sqlite3.Connection, task_id: str, agent_id: str, kind: str,
         "INSERT INTO task_comments (id, task_id, agent_id, kind, body) VALUES (?,?,?,?,?)",
         (new_id(), task_id, agent_id, kind, body),
     )
+
+
+@router.get(
+    "/recommended",
+    response_model=list[TaskEntry],
+    summary="Open unblocked tasks ranked by the caller's earned tag affinity",
+)
+async def recommended_tasks(
+    project: str | None = Query(default=None),
+    limit: int = Query(default=10, le=50),
+    agent_id: str = ReaderDep,
+):
+    project = norm_project(project)
+    db = get_db()
+    sql = "SELECT * FROM tasks WHERE status='open'"
+    params: list = []
+    if project:
+        allowed = _memberships(agent_id)
+        if allowed is not None and project not in allowed:
+            return []
+        sql += " AND project=?"
+        params.append(project)
+    else:
+        pf_clause, pf_params = project_filter(agent_id)
+        if pf_clause:
+            sql += f" AND {pf_clause}"
+            params.extend(pf_params)
+    sql += (
+        " AND NOT EXISTS ("
+        "SELECT 1 FROM task_deps d JOIN tasks dt ON dt.id=d.depends_on"
+        " WHERE d.task_id=tasks.id AND dt.status!='completed')"
+        " ORDER BY created_at ASC"
+    )
+    rows = db.execute(sql, params).fetchall()
+    aff = affinity.scores(db, agent_id)
+    prio = {"high": 2, "normal": 1, "low": 0}
+
+    def _rank(r: sqlite3.Row) -> tuple:
+        return (
+            sum(aff.get(t, 0.0) for t in json.loads(r["tags"])),
+            prio.get(r["priority"], 1),
+        )
+
+    ranked = sorted(rows, key=_rank, reverse=True)[:limit]
+    deps_map = _fetch_deps(db, [r["id"] for r in ranked])
+    return [_row_to_task(r, deps_map.get(r["id"])) for r in ranked]
 
 
 @router.get("/{task_id}", response_model=TaskEntry, summary="Get a task by ID")
@@ -290,6 +337,7 @@ async def complete_task(
                updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?""",
             (task_id,),
         )
+        affinity.reinforce(db, agent_id, json.loads(row["tags"]))
         _add_comment(db, task_id, agent_id, "complete", body.body)
         _emit_event(db, "task.completed", agent_id, {"task_id": task_id})
     row = db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()

@@ -37,7 +37,26 @@ CREATE TABLE IF NOT EXISTS memory (
     stale        INTEGER NOT NULL DEFAULT 0,
     headline         TEXT,
     headline_version INTEGER NOT NULL DEFAULT 0,
-    vclock           TEXT
+    vclock           TEXT,
+    trail            REAL NOT NULL DEFAULT 0,
+    trail_at         TEXT
+);
+
+CREATE TABLE IF NOT EXISTS hebbian_edge (
+    src        TEXT NOT NULL,
+    dst        TEXT NOT NULL,
+    weight     REAL NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (src, dst)
+);
+CREATE INDEX IF NOT EXISTS idx_hebbian_dst ON hebbian_edge (dst);
+
+CREATE TABLE IF NOT EXISTS task_affinity (
+    agent_id   TEXT NOT NULL,
+    tag        TEXT NOT NULL,
+    weight     REAL NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (agent_id, tag)
 );
 
 CREATE TABLE IF NOT EXISTS tasks (

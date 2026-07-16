@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     mcp_url: str = ""
     jwt_ttl: int = 2592000
     mdns_enabled: bool = True
+    gossip_enabled: bool = True
 
     _keys_cache: dict[str, str] | None = PrivateAttr(default=None)
     _projects_cache: dict[str, list[str]] | None = PrivateAttr(default=None)
