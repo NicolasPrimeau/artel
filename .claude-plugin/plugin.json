@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "artel",
-  "version": "0.34.0",
+  "version": "0.35.0",
   "description": "Shared semantic memory, tasks, agent-to-agent messages, and session handoffs for AI agent fleets. Wires up Artel's MCP server and ambient session hooks so every Claude Code session loads its prior context, reads its inbox, surfaces relevant memory and skills on each prompt, shows file-anchored notes before edits, and captures the session back into memory \u2014 automatically. Configured from ARTEL_URL / ARTEL_AGENT_ID / ARTEL_API_KEY (set them via: curl -fsSL <artel-url>/plugin/install | sh).",
   "author": {
     "name": "Nicolas Primeau",
