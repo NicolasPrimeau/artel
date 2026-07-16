@@ -6,6 +6,7 @@ import re
 import secrets
 from datetime import UTC, datetime, timedelta
 
+from ..store import graph
 from ..store.db import get_db, instance_id
 from .client import ArtelClient
 from .config import settings
@@ -27,6 +28,7 @@ _KNOWN_OPS = {
     "split",
     "extract",
     "close_task",
+    "link",
 }
 
 _META_TASK_PATTERNS = [
@@ -258,6 +260,19 @@ async def _execute_operations(
                     continue
                 await client.patch_memory(eid, type="doc")
                 log.info("archivist promoted entry %s", eid)
+
+            elif op_name == "link":
+                src, dst, rel = op.get("src"), op.get("dst"), op.get("rel")
+                if src not in valid_ids or dst not in valid_ids or src == dst:
+                    log.warning("link op references hallucinated/self IDs: %s -> %s", src, dst)
+                    continue
+                if rel not in (graph.CORROBORATES, graph.CONTRADICTS):
+                    log.warning("link op has invalid rel: %s", rel)
+                    continue
+                db = get_db()
+                graph.add_edge(db, entries_by_id[src].get("project"), src, dst, rel)
+                db.commit()
+                log.info("archivist linked %s -%s-> %s", src[:8], rel, dst[:8])
 
             elif op_name == "prune":
                 eid = op.get("entry")
@@ -558,7 +573,7 @@ async def on_task_failed(task_id: str, agent_id: str, client: ArtelClient) -> No
 
 
 _CLEANUP_OPS = {"merge", "prune", "split", "extract"}
-_INSIGHT_OPS = {"promote", "tag", "adjust_confidence", "task", "close_task"}
+_INSIGHT_OPS = {"promote", "tag", "adjust_confidence", "task", "close_task", "link"}
 
 
 async def _llm_ops_pass(
@@ -708,16 +723,18 @@ async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
         f"Memory entries written or updated in the last 24h:\n\n{memory_block}"
         f"{task_block}\n\n"
         "Directives are in the system prompt. Follow them above all else.\n\n"
-        "Issue a JSON array of insight operations. Available ops: promote, tag, adjust_confidence, task, close_task.\n\n"
+        "Issue a JSON array of insight operations. Available ops: promote, tag, adjust_confidence, task, close_task, link.\n\n"
         "Op schemas:\n"
         '- {"op": "promote", "entry": "<id>"}\n'
         '- {"op": "tag", "entry": "<id>", "add_tags": ["<tag>", ...]}\n'
         '- {"op": "adjust_confidence", "entry": "<id>", "confidence": <0.0-1.0>}\n'
         '- {"op": "task", "title": "<title>", "description": "<desc>", "priority": "low|normal|high", "project": "<project|null>"}\n'
-        '- {"op": "close_task", "task_id": "<open task id from the Already-open tasks list>", "reason": "<cite the memory entry ID or comment text that evidences completion or duplication>"}\n\n'
+        '- {"op": "close_task", "task_id": "<open task id from the Already-open tasks list>", "reason": "<cite the memory entry ID or comment text that evidences completion or duplication>"}\n'
+        '- {"op": "link", "src": "<id>", "dst": "<id>", "rel": "corroborates|contradicts"}\n\n'
         "Rules:\n"
         "- Promote entries that are stable, high-signal, and likely to remain true.\n"
         "- Use tag/adjust_confidence to surface connections or correct signal strength.\n"
+        "- link two entries when one corroborates or contradicts another — this builds the knowledge graph that powers associative recall. Only link entries in this set, using exact IDs; omit if unsure.\n"
         "- Create tasks ONLY for work requiring an external agent — never for memory operations.\n"
         "- close_task when: (a) memory entries or task comments clearly evidence the work is done — cite the evidence; or (b) the task is an exact or near-exact duplicate of another open task — cite the other task's ID.\n"
         "- Do not close based on guesswork. Evidence must be explicit.\n"
