@@ -36,7 +36,8 @@ CREATE TABLE IF NOT EXISTS memory (
     compiled_at  TEXT,
     stale        INTEGER NOT NULL DEFAULT 0,
     headline         TEXT,
-    headline_version INTEGER NOT NULL DEFAULT 0
+    headline_version INTEGER NOT NULL DEFAULT 0,
+    vclock           TEXT
 );
 
 CREATE TABLE IF NOT EXISTS tasks (

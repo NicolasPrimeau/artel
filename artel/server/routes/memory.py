@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import JSONResponse, Response
 
-from ...store import graph
+from ...store import graph, vclock
 from ...store.db import AmbiguousId, fts_index, get_db, instance_id, norm_project, resolve_id
 from ...store.embeddings import embed
 from ..auth import (
@@ -159,8 +159,8 @@ async def write_memory(
     with db:
         db.execute(
             """INSERT INTO memory (id, type, agent_id, project, scope, content,
-               confidence, parents, tags, expires_at, created_at, updated_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+               confidence, parents, tags, expires_at, created_at, updated_at, vclock)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 entry_id,
                 body.type,
@@ -174,6 +174,7 @@ async def write_memory(
                 body.expires_at,
                 now,
                 now,
+                vclock.dump(vclock.bump({}, instance_id())),
             ),
         )
         if vec is not None:
@@ -606,6 +607,7 @@ async def memory_feed_json(
                 "deleted_at": row["deleted_at"],
                 "parents": json.loads(row["parents"]),
                 "origin": row["origin"] or iid,
+                "vclock": vclock.parse(row["vclock"]) or None,
             },
         }
         for row in rows
@@ -757,7 +759,9 @@ async def patch_memory(
         set_parts += [
             "updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')",
             f"version={row['version'] + 1}",
+            "vclock=?",
         ]
+        bumped = vclock.dump(vclock.bump(vclock.parse(row["vclock"]), instance_id()))
         with db:
             if body.content is not None and vec is not None:
                 db.execute("DELETE FROM memory_vec WHERE id=?", (entry_id,))
@@ -769,7 +773,7 @@ async def patch_memory(
                 fts_index(db, entry_id, body.content)
             db.execute(
                 f"UPDATE memory SET {', '.join(set_parts)} WHERE id=?",
-                [*updates.values(), entry_id],
+                [*updates.values(), bumped, entry_id],
             )
 
     row = db.execute("SELECT * FROM memory WHERE id=?", (entry_id,)).fetchone()
@@ -787,15 +791,16 @@ async def bulk_delete_memory(body: BulkMemoryDelete, agent_id: str = ActorDep):
             except Exception:
                 continue
             row = db.execute(
-                "SELECT agent_id FROM memory WHERE id=? AND deleted_at IS NULL", (entry_id,)
+                "SELECT agent_id, vclock FROM memory WHERE id=? AND deleted_at IS NULL",
+                (entry_id,),
             ).fetchone()
             if not row:
                 continue
             if row["agent_id"] != agent_id and not can_curate_memory(agent_id):
                 continue
             db.execute(
-                f"UPDATE memory SET deleted_at={now} WHERE id=?",
-                (entry_id,),
+                f"UPDATE memory SET deleted_at={now}, vclock=? WHERE id=?",
+                (vclock.dump(vclock.bump(vclock.parse(row["vclock"]), instance_id())), entry_id),
             )
 
 
@@ -815,6 +820,6 @@ async def delete_memory(
         raise HTTPException(status_code=403, detail="forbidden")
     with db:
         db.execute(
-            "UPDATE memory SET deleted_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?",
-            (entry_id,),
+            "UPDATE memory SET deleted_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'), vclock=? WHERE id=?",
+            (vclock.dump(vclock.bump(vclock.parse(row["vclock"]), instance_id())), entry_id),
         )

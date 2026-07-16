@@ -1,11 +1,14 @@
 import asyncio
+import hashlib
 import json
 import logging
+import uuid
 from datetime import UTC, datetime, timedelta
 
 import feedparser
 import httpx
 
+from ..store import graph, vclock
 from ..store.db import fts_index, get_db, instance_id
 from ..store.embeddings import embed
 from .broadcast import broadcast
@@ -112,6 +115,63 @@ def _parse_json_feed(resp_text: str, feed_name: str) -> list[tuple[str, str]]:
     return results
 
 
+def _order_key(version: int, updated_at: str, content: str) -> tuple:
+    return (version, updated_at, hashlib.sha256(content.encode("utf-8")).hexdigest())
+
+
+def conflict_sibling_id(gid: str, content: str) -> str:
+    digest = hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"artel:conflict:{gid}:{digest}"))
+
+
+def _emit(db, pending: list, event_type: str, agent_id: str, payload: dict) -> None:
+    eid = new_id()
+    db.execute(
+        "INSERT INTO events (id, type, agent_id, payload) VALUES (?,?,?,?)",
+        (eid, event_type, agent_id, json.dumps(payload)),
+    )
+    pending.append(
+        EventEntry(
+            id=eid, type=event_type, agent_id=agent_id, payload=payload, created_at=_utcnow()
+        )
+    )
+
+
+def _insert_conflict_sibling(db, gid: str, project: str | None, loser: dict) -> str | None:
+    sib_id = conflict_sibling_id(gid, loser["content"])
+    exists = db.execute("SELECT 1 FROM memory WHERE id=?", (sib_id,)).fetchone()
+    if not exists:
+        sib_tags = [t for t in loser["tags"] if t != "sync-conflict"] + ["sync-conflict"]
+        db.execute(
+            """INSERT INTO memory (id, type, agent_id, project, scope, content,
+               confidence, parents, tags, created_at, updated_at, version, origin)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (
+                sib_id,
+                loser["type"],
+                loser["agent_id"],
+                project,
+                "project",
+                loser["content"],
+                loser["confidence"],
+                json.dumps([gid]),
+                json.dumps(sib_tags),
+                loser["stamp"],
+                loser["stamp"],
+                1,
+                loser["origin"],
+            ),
+        )
+        vec = embed(loser["content"])
+        if vec is not None:
+            db.execute(
+                "INSERT INTO memory_vec (id, embedding) VALUES (?, ?)", (sib_id, json.dumps(vec))
+            )
+        fts_index(db, sib_id, loser["content"])
+    graph.add_edge(db, project, sib_id, gid, graph.CONTRADICTS, note="sync conflict")
+    return sib_id if not exists else None
+
+
 def _replicate_entry(db, feed: dict, meta: dict, content: str, tags: list, self_id: str) -> bool:
     gid = meta.get("memory_id")
     origin = meta.get("origin")
@@ -120,6 +180,7 @@ def _replicate_entry(db, feed: dict, meta: dict, content: str, tags: list, self_
     incoming_ver = int(meta.get("version") or 1)
     incoming_upd = meta.get("updated_at") or _utcnow()
     incoming_del = meta.get("deleted_at")
+    incoming_vc = vclock.parse(meta.get("vclock"))
     etype = meta.get("type") or "memory"
     agent_id = meta.get("agent_id") or feed["agent_id"]
     conf = meta.get("confidence")
@@ -128,10 +189,14 @@ def _replicate_entry(db, feed: dict, meta: dict, content: str, tags: list, self_
     tags_json = json.dumps(tags or [])
     created_at = meta.get("created_at") or incoming_upd
 
-    row = db.execute("SELECT version, updated_at FROM memory WHERE id=?", (gid,)).fetchone()
+    row = db.execute(
+        """SELECT version, updated_at, vclock, type, agent_id, content, confidence,
+           tags, project, origin, deleted_at FROM memory WHERE id=?""",
+        (gid,),
+    ).fetchone()
 
-    event_id = new_id()
-    event_type: str | None = None
+    pending: list[EventEntry] = []
+
     if row is None:
         if incoming_del:
             return False
@@ -139,8 +204,8 @@ def _replicate_entry(db, feed: dict, meta: dict, content: str, tags: list, self_
         with db:
             db.execute(
                 """INSERT INTO memory (id, type, agent_id, project, scope, content,
-                   confidence, parents, tags, created_at, updated_at, version, origin)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   confidence, parents, tags, created_at, updated_at, version, origin, vclock)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
                     gid,
                     etype,
@@ -155,6 +220,7 @@ def _replicate_entry(db, feed: dict, meta: dict, content: str, tags: list, self_
                     incoming_upd,
                     incoming_ver,
                     origin,
+                    vclock.dump(incoming_vc),
                 ),
             )
             if vec is not None:
@@ -162,29 +228,81 @@ def _replicate_entry(db, feed: dict, meta: dict, content: str, tags: list, self_
                     "INSERT INTO memory_vec (id, embedding) VALUES (?, ?)", (gid, json.dumps(vec))
                 )
             fts_index(db, gid, content)
-            event_type = "memory.written"
-            db.execute(
-                "INSERT INTO events (id, type, agent_id, payload) VALUES (?,?,?,?)",
-                (event_id, event_type, agent_id, json.dumps({"memory_id": gid})),
-            )
+            _emit(db, pending, "memory.written", agent_id, {"memory_id": gid})
+        for ev in pending:
+            broadcast(ev)
+        return True
+
+    local_vc = vclock.parse(row["vclock"])
+    apply_incoming = False
+    merge_only = False
+    sibling: dict | None = None
+    store_vc = vclock.dump(incoming_vc)
+
+    if incoming_vc and local_vc:
+        rel = vclock.compare(incoming_vc, local_vc)
+        if rel in (vclock.EQUAL, vclock.DOMINATED):
+            return False
+        store_vc = vclock.dump(vclock.merge(incoming_vc, local_vc))
+        if rel == vclock.DOMINATES:
+            apply_incoming = True
+        else:
+            inc_key = _order_key(incoming_ver, incoming_upd, content)
+            loc_key = _order_key(int(row["version"]), row["updated_at"] or "", row["content"])
+            apply_incoming = inc_key > loc_key
+            merge_only = not apply_incoming
+            if apply_incoming and not row["deleted_at"]:
+                sibling = {
+                    "content": row["content"],
+                    "type": row["type"],
+                    "agent_id": row["agent_id"],
+                    "confidence": row["confidence"],
+                    "tags": json.loads(row["tags"]),
+                    "origin": row["origin"] or self_id,
+                    "stamp": row["updated_at"] or incoming_upd,
+                }
+            elif merge_only and not incoming_del:
+                sibling = {
+                    "content": content,
+                    "type": etype,
+                    "agent_id": agent_id,
+                    "confidence": conf,
+                    "tags": list(tags or []),
+                    "origin": origin,
+                    "stamp": incoming_upd,
+                }
     else:
         local_ver = int(row["version"])
         local_upd = row["updated_at"] or ""
         newer = incoming_ver > local_ver or (incoming_ver == local_ver and incoming_upd > local_upd)
         if not newer:
             return False
-        with db:
+        apply_incoming = True
+
+    project = row["project"] or feed["project"]
+    with db:
+        if apply_incoming:
             if incoming_del:
                 db.execute(
-                    "UPDATE memory SET deleted_at=?, version=?, updated_at=? WHERE id=?",
-                    (incoming_del, incoming_ver, incoming_upd, gid),
+                    "UPDATE memory SET deleted_at=?, version=?, updated_at=?, vclock=? WHERE id=?",
+                    (incoming_del, incoming_ver, incoming_upd, store_vc, gid),
                 )
-                event_type = "memory.deleted"
+                _emit(db, pending, "memory.deleted", agent_id, {"memory_id": gid})
             else:
                 db.execute(
                     """UPDATE memory SET type=?, content=?, confidence=?, parents=?, tags=?,
-                       updated_at=?, version=?, deleted_at=NULL WHERE id=?""",
-                    (etype, content, conf, parents, tags_json, incoming_upd, incoming_ver, gid),
+                       updated_at=?, version=?, deleted_at=NULL, vclock=? WHERE id=?""",
+                    (
+                        etype,
+                        content,
+                        conf,
+                        parents,
+                        tags_json,
+                        incoming_upd,
+                        incoming_ver,
+                        store_vc,
+                        gid,
+                    ),
                 )
                 db.execute("DELETE FROM memory_vec WHERE id=?", (gid,))
                 new_vec = embed(content)
@@ -194,22 +312,26 @@ def _replicate_entry(db, feed: dict, meta: dict, content: str, tags: list, self_
                         (gid, json.dumps(new_vec)),
                     )
                 fts_index(db, gid, content)
-                event_type = "memory.written"
-            db.execute(
-                "INSERT INTO events (id, type, agent_id, payload) VALUES (?,?,?,?)",
-                (event_id, event_type, agent_id, json.dumps({"memory_id": gid})),
-            )
-    if event_type:
-        broadcast(
-            EventEntry(
-                id=event_id,
-                type=event_type,
-                agent_id=agent_id,
-                payload={"memory_id": gid},
-                created_at=_utcnow(),
-            )
-        )
-    return True
+                _emit(db, pending, "memory.written", agent_id, {"memory_id": gid})
+        elif merge_only:
+            db.execute("UPDATE memory SET vclock=? WHERE id=?", (store_vc, gid))
+        if sibling is not None:
+            sib_id = _insert_conflict_sibling(db, gid, project, sibling)
+            if sib_id:
+                _emit(
+                    db,
+                    pending,
+                    "memory.conflict",
+                    agent_id,
+                    {
+                        "memory_id": gid,
+                        "sibling_id": sib_id,
+                        "winner": "incoming" if apply_incoming else "local",
+                    },
+                )
+    for ev in pending:
+        broadcast(ev)
+    return apply_incoming or merge_only
 
 
 async def _poll_feed(feed: dict) -> None:

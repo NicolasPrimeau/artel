@@ -556,6 +556,7 @@ def _artel_item(
     deleted_at=None,
     tags=None,
     agent="remote-agent",
+    vclock=None,
 ):
     return {
         "id": f"http://peer/memory/{mid}",
@@ -578,6 +579,7 @@ def _artel_item(
             "deleted_at": deleted_at,
             "parents": [],
             "origin": origin,
+            "vclock": vclock,
         },
     }
 
@@ -741,6 +743,218 @@ async def test_non_artel_json_feed_uses_legacy_path(client):
     assert len(rows) == 1
     assert rows[0]["id"] != "x1"  # legacy path mints a fresh id
     assert rows[0]["confidence"] == 0.5  # legacy ingest confidence
+
+
+# ── Vector-clock causality (conflict-honesty proof) ────────────────────────────
+
+
+async def test_vclock_dominant_incoming_applied_with_merged_clock(client):
+    import artel.store.db as db_mod
+
+    feed = await _peer_feed(client)
+    await _poll_artel(feed, [_artel_item("vc-1", "peer-A", "first", vclock={"A": 1})])
+    await _poll_artel(
+        feed,
+        [
+            _artel_item(
+                "vc-1",
+                "peer-A",
+                "second",
+                version=2,
+                updated_at="2026-05-16T01:00:00.000Z",
+                vclock={"A": 2},
+            )
+        ],
+    )
+    row = db_mod.get_db().execute("SELECT content, vclock FROM memory WHERE id='vc-1'").fetchone()
+    assert row["content"] == "second"
+    assert json.loads(row["vclock"]) == {"A": 2}
+
+
+async def test_vclock_dominated_incoming_rejected_despite_higher_version(client):
+    import artel.store.db as db_mod
+
+    feed = await _peer_feed(client)
+    await _poll_artel(feed, [_artel_item("vc-2", "peer-A", "causal head", vclock={"A": 2})])
+    # a stale replica echoes an old write with an inflated version — LWW would take it
+    await _poll_artel(
+        feed,
+        [
+            _artel_item(
+                "vc-2",
+                "peer-B",
+                "stale echo",
+                version=9,
+                updated_at="2026-05-16T09:00:00.000Z",
+                vclock={"A": 1},
+            )
+        ],
+    )
+    row = db_mod.get_db().execute("SELECT content FROM memory WHERE id='vc-2'").fetchone()
+    assert row["content"] == "causal head"  # causality beats last-writer-wins
+
+
+async def test_vclock_concurrent_incoming_wins_and_preserves_local_as_sibling(client):
+    import artel.store.db as db_mod
+    from artel.server.feed_poller import conflict_sibling_id
+    from artel.store import graph
+
+    feed = await _peer_feed(client)
+    await _poll_artel(feed, [_artel_item("vc-3", "peer-A", "local branch", vclock={"A": 1})])
+    await _poll_artel(
+        feed,
+        [
+            _artel_item(
+                "vc-3",
+                "peer-B",
+                "remote branch",
+                updated_at="2026-05-16T01:00:00.000Z",
+                vclock={"B": 1},
+            )
+        ],
+    )
+    db = db_mod.get_db()
+    row = db.execute("SELECT content, vclock FROM memory WHERE id='vc-3'").fetchone()
+    assert row["content"] == "remote branch"  # later stamp wins the deterministic tiebreak
+    assert json.loads(row["vclock"]) == {"A": 1, "B": 1}  # merged: dominates both branches
+    sib_id = conflict_sibling_id("vc-3", "local branch")
+    sib = db.execute("SELECT content, tags, parents FROM memory WHERE id=?", (sib_id,)).fetchone()
+    assert sib is not None
+    assert sib["content"] == "local branch"  # loser preserved, not silently dropped
+    assert "sync-conflict" in json.loads(sib["tags"])
+    assert json.loads(sib["parents"]) == ["vc-3"]
+    out = graph.edges_of(db, sib_id)["out"]
+    assert any(e["dst"] == "vc-3" and e["rel"] == "contradicts" for e in out)
+
+
+async def test_vclock_concurrent_local_wins_and_preserves_incoming_as_sibling(client):
+    import artel.store.db as db_mod
+    from artel.server.feed_poller import conflict_sibling_id
+
+    feed = await _peer_feed(client)
+    await _poll_artel(
+        feed,
+        [
+            _artel_item(
+                "vc-4",
+                "peer-A",
+                "local branch",
+                updated_at="2026-05-16T05:00:00.000Z",
+                vclock={"A": 1},
+            )
+        ],
+    )
+    await _poll_artel(
+        feed,
+        [
+            _artel_item(
+                "vc-4",
+                "peer-B",
+                "remote branch",
+                updated_at="2026-05-16T01:00:00.000Z",
+                vclock={"B": 1},
+            )
+        ],
+    )
+    db = db_mod.get_db()
+    row = db.execute("SELECT content, vclock FROM memory WHERE id='vc-4'").fetchone()
+    assert row["content"] == "local branch"
+    assert json.loads(row["vclock"]) == {"A": 1, "B": 1}  # merged so the conflict never re-fires
+    sib = db.execute(
+        "SELECT content FROM memory WHERE id=?", (conflict_sibling_id("vc-4", "remote branch"),)
+    ).fetchone()
+    assert sib is not None
+    assert sib["content"] == "remote branch"
+
+
+async def test_vclock_conflict_resolves_once(client):
+    import artel.store.db as db_mod
+
+    feed = await _peer_feed(client)
+    await _poll_artel(feed, [_artel_item("vc-5", "peer-A", "local branch", vclock={"A": 1})])
+    item = [
+        _artel_item(
+            "vc-5",
+            "peer-B",
+            "remote branch",
+            updated_at="2026-05-16T01:00:00.000Z",
+            vclock={"B": 1},
+        )
+    ]
+    await _poll_artel(feed, item)
+    await _poll_artel(feed, item)  # merged clock now dominates {B:1} — no re-conflict
+    db = db_mod.get_db()
+    n = db.execute(
+        "SELECT COUNT(*) FROM memory WHERE json_extract(parents,'$[0]')='vc-5'"
+    ).fetchone()[0]
+    assert n == 1
+
+
+async def test_vclock_tombstone_dominates_and_deletes(client):
+    import artel.store.db as db_mod
+
+    feed = await _peer_feed(client)
+    await _poll_artel(feed, [_artel_item("vc-6", "peer-A", "doomed", vclock={"A": 1})])
+    await _poll_artel(
+        feed,
+        [
+            _artel_item(
+                "vc-6",
+                "peer-A",
+                "doomed",
+                updated_at="2026-05-16T02:00:00.000Z",
+                deleted_at="2026-05-16T02:00:00.000Z",
+                vclock={"A": 2},
+            )
+        ],
+    )
+    row = db_mod.get_db().execute("SELECT deleted_at FROM memory WHERE id='vc-6'").fetchone()
+    assert row["deleted_at"] == "2026-05-16T02:00:00.000Z"
+
+
+async def test_vclock_missing_on_either_side_falls_back_to_lww(client):
+    import artel.store.db as db_mod
+
+    feed = await _peer_feed(client)
+    await _poll_artel(feed, [_artel_item("vc-7", "peer-A", "clocked", vclock={"A": 3})])
+    await _poll_artel(
+        feed,
+        [
+            _artel_item(
+                "vc-7",
+                "peer-B",
+                "legacy peer wins by version",
+                version=4,
+                updated_at="2026-05-16T04:00:00.000Z",
+            )
+        ],
+    )
+    row = db_mod.get_db().execute("SELECT content FROM memory WHERE id='vc-7'").fetchone()
+    assert row["content"] == "legacy peer wins by version"
+
+
+async def test_local_writes_stamp_vclock_into_feed(client):
+    import artel.store.db as db_mod
+
+    iid = db_mod.instance_id()
+    r = await client.post(
+        "/memory", json={"content": "vclock lifecycle", "tags": ["vclk"]}, headers=HEADERS
+    )
+    entry_id = r.json()["id"]
+
+    def _feed_vclock(items):
+        return next(i["_artel"]["vclock"] for i in items if i["_artel"]["memory_id"] == entry_id)
+
+    r = await client.get("/memory/feed.json?tag=vclk", headers=HEADERS)
+    assert _feed_vclock(r.json()["items"]) == {iid: 1}
+
+    await client.patch(f"/memory/{entry_id}", json={"content": "edited"}, headers=HEADERS)
+    r = await client.get("/memory/feed.json?tag=vclk", headers=HEADERS)
+    assert _feed_vclock(r.json()["items"]) == {iid: 2}
+
+    await client.delete(f"/memory/{entry_id}", headers=HEADERS)
+    r = await client.get("/memory/feed.json?tag=vclk&include_deleted=true", headers=HEADERS)
+    assert _feed_vclock(r.json()["items"]) == {iid: 3}
 
 
 async def test_feed_patch_updates_settings(client):
