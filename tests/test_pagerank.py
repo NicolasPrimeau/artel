@@ -19,7 +19,8 @@ def db():
 def _mem(db, *ids):
     for i in ids:
         db.execute(
-            "INSERT INTO memory (id, type, agent_id, content) VALUES (?,?,?,?)", (i, "memory", "a", "x")
+            "INSERT INTO memory (id, type, agent_id, content) VALUES (?,?,?,?)",
+            (i, "memory", "a", "x"),
         )
 
 

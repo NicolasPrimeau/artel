@@ -54,7 +54,9 @@ def test_spread_activation_decays_with_distance(bare_db):
 
 def test_spread_activation_no_seeds_or_edges(bare_db):
     assert graph.spread_activation(bare_db, []) == []
-    bare_db.execute("INSERT INTO memory (id, type, agent_id, content) VALUES ('x','memory','a','y')")
+    bare_db.execute(
+        "INSERT INTO memory (id, type, agent_id, content) VALUES ('x','memory','a','y')"
+    )
     assert graph.spread_activation(bare_db, ["x"]) == []  # isolated seed -> nothing related
 
 
