@@ -389,6 +389,31 @@ async def related_memory(
     return [_row_to_entry(rows[nid]) for nid in ids if nid in rows]  # preserve activation order
 
 
+@router.get(
+    "/central",
+    response_model=list[MemoryEntry],
+    summary="Most central memories by PageRank over the knowledge graph",
+)
+async def central_memory(
+    project: str | None = Query(default=None),
+    limit: int = Query(default=20, le=100),
+    agent_id: str = ReaderDep,
+):
+    db = get_db()
+    scores = graph.pagerank(db, project=norm_project(project))
+    if not scores:
+        return []
+    ids = [nid for nid, _ in sorted(scores.items(), key=lambda x: x[1], reverse=True)[:limit]]
+    placeholders = ",".join("?" * len(ids))
+    rows = {
+        r["id"]: r
+        for r in db.execute(
+            f"SELECT * FROM memory WHERE id IN ({placeholders}) AND deleted_at IS NULL", ids
+        ).fetchall()
+    }
+    return [_row_to_entry(rows[nid]) for nid in ids if nid in rows]  # preserve centrality order
+
+
 @router.get("", response_model=list[MemoryEntry], summary="List memory with optional filters")
 async def list_memory(
     type: str | None = Query(default=None),

@@ -259,3 +259,66 @@ def spread_activation(
     ]
     ranked.sort(key=lambda x: x[1], reverse=True)
     return ranked[:limit]
+
+
+# Support relations that carry importance for PageRank (contradiction is excluded —
+# it's not support; the local viability score handles the penalty).
+_PAGERANK_RELS = (RELIES_ON, CORROBORATES, APPLIES_TO)
+
+
+def pagerank(
+    db: sqlite3.Connection,
+    *,
+    project: str | None = None,
+    damping: float = 0.85,
+    iterations: int = 40,
+) -> dict[str, float]:
+    """Weighted PageRank over the support subgraph among memory nodes.
+
+    Importance flows along edges (a memory that many important memories rely on or
+    corroborate scores high), giving a *global* structural centrality — the principled
+    version of `viability`'s local connectivity heuristic. Dangling mass is redistributed
+    uniformly. Returns {memory_id: centrality}.
+    """
+    placeholders = ",".join("?" * len(_PAGERANK_RELS))
+    params: list = list(_PAGERANK_RELS)
+    proj = ""
+    if project is not None:
+        proj = " AND project = ?"
+        params.append(project)
+    rows = db.execute(
+        f"SELECT src, dst FROM memory_edge WHERE rel IN ({placeholders}){proj}", params
+    ).fetchall()
+
+    out_edges: dict[str, list[str]] = {}
+    nodes: set[str] = set()
+    for r in rows:
+        src, dst = r["src"], r["dst"]
+        if node_kind(db, src) != "memory" or node_kind(db, dst) != "memory":
+            continue
+        out_edges.setdefault(src, []).append(dst)
+        nodes.add(src)
+        nodes.add(dst)
+    if not nodes:
+        return {}
+
+    n = len(nodes)
+    pr = {node: 1.0 / n for node in nodes}
+    base = (1.0 - damping) / n
+    for _ in range(iterations):
+        nxt = {node: base for node in nodes}
+        dangling = 0.0
+        for node in nodes:
+            outs = out_edges.get(node)
+            if not outs:
+                dangling += pr[node]
+                continue
+            share = damping * pr[node] / len(outs)
+            for dst in outs:
+                nxt[dst] += share
+        if dangling:
+            add = damping * dangling / n
+            for node in nodes:
+                nxt[node] += add
+        pr = nxt
+    return {node: round(score, 6) for node, score in pr.items()}
