@@ -201,3 +201,61 @@ def viability(db: sqlite3.Connection, node_id: str) -> dict:
         "corroborates": out_corroborates,
         "contradictions": contradictions,
     }
+
+
+# Per-relation conductance for spreading activation: supportive edges carry activation,
+# contradiction inhibits it (carries negative). Mirrors the viability weighting.
+_SPREAD_WEIGHTS = {
+    RELIES_ON: 0.9,
+    CORROBORATES: 0.8,
+    APPLIES_TO: 0.7,
+    GROUNDS: 0.6,
+    CONTRADICTS: -0.7,
+}
+
+
+def spread_activation(
+    db: sqlite3.Connection,
+    seeds: list[str],
+    *,
+    decay: float = 0.5,
+    hops: int = 3,
+    min_activation: float = 0.05,
+    limit: int = 20,
+) -> list[tuple[str, float]]:
+    """Spreading-activation retrieval over the memory graph (Anderson/Collins-Loftus).
+
+    Each seed starts at 1.0; activation flows along edges scaled by per-relation
+    conductance and a per-hop decay, accumulating at each node. Returns memory nodes
+    (seeds excluded, net-positive only) ranked by activation — graph-native associative
+    recall that surfaces what is *structurally* related, complementing vector/keyword search.
+    """
+    activation: dict[str, float] = {s: 1.0 for s in seeds}
+    frontier: dict[str, float] = dict(activation)
+    for _ in range(hops):
+        nxt: dict[str, float] = {}
+        for node, act in frontier.items():
+            if abs(act) < min_activation:
+                continue
+            adj = edges_of(db, node)
+            for e in adj["out"] + adj["in"]:
+                weight = _SPREAD_WEIGHTS.get(e["rel"], 0.0)
+                if weight == 0.0:
+                    continue
+                neighbor = e["dst"] if e["src"] == node else e["src"]
+                flow = act * weight * decay
+                if abs(flow) < min_activation:
+                    continue
+                activation[neighbor] = activation.get(neighbor, 0.0) + flow
+                nxt[neighbor] = nxt.get(neighbor, 0.0) + flow
+        frontier = nxt
+        if not frontier:
+            break
+    seeds_set = set(seeds)
+    ranked = [
+        (nid, round(act, 4))
+        for nid, act in activation.items()
+        if nid not in seeds_set and act > 0 and node_kind(db, nid) == "memory"
+    ]
+    ranked.sort(key=lambda x: x[1], reverse=True)
+    return ranked[:limit]

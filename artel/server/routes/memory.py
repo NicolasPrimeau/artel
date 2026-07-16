@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import JSONResponse, Response
 
+from ...store import graph
 from ...store.db import AmbiguousId, fts_index, get_db, instance_id, norm_project, resolve_id
 from ...store.embeddings import embed
 from ..auth import (
@@ -354,6 +355,38 @@ async def search_memory(
             if len(e.content) > max_content_length:
                 e.content = e.content[:max_content_length]
     return entries
+
+
+@router.get(
+    "/{entry_id}/related",
+    response_model=list[MemoryEntry],
+    summary="Memories associatively related via the knowledge graph (spreading activation)",
+)
+async def related_memory(
+    entry_id: str,
+    limit: int = Query(default=10, le=50),
+    hops: int = Query(default=3, ge=1, le=5),
+    agent_id: str = ReaderDep,
+):
+    db = get_db()
+    try:
+        resolved = resolve_id("memory", entry_id)
+    except AmbiguousId:
+        raise HTTPException(status_code=409, detail=f"ambiguous id prefix: {entry_id}") from None
+    if resolved is None:
+        raise HTTPException(status_code=404, detail="memory not found")
+    ranked = graph.spread_activation(db, [resolved], hops=hops, limit=limit)
+    if not ranked:
+        return []
+    ids = [nid for nid, _ in ranked]
+    placeholders = ",".join("?" * len(ids))
+    rows = {
+        r["id"]: r
+        for r in db.execute(
+            f"SELECT * FROM memory WHERE id IN ({placeholders}) AND deleted_at IS NULL", ids
+        ).fetchall()
+    }
+    return [_row_to_entry(rows[nid]) for nid in ids if nid in rows]  # preserve activation order
 
 
 @router.get("", response_model=list[MemoryEntry], summary="List memory with optional filters")
