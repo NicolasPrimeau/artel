@@ -8,6 +8,7 @@ from .client import ArtelClient
 from .compaction import run_capture_compaction, run_capture_refinement
 from .config import settings
 from .conflict import check_and_merge
+from .conflicts import run_conflict_resolution
 from .llm import is_configured
 from .synthesis import (
     capture_metrics,
@@ -114,6 +115,7 @@ async def _scheduler(client: ArtelClient) -> None:
         for fn, name in (
             (run_capture_compaction, "capture_compaction"),
             (run_feed_triage, "feed_triage"),
+            (run_conflict_resolution, "conflict_resolution"),
             (run_synthesis, "synthesis"),
             (decay_confidence, "decay"),
             (run_promotion, "promotion"),
