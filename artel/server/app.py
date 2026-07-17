@@ -48,6 +48,7 @@ from .routes.messages import router as messages_router
 from .routes.oauth import router as oauth_router
 from .routes.onboard import router as onboard_router
 from .routes.projects import router as projects_router
+from .routes.pulse import router as pulse_router
 from .routes.sessions import router as sessions_router
 from .routes.tasks import router as tasks_router
 
@@ -228,6 +229,7 @@ app.include_router(projects_router)
 app.include_router(feeds_router)
 app.include_router(logs_router)
 app.include_router(mesh_router)
+app.include_router(pulse_router)
 
 
 @app.get("/.well-known/oauth-protected-resource", include_in_schema=False)
