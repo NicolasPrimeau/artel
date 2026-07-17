@@ -84,6 +84,11 @@ def search(query, limit=6):
     return result if isinstance(result, list) else []
 
 
+def related(entry_id, limit=2):
+    result = get(f"/memory/{urllib.parse.quote(str(entry_id))}/related?limit={limit}")
+    return [e for e in result if isinstance(e, dict)] if isinstance(result, list) else []
+
+
 def payload():
     try:
         return json.load(sys.stdin)
@@ -158,6 +163,17 @@ def cmd_recall():
             "Relevant memory:\n"
             + "\n".join("- " + clip(e.get("content"), 160) for e in memories[:2])
         )
+        surfaced = {e.get("id") for e in memories[:2]}
+        assoc = [e for e in related(memories[0].get("id")) if e.get("id") not in surfaced]
+        assoc_ids = set(
+            seen_filter(data.get("session_id", ""), "recall", [e.get("id") for e in assoc])
+        )
+        assoc = [e for e in assoc if e.get("id") in assoc_ids]
+        if assoc:
+            parts.append(
+                "Linked in the knowledge graph:\n"
+                + "\n".join("  ↳ " + clip(e.get("content"), 140) for e in assoc[:2])
+            )
     if skills:
         parts.append("Skill that may apply: " + clip(skills[0].get("content"), 160))
     if parts:
