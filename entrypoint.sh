@@ -15,10 +15,13 @@ if [ -z "$MCP_REGISTRATION_KEY" ] && [ -n "$REGISTRATION_KEY" ]; then
     export MCP_REGISTRATION_KEY="$REGISTRATION_KEY"
 fi
 
-# Never inline-spawn when this container's own command already runs the archivist
-# (the dedicated archivist service) — that would double-run against one database.
+# Only the primary server process curates inline. Skip the dedicated archivist
+# service (double-run against one database) AND utility sidecars like the mDNS
+# announcer — those run under network_mode: host with no shared DB volume, so an
+# inline curator there wins the lease but writes metrics/cursors to a throwaway
+# database, silently starving the real archivist.
 case "$*" in
-    *artel.archivist*) RUN_INLINE_ARCHIVIST=0 ;;
+    *artel.archivist*|*mdns_announce*) RUN_INLINE_ARCHIVIST=0 ;;
 esac
 
 # Run the archivist alongside the server when it has an LLM key — it curates the

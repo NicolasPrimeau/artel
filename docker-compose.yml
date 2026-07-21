@@ -49,6 +49,11 @@ services:
     network_mode: host
     command: ["python", "-m", "artel.server.mdns_announce"]
     env_file: .env
+    environment:
+      # Utility sidecar, not the server: never inline-spawn a curator here. It has
+      # no /data volume, so an archivist running here writes metrics/cursors to a
+      # throwaway DB and starves the dedicated archivist service.
+      - RUN_INLINE_ARCHIVIST=0
     depends_on:
       artel:
         condition: service_healthy
