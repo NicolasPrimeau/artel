@@ -51,7 +51,10 @@ def test_hooks_wired_and_scripts_executable():
             for h in group["hooks"]:
                 assert h["type"] == "command"
                 referenced.append(h["command"])
-    assert _PLUGIN["hooks"] == "./hooks/hooks.json"
+    # Claude Code auto-loads the standard hooks/hooks.json; declaring it in the
+    # manifest double-loads it and the whole plugin fails to load. Regression
+    # guard: the manifest must NOT reference the standard hooks file.
+    assert "hooks" not in _PLUGIN
     for cmd in referenced:
         rel = cmd.replace("${CLAUDE_PLUGIN_ROOT}/", "")
         script = _ROOT / rel
