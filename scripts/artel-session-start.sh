@@ -3,9 +3,9 @@
 # additional context. Gated on artel_url being configured; never blocks a
 # session (always exits 0) so a missing/down Artel server is harmless.
 
-url="${CLAUDE_PLUGIN_OPTION_ARTEL_URL:-}"
-aid="${CLAUDE_PLUGIN_OPTION_AGENT_ID:-}"
-key="${CLAUDE_PLUGIN_OPTION_API_KEY:-}"
+url="${CLAUDE_PLUGIN_OPTION_ARTEL_URL:-${ARTEL_URL:-}}"
+aid="${CLAUDE_PLUGIN_OPTION_AGENT_ID:-${ARTEL_AGENT_ID:-}}"
+key="${CLAUDE_PLUGIN_OPTION_API_KEY:-${ARTEL_API_KEY:-}}"
 
 [ -z "$url" ] && exit 0
 [ -z "$aid" ] && exit 0
