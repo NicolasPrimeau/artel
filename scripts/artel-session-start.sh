@@ -3,6 +3,10 @@
 # additional context. Gated on artel_url being configured; never blocks a
 # session (always exits 0) so a missing/down Artel server is harmless.
 
+# Hooks don't inherit Claude Code's settings.json env block, so load the
+# installer's env file directly when the vars aren't already in the environment.
+[ -z "${ARTEL_URL:-}${CLAUDE_PLUGIN_OPTION_ARTEL_URL:-}" ] && [ -f "$HOME/.config/artel/env.sh" ] && . "$HOME/.config/artel/env.sh"
+
 url="${CLAUDE_PLUGIN_OPTION_ARTEL_URL:-${ARTEL_URL:-}}"
 aid="${CLAUDE_PLUGIN_OPTION_AGENT_ID:-${ARTEL_AGENT_ID:-}}"
 key="${CLAUDE_PLUGIN_OPTION_API_KEY:-${ARTEL_API_KEY:-}}"

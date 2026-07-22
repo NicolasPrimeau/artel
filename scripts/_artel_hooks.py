@@ -49,9 +49,27 @@ ACKS = {
 }
 
 
+def _load_env_file():
+    if os.environ.get("ARTEL_URL") or os.environ.get("CLAUDE_PLUGIN_OPTION_ARTEL_URL"):
+        return
+    path = os.path.expanduser("~/.config/artel/env.sh")
+    try:
+        for line in open(path):
+            line = line.strip()
+            if line.startswith("export "):
+                line = line[7:]
+            key, _, val = line.partition("=")
+            if key in ("ARTEL_URL", "ARTEL_AGENT_ID", "ARTEL_API_KEY"):
+                os.environ.setdefault(key, val.strip().strip('"').strip("'"))
+    except OSError:
+        pass
+
+
 def _cfg(plugin_opt, env):
     return os.environ.get(plugin_opt) or os.environ.get(env) or ""
 
+
+_load_env_file()
 
 URL = _cfg("CLAUDE_PLUGIN_OPTION_ARTEL_URL", "ARTEL_URL").rstrip("/")
 AID = _cfg("CLAUDE_PLUGIN_OPTION_AGENT_ID", "ARTEL_AGENT_ID")
