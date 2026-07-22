@@ -5,6 +5,13 @@ from ..config import settings
 
 router = APIRouter(tags=["onboard"])
 
+
+def _advertise_url(request: Request) -> str:
+    if settings.public_url:
+        return settings.public_url.rstrip("/")
+    return str(request.base_url).rstrip("/")
+
+
 _SCRIPT = r"""#!/bin/sh
 set -e
 
@@ -196,7 +203,7 @@ async def onboard(
     request: Request,
     project: str | None = Query(default=None),
 ):
-    artel_url = settings.public_url or str(request.base_url).rstrip("/")
+    artel_url = _advertise_url(request)
     return _SCRIPT.format(artel_url=artel_url, project=project or "", mcp_url=artel_url)
 
 
@@ -319,7 +326,7 @@ fi
 
 @router.get("/plugin/install", response_class=PlainTextResponse)
 async def plugin_install(request: Request):
-    artel_url = settings.public_url or str(request.base_url).rstrip("/")
+    artel_url = _advertise_url(request)
     return (
         _INSTALL.replace("__ARTEL_URL__", artel_url)
         .replace("__REPO__", "NicolasPrimeau/artel")
