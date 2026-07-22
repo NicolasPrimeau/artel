@@ -186,7 +186,7 @@ if shutil.which('opencode'):
     print(json.dumps(opencode_cfg, indent=2))
     print()
     print('Wake daemon (spawns opencode when a message arrives):')
-    print('  MCP_AGENT_ID={} MCP_AGENT_KEY={} ARTEL_URL={} artel-watch'.format(aid, akey, url))
+    print('  MCP_AGENT_ID={{}} MCP_AGENT_KEY={{}} ARTEL_URL={{}} artel-watch'.format(aid, akey, url))
 PYEOF
 """
 
