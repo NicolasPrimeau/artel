@@ -298,8 +298,25 @@ if not v:
 (creds_dir / 'env.sh').write_text(
     'export ARTEL_URL="{}"\nexport ARTEL_AGENT_ID="{}"\nexport ARTEL_API_KEY="{}"\n'.format(url, aid, akey)
 )
+
+# Claude Code substitutes ${ARTEL_*} in the plugin's MCP config from its settings
+# env block (reliable, launch-independent) — unlike a shell file, which only works
+# when Claude Code is launched from a shell that sourced it. Merge, preserving any
+# existing settings.
+settings_path = pathlib.Path.home() / '.claude' / 'settings.json'
+try:
+    settings = json.loads(settings_path.read_text()) if settings_path.exists() else {}
+except Exception:
+    settings = {}
+if not isinstance(settings, dict):
+    settings = {}
+settings.setdefault('env', {})
+settings['env'].update({'ARTEL_URL': url, 'ARTEL_AGENT_ID': aid, 'ARTEL_API_KEY': akey})
+settings_path.parent.mkdir(parents=True, exist_ok=True)
+settings_path.write_text(json.dumps(settings, indent=2) + '\n')
+
 print('  agent : ' + aid)
-print('  env   : ~/.config/artel/env.sh')
+print('  env   : ~/.config/artel/env.sh + ~/.claude/settings.json')
 PYEOF
 
 . "$HOME/.config/artel/env.sh"
