@@ -27,6 +27,5 @@
         "x-api-key": "${ARTEL_API_KEY}"
       }
     }
-  },
-  "hooks": "./hooks/hooks.json"
+  }
 }
