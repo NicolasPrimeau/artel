@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 
 from ..store import graph
 from ..store.db import get_db, instance_id
+from . import control
 from .client import ArtelClient
 from .config import settings
 from .llm import complete, is_configured
@@ -169,6 +170,71 @@ def _write_synthesis_cursor(value: str) -> None:
             )
     except Exception as e:
         log.warning("could not advance synthesis cursor: %s", e)
+
+
+_DECAY_CONTROL_KEY = "archivist_decay_controller"
+
+
+def _decay_control_params() -> control.PIParams:
+    return control.PIParams(
+        kp=settings.control_decay_kp,
+        ki=settings.control_decay_ki,
+        setpoint=settings.control_decay_regret_setpoint,
+        out_min=settings.control_decay_min,
+        out_max=settings.control_decay_max,
+        bias=settings.decay_rate,
+        deadband=settings.control_decay_deadband,
+        leak=settings.control_decay_leak,
+    )
+
+
+def _read_decay_control_state() -> control.PIState:
+    params = _decay_control_params()
+    try:
+        row = (
+            get_db().execute("SELECT value FROM kv WHERE key = ?", (_DECAY_CONTROL_KEY,)).fetchone()
+        )
+        if row and isinstance(row["value"], str):
+            return control.loads(row["value"], params)
+    except Exception:
+        pass
+    return control.initial_state(params)
+
+
+def _write_decay_control_state(state: control.PIState) -> None:
+    try:
+        db = get_db()
+        with db:
+            db.execute(
+                "INSERT INTO kv (key, value) VALUES (?, ?) "
+                "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                (_DECAY_CONTROL_KEY, control.dumps(state)),
+            )
+    except Exception as e:
+        log.warning("could not persist decay controller state: %s", e)
+
+
+def controlled_decay_rate() -> float:
+    if not settings.control_decay_enabled:
+        return settings.decay_rate
+    return _read_decay_control_state().output
+
+
+def run_decay_control(measured_regret: float) -> float:
+    if not settings.control_decay_enabled:
+        return settings.decay_rate
+    params = _decay_control_params()
+    state = _read_decay_control_state()
+    new_state = control.pi_step(params, state, measured_regret)
+    _write_decay_control_state(new_state)
+    log.info(
+        "decay control: regret=%.2f setpoint=%.2f -> decay_rate=%.4f (integral=%.3f)",
+        measured_regret,
+        params.setpoint,
+        new_state.output,
+        new_state.integral,
+    )
+    return new_state.output
 
 
 def _parse_operations(text: str) -> list[dict]:
@@ -1132,6 +1198,7 @@ async def decay_confidence(client: ArtelClient) -> None:
             heat_map[r["id"]] = (r["read_count"] or 0, r["last_read_at"])
 
     now = datetime.now(UTC)
+    rate = controlled_decay_rate()
     decayed = 0
     heat_skipped = 0
     for entry in entries:
@@ -1149,7 +1216,7 @@ async def decay_confidence(client: ArtelClient) -> None:
                     continue
             except Exception:
                 pass
-        new_conf = max(settings.decay_floor, current * settings.decay_rate)
+        new_conf = max(settings.decay_floor, current * rate)
         try:
             await client.patch_memory(entry["id"], confidence=new_conf)
             decayed += 1
@@ -1600,6 +1667,19 @@ async def capture_metrics(project: str | None = None) -> None:
     ).fetchone()[0]
     net_growth = created - deleted
 
+    synth_total = db.execute(
+        f"""SELECT COUNT(*) FROM memory
+            WHERE created_at > ? AND agent_id = ? AND deleted_at IS NULL {proj_filter}""",
+        (cycle_cutoff, settings.archivist_id, *proj_params),
+    ).fetchone()[0]
+    synth_read = db.execute(
+        f"""SELECT COUNT(*) FROM memory
+            WHERE created_at > ? AND agent_id = ? AND deleted_at IS NULL
+              AND read_count > 0 {proj_filter}""",
+        (cycle_cutoff, settings.archivist_id, *proj_params),
+    ).fetchone()[0]
+    synthesis_uptake_rate = synth_read / synth_total if synth_total > 0 else 0.0
+
     synthesis_count = 0
     merge_count = 0
     decay_count = 0
@@ -1618,9 +1698,13 @@ async def capture_metrics(project: str | None = None) -> None:
         elif row["action"] == "decay":
             decay_count += d.get("decayed", 0)
 
+    controlled_rate = (
+        run_decay_control(float(decay_regret)) if project is None else controlled_decay_rate()
+    )
     params_json = json.dumps(
         {
-            "decay_rate": settings.decay_rate,
+            "decay_rate": controlled_rate,
+            "decay_rate_bias": settings.decay_rate,
             "decay_window_days": settings.decay_window_days,
             "synthesis_interval": settings.synthesis_interval,
         }
@@ -1640,7 +1724,7 @@ async def capture_metrics(project: str | None = None) -> None:
                 utilization_rate,
                 decay_regret,
                 synthesis_count,
-                0.0,
+                synthesis_uptake_rate,
                 contradictions,
                 net_growth,
                 merge_count,

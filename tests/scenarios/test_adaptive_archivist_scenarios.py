@@ -173,6 +173,7 @@ async def _run_decay(client, decay_rate=0.9, decay_floor=0.05, decay_window_days
         s.decay_rate = decay_rate
         s.archivist_id = ARCHIVIST_ID
         s.synthesis_interval = 3600
+        s.control_decay_enabled = False
         await decay_confidence(client)
 
 
@@ -195,6 +196,8 @@ async def _snap(project=None):
         s.synthesis_interval = 3600
         s.decay_rate = 0.9
         s.decay_window_days = 7
+        s.archivist_id = ARCHIVIST_ID
+        s.control_decay_enabled = False
         await capture_metrics(project=project)
     row = (
         db_mod.get_db()

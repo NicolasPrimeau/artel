@@ -577,6 +577,8 @@ class TestCaptureMetrics:
             s.synthesis_interval = 3600
             s.decay_rate = 0.9
             s.decay_window_days = 7
+            s.archivist_id = "archivist"
+            s.control_decay_enabled = False
             await capture_metrics()
 
         row = raw_db.execute("SELECT COUNT(*) FROM archivist_metrics").fetchone()[0]
@@ -592,6 +594,8 @@ class TestCaptureMetrics:
             s.synthesis_interval = 3600
             s.decay_rate = 0.9
             s.decay_window_days = 7
+            s.archivist_id = "archivist"
+            s.control_decay_enabled = False
             await capture_metrics()
 
         row = raw_db.execute("SELECT total_entries FROM archivist_metrics").fetchone()
@@ -605,6 +609,8 @@ class TestCaptureMetrics:
             s.synthesis_interval = 3600
             s.decay_rate = 0.9
             s.decay_window_days = 7
+            s.archivist_id = "archivist"
+            s.control_decay_enabled = False
             await capture_metrics()
 
         row = raw_db.execute("SELECT utilization_rate FROM archivist_metrics").fetchone()
@@ -620,6 +626,8 @@ class TestCaptureMetrics:
             s.synthesis_interval = 3600
             s.decay_rate = 0.9
             s.decay_window_days = 7
+            s.archivist_id = "archivist"
+            s.control_decay_enabled = False
             await capture_metrics()
 
         row = raw_db.execute("SELECT utilization_rate FROM archivist_metrics").fetchone()
@@ -633,6 +641,8 @@ class TestCaptureMetrics:
             s.synthesis_interval = 3600
             s.decay_rate = 0.9
             s.decay_window_days = 7
+            s.archivist_id = "archivist"
+            s.control_decay_enabled = False
             await capture_metrics()
 
         row = raw_db.execute("SELECT utilization_rate FROM archivist_metrics").fetchone()
@@ -648,6 +658,8 @@ class TestCaptureMetrics:
             s.synthesis_interval = 3600
             s.decay_rate = 0.9
             s.decay_window_days = 7
+            s.archivist_id = "archivist"
+            s.control_decay_enabled = False
             await capture_metrics()
 
         row = raw_db.execute("SELECT decay_regret_count FROM archivist_metrics").fetchone()
@@ -662,6 +674,8 @@ class TestCaptureMetrics:
             s.synthesis_interval = 3600
             s.decay_rate = 0.9
             s.decay_window_days = 7
+            s.archivist_id = "archivist"
+            s.control_decay_enabled = False
             await capture_metrics()
 
         row = raw_db.execute("SELECT contradiction_count FROM archivist_metrics").fetchone()
@@ -675,6 +689,8 @@ class TestCaptureMetrics:
             s.synthesis_interval = 3600
             s.decay_rate = 0.9
             s.decay_window_days = 7
+            s.archivist_id = "archivist"
+            s.control_decay_enabled = False
             await capture_metrics()
 
         row = raw_db.execute("SELECT contradiction_count FROM archivist_metrics").fetchone()
@@ -691,6 +707,8 @@ class TestCaptureMetrics:
             s.synthesis_interval = 3600
             s.decay_rate = 0.9
             s.decay_window_days = 7
+            s.archivist_id = "archivist"
+            s.control_decay_enabled = False
             await capture_metrics()
 
         row = raw_db.execute("SELECT net_growth FROM archivist_metrics").fetchone()
@@ -707,6 +725,8 @@ class TestCaptureMetrics:
             s.synthesis_interval = 3600
             s.decay_rate = 0.9
             s.decay_window_days = 7
+            s.archivist_id = "archivist"
+            s.control_decay_enabled = False
             await capture_metrics()
 
         row = raw_db.execute("SELECT net_growth FROM archivist_metrics").fetchone()
@@ -723,6 +743,8 @@ class TestCaptureMetrics:
             s.synthesis_interval = 3600
             s.decay_rate = 0.9
             s.decay_window_days = 7
+            s.archivist_id = "archivist"
+            s.control_decay_enabled = False
             await capture_metrics()
 
         row = raw_db.execute("SELECT merge_count FROM archivist_metrics").fetchone()
@@ -735,6 +757,8 @@ class TestCaptureMetrics:
             s.synthesis_interval = 3600
             s.decay_rate = 0.9
             s.decay_window_days = 7
+            s.archivist_id = "archivist"
+            s.control_decay_enabled = False
             await capture_metrics()
 
         row = raw_db.execute("SELECT decay_count FROM archivist_metrics").fetchone()
@@ -748,6 +772,8 @@ class TestCaptureMetrics:
             s.synthesis_interval = 3600
             s.decay_rate = 0.9
             s.decay_window_days = 7
+            s.archivist_id = "archivist"
+            s.control_decay_enabled = False
             await capture_metrics()
 
         row = raw_db.execute("SELECT synthesis_count FROM archivist_metrics").fetchone()
@@ -758,6 +784,8 @@ class TestCaptureMetrics:
             s.synthesis_interval = 7200
             s.decay_rate = 0.85
             s.decay_window_days = 14
+            s.archivist_id = "archivist"
+            s.control_decay_enabled = False
             await capture_metrics()
 
         row = raw_db.execute("SELECT params FROM archivist_metrics").fetchone()
@@ -771,6 +799,8 @@ class TestCaptureMetrics:
             s.synthesis_interval = 3600
             s.decay_rate = 0.9
             s.decay_window_days = 7
+            s.archivist_id = "archivist"
+            s.control_decay_enabled = False
             await capture_metrics()
 
         row = raw_db.execute(
@@ -784,6 +814,8 @@ class TestCaptureMetrics:
             s.synthesis_interval = 3600
             s.decay_rate = 0.9
             s.decay_window_days = 7
+            s.archivist_id = "archivist"
+            s.control_decay_enabled = False
             await capture_metrics()
             await capture_metrics()
             await capture_metrics()
@@ -812,6 +844,8 @@ class TestCaptureMetrics:
             s.synthesis_interval = 3600
             s.decay_rate = 0.9
             s.decay_window_days = 7
+            s.archivist_id = "archivist"
+            s.control_decay_enabled = False
             await capture_metrics()
 
         row = raw_db.execute(
@@ -843,6 +877,8 @@ class TestCaptureMetrics:
             s.synthesis_interval = 3600
             s.decay_rate = 0.9
             s.decay_window_days = 7
+            s.archivist_id = "archivist"
+            s.control_decay_enabled = False
             await capture_metrics(project="proj-a")
 
         row = raw_db.execute(
