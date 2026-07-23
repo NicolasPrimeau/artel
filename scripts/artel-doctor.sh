@@ -3,6 +3,11 @@
 # debug. Reads CLAUDE_PLUGIN_OPTION_ARTEL_URL / _AGENT_ID / _API_KEY, falling back to
 # ARTEL_URL / ARTEL_AGENT_ID / ARTEL_API_KEY. Never prints the API key.
 
+# Match the hooks: they don't inherit Claude Code's settings.json env block, so load
+# the installer's env file directly when the vars aren't already in the environment.
+# Without this the doctor reports a false "not set" even when the plugin works fine.
+[ -z "${ARTEL_URL:-}${CLAUDE_PLUGIN_OPTION_ARTEL_URL:-}" ] && [ -f "$HOME/.config/artel/env.sh" ] && . "$HOME/.config/artel/env.sh"
+
 url="${CLAUDE_PLUGIN_OPTION_ARTEL_URL:-${ARTEL_URL:-}}"
 aid="${CLAUDE_PLUGIN_OPTION_AGENT_ID:-${ARTEL_AGENT_ID:-}}"
 key="${CLAUDE_PLUGIN_OPTION_API_KEY:-${ARTEL_API_KEY:-}}"

@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.37.0] — 2026-07-22
+
+### Plugin — bug fixes from an end-to-end hook audit
+
+- `SessionStart` hook now loads the handoff. It was requesting `GET /sessions/handoff/$aid`, which 404s — the endpoint resolves the agent from the `x-agent-id` header, there is no path form — so the hook silently injected nothing and prior-session context never loaded. Fixed to `GET /sessions/handoff`.
+- `artel-doctor.sh` now self-loads `~/.config/artel/env.sh` like the other hook scripts. Hooks don't inherit Claude Code's `settings.json` env block, so the doctor reported a false "ARTEL_* not set" even when the plugin was configured and working.
+- Slash commands (`/artel-recall`, `/artel-remember`, `/artel-handoff`, `/artel-tasks`) now reference the plugin-namespaced MCP tools (`mcp__plugin_artel_artel__<tool>`). They hardcoded the bare `mcp__artel__<tool>` form of a plain project `.mcp.json` server, which does not resolve inside a plugin-bundled MCP server.
+- Regression guards for all three added to `tests/test_plugin.py`.
+
 ## [0.32.0] — 2026-07-11
 
 ### Plugin

@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent.parent
@@ -61,6 +62,38 @@ def test_hooks_wired_and_scripts_executable():
         assert script.is_file(), f"missing hook script: {rel}"
         assert os.access(script, os.X_OK), f"hook script not executable: {rel}"
         assert script.read_text().startswith("#!"), f"hook script missing shebang: {rel}"
+
+
+def test_session_start_hook_hits_header_scoped_handoff_endpoint():
+    # GET /sessions/handoff resolves the agent from the x-agent-id header — there is no
+    # /sessions/handoff/{agent_id} path form. A trailing /$aid 404s and the hook then
+    # silently injects nothing. Regression guard for that bug.
+    src = (_ROOT / "scripts" / "artel-session-start.sh").read_text()
+    assert "/sessions/handoff" in src
+    assert "/sessions/handoff/$aid" not in src
+    assert "/sessions/handoff/${aid}" not in src
+
+
+def test_doctor_self_loads_installer_env_file():
+    # Hooks/diagnostics don't inherit Claude Code's settings.json env block, so the
+    # doctor must self-load ~/.config/artel/env.sh (like the other hook scripts) or it
+    # reports a false "not set" when the plugin is actually configured.
+    src = (_ROOT / "scripts" / "artel-doctor.sh").read_text()
+    assert "config/artel/env.sh" in src
+
+
+def test_commands_reference_plugin_namespaced_mcp_tools():
+    # Plugin-bundled MCP tools are callable only as mcp__plugin_<plugin>_<server>__<tool>.
+    # The bare mcp__artel__ prefix (a plain project .mcp.json server) does not resolve
+    # inside the plugin, so a command referencing it fails to find the tool.
+    server = next(iter(_PLUGIN["mcpServers"]))
+    expected = f"mcp__plugin_{_PLUGIN['name']}_{server}__"
+    for cmd in (_ROOT / "commands").glob("*.md"):
+        body = cmd.read_text()
+        for token in re.findall(r"mcp__[A-Za-z0-9_]+__", body):
+            assert token.startswith(expected), (
+                f"{cmd.name}: {token} must use the plugin form {expected}<tool>"
+            )
 
 
 def test_pretool_hook_targets_edit_tools():

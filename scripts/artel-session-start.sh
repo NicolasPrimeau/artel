@@ -17,7 +17,7 @@ key="${CLAUDE_PLUGIN_OPTION_API_KEY:-${ARTEL_API_KEY:-}}"
 
 resp="$(curl -sS --max-time 10 \
   -H "x-agent-id: $aid" -H "x-api-key: $key" \
-  "${url%/}/sessions/handoff/$aid" 2>/dev/null)" || exit 0
+  "${url%/}/sessions/handoff" 2>/dev/null)" || exit 0
 [ -z "$resp" ] && exit 0
 
 printf '%s' "$resp" | python3 -c '
