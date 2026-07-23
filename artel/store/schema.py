@@ -291,6 +291,18 @@ CREATE TABLE IF NOT EXISTS archivist_metrics (
 );
 CREATE INDEX IF NOT EXISTS idx_arch_metrics_captured ON archivist_metrics (captured_at);
 
+CREATE TABLE IF NOT EXISTS recall_events (
+    id            TEXT PRIMARY KEY,
+    agent_id      TEXT NOT NULL,
+    entry_id      TEXT NOT NULL,
+    features      TEXT NOT NULL,
+    read_count_at INTEGER NOT NULL DEFAULT 0,
+    surfaced_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    resolved      INTEGER NOT NULL DEFAULT 0,
+    reward        REAL
+);
+CREATE INDEX IF NOT EXISTS idx_recall_events_unresolved ON recall_events (resolved, surfaced_at);
+
 CREATE TABLE IF NOT EXISTS code_anchor (
     id          TEXT PRIMARY KEY,
     project     TEXT,

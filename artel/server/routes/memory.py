@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import JSONResponse, Response
 
-from ...store import decay, graph, hebbian, merkle, mmr, vclock
+from ...store import decay, graph, hebbian, merkle, mmr, recall_bandit, vclock
 from ...store.db import AmbiguousId, fts_index, get_db, instance_id, norm_project, resolve_id
 from ...store.embeddings import embed
 from ..auth import (
@@ -239,6 +239,7 @@ async def search_memory(
     confidence_min: float | None = Query(default=None, ge=0.0, le=1.0),
     max_content_length: int | None = Query(default=None, gt=0),
     diversify: bool = Query(default=False),
+    context: str | None = Query(default=None),
     agent_id: str = ReaderDep,
 ):
     project = norm_project(project)
@@ -391,6 +392,37 @@ async def search_memory(
                         (hid,),
                     )
             hebbian.reinforce(db, hit_ids[:5], now_iso)
+            if context == "recall" and settings.recall_bandit_enabled:
+                scores = {hid: _score(hid) for hid in hit_ids}
+                max_score = max(scores.values()) or 1.0
+                for hid in hit_ids:
+                    r = rows[hid]
+                    conf = r["confidence"] if r["confidence"] is not None else 0.5
+                    trail = decay.decayed(
+                        r["trail"] or 0.0, r["trail_at"], _TRAIL_HALF_LIFE_DAYS, now_iso
+                    )
+                    try:
+                        age_days = max(
+                            0.0,
+                            (
+                                now
+                                - datetime.fromisoformat(
+                                    str(r["updated_at"]).replace("Z", "+00:00")
+                                )
+                            ).total_seconds()
+                            / 86400.0,
+                        )
+                    except ValueError:
+                        age_days = 0.0
+                    recency = 0.5 ** (age_days / 45.0)
+                    feats = recall_bandit.build_features(
+                        scores[hid] / max_score,
+                        conf,
+                        recency,
+                        trail,
+                        r["distinct_reader_count"] or 0,
+                    )
+                    recall_bandit.log_surface(db, agent_id, hid, feats, (r["read_count"] or 0) + 1)
     entries = [_row_to_entry(r) for r in out]
     if max_content_length is not None:
         for e in entries:

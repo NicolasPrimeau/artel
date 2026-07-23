@@ -1207,6 +1207,22 @@
             }
           },
           {
+            "name": "context",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Context"
+            }
+          },
+          {
             "name": "x-agent-id",
             "in": "header",
             "required": false,

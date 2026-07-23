@@ -89,10 +89,15 @@ Artel signal into a reward.
 
 ### Reinforcement learning
 
-- **A1 — contextual bandit for recall-injection gating.** LinUCB/Thompson over
-  (prompt cluster, agent, project, hook). Reward = uptake. Stops injecting ignored memory,
-  personalizes, and makes `synthesis_uptake_rate` the training signal. Also learns the RRF
-  re-score weights (`memory.py` `_score`) instead of hardcoding them.
+- **A1 — contextual bandit for recall-injection gating.** *(implemented, shadow mode)*
+  An online logistic bandit (`store/bandit.py`) over per-candidate features
+  (relevance, confidence, recency, trail, distinct-readers). Reward = uptake: recall
+  surfaces are logged to `recall_events` (the reward bus), and the archivist's
+  `run_recall_feedback` step resolves each event to 1/0 based on whether the entry was
+  re-read after being surfaced, then updates the bandit weights (`store/recall_bandit.py`).
+  Gated by `recall_bandit_enabled` (default off); currently learns without yet driving
+  ranking — flip to driving once the weights are validated on real traffic. This is the
+  first tap into the reward bus and makes `synthesis_uptake_rate`'s cousin signal real.
 - **A2 — regret-minimizing retention policy.** The generalization of Loop #1: an online
   policy predicting `P(needed again | features)`, trained on regret events.
 - **A3 — contextual bandit for task routing.** Arms = agents, reward = task outcome
@@ -111,9 +116,11 @@ Artel signal into a reward.
 
 ### Plugin integration
 
-- **C1 — diverse recall via DPP / MMR.** Select relevant *and* mutually diverse memories
-  instead of top-k near-duplicates. Pure quality win, no learning required. Same math makes
-  capture compression a submodular coverage problem under a token budget.
+- **C1 — diverse recall via DPP / MMR.** *(implemented)* Maximal Marginal Relevance
+  (`store/mmr.py`) selects relevant *and* mutually diverse memories instead of top-k
+  near-duplicates, using stored embedding vectors. Exposed as `/memory/search?diversify=true`
+  and used by the recall hook. Same math makes capture compression a submodular coverage
+  problem under a token budget (future).
 - **C2 — predictive JIT retrieval hook.** From the trajectory of files/tools just touched,
   walk STDP edges (B3) + spreading activation to pre-surface the next-needed memory; gated
   by the A1 bandit.

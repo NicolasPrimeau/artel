@@ -1627,6 +1627,14 @@ async def _process_feed_item(entry: dict, client: ArtelClient) -> None:
     log.info("feed triage: processed item %s", entry_id[:8])
 
 
+async def run_recall_feedback(client: ArtelClient) -> None:
+    from ..store import recall_bandit
+
+    resolved = recall_bandit.resolve_rewards(get_db(), datetime.now(UTC))
+    if resolved:
+        log.info("recall bandit: resolved %d event(s)", resolved)
+
+
 async def capture_metrics(project: str | None = None) -> None:
     db = get_db()
     cycle_window_hours = max(1, settings.synthesis_interval // 3600) + 1
