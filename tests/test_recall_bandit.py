@@ -111,6 +111,21 @@ async def test_reward_zero_when_entry_not_reused(client, enable_bandit):
 
 
 @pytest.mark.asyncio
+async def test_resolve_rewards_leaves_no_open_transaction(client, enable_bandit):
+    # Regression: uncommitted writes here held the write lock and deadlocked every
+    # other writer (server presence/lease -> 500s across the board).
+    from artel.store import recall_bandit
+    from artel.store.db import get_db
+
+    await _write(client, "alpha topic one")
+    await _recall(client)
+
+    db = get_db()
+    recall_bandit.resolve_rewards(db, datetime.now(UTC) + timedelta(hours=1))
+    assert not db.in_transaction
+
+
+@pytest.mark.asyncio
 async def test_grace_period_defers_unripe_events(client, enable_bandit):
     from artel.store import recall_bandit
     from artel.store.db import get_db

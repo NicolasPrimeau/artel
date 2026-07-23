@@ -67,28 +67,34 @@ def resolve_rewards(
     lr: float = LEARNING_RATE,
 ) -> int:
     rows = db.execute("SELECT * FROM recall_events WHERE resolved = 0").fetchall()
-    state = load_state(db)
-    resolved = 0
+    ripe = []
     for ev in rows:
         try:
             surfaced = datetime.fromisoformat(str(ev["surfaced_at"]).replace("Z", "+00:00"))
         except ValueError:
             continue
-        if (now - surfaced).total_seconds() < grace_seconds:
-            continue
-        row = db.execute("SELECT read_count FROM memory WHERE id = ?", (ev["entry_id"],)).fetchone()
-        current = (row["read_count"] if row else 0) or 0
-        reward = 1.0 if current > ev["read_count_at"] else 0.0
-        try:
-            features = json.loads(ev["features"])
-        except (TypeError, ValueError):
-            features = []
-        if len(features) == BANDIT_DIM:
-            state = bandit.update(state, features, reward, lr)
-        db.execute(
-            "UPDATE recall_events SET resolved = 1, reward = ? WHERE id = ?", (reward, ev["id"])
-        )
-        resolved += 1
-    if resolved:
+        if (now - surfaced).total_seconds() >= grace_seconds:
+            ripe.append(ev)
+    if not ripe:
+        return 0
+    state = load_state(db)
+    # One committing transaction: leaving writes uncommitted holds the write lock and
+    # deadlocks every other writer (server presence/lease included).
+    with db:
+        for ev in ripe:
+            row = db.execute(
+                "SELECT read_count FROM memory WHERE id = ?", (ev["entry_id"],)
+            ).fetchone()
+            current = (row["read_count"] if row else 0) or 0
+            reward = 1.0 if current > ev["read_count_at"] else 0.0
+            try:
+                features = json.loads(ev["features"])
+            except (TypeError, ValueError):
+                features = []
+            if len(features) == BANDIT_DIM:
+                state = bandit.update(state, features, reward, lr)
+            db.execute(
+                "UPDATE recall_events SET resolved = 1, reward = ? WHERE id = ?", (reward, ev["id"])
+            )
         save_state(db, state)
-    return resolved
+    return len(ripe)
