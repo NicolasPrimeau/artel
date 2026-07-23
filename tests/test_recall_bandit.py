@@ -59,7 +59,10 @@ async def test_recall_context_logs_surface_events(client, enable_bandit):
 
 
 @pytest.mark.asyncio
-async def test_disabled_by_default_logs_nothing(client):
+async def test_disabled_logs_nothing(client, monkeypatch):
+    import artel.server.config as cfg
+
+    monkeypatch.setattr(cfg.settings, "recall_bandit_enabled", False)
     from artel.store.db import get_db
 
     await _write(client, "alpha topic one")

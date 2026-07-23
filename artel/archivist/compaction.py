@@ -221,9 +221,7 @@ async def _apply_refine_op(
         if isinstance(op.get("confidence"), int | float):
             fields["confidence"] = float(op["confidence"])
         if isinstance(op.get("tags"), list):
-            # setting tags also rewrites scope in the PATCH handler — pin it to project
             fields["tags"] = [t for t in op["tags"] if t != _PROVISIONAL_TAG]
-            fields["scope"] = "project"
         if fields:
             await client.patch_memory(op["keep"], **fields)
         for drop in op.get("drop", []):
@@ -232,7 +230,7 @@ async def _apply_refine_op(
         return "consolidated"
     if action == "promote" and op.get("id") in provisional:
         kept = [t for t in _tags_of(provisional[op["id"]]) if t != _PROVISIONAL_TAG]
-        await client.patch_memory(op["id"], tags=kept, scope="project")
+        await client.patch_memory(op["id"], tags=kept)
         return "promoted"
     if action == "discard" and op.get("id") in provisional:
         await client.delete_memory(op["id"])

@@ -39,6 +39,30 @@ async def test_patch_content(client, mem_payload):
     assert r2.json()["version"] == 2
 
 
+async def test_patch_tags_preserves_scope_on_null_project_entry(client, mem_payload):
+    # A scope=project entry with no project is a valid stored state (archivist docs,
+    # digested captures). A tags-only PATCH must leave scope intact — the capture
+    # refinement pass relies on this instead of re-asserting scope='project'.
+    r = await client.post("/memory", json=mem_payload, headers=HEADERS)
+    assert r.json()["project"] is None and r.json()["scope"] == "project"
+    eid = r.json()["id"]
+
+    r2 = await client.patch(f"/memory/{eid}", json={"tags": ["kept"]}, headers=HEADERS)
+    assert r2.status_code == 200
+    assert r2.json()["scope"] == "project"
+    assert r2.json()["tags"] == ["kept"]
+
+
+async def test_patch_scope_project_without_project_is_rejected(client, mem_payload):
+    # Documents the contract the refinement pass tripped on: re-asserting
+    # scope='project' on a project-less entry 422s.
+    r = await client.post("/memory", json=mem_payload, headers=HEADERS)
+    eid = r.json()["id"]
+
+    r2 = await client.patch(f"/memory/{eid}", json={"scope": "project"}, headers=HEADERS)
+    assert r2.status_code == 422
+
+
 async def test_patch_confidence_by_other_agent_forbidden(client, mem_payload):
     r = await client.post("/memory", json=mem_payload, headers=HEADERS)
     eid = r.json()["id"]

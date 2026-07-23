@@ -106,12 +106,14 @@ async def test_refine_consolidates_and_corroborates(monkeypatch):
         ]
     )
     await compaction.run_capture_refinement(c, refine=refine)
-    # keep is patched with merged content + raised confidence + provisional tag dropped + scope pinned
+    # keep is patched with merged content + raised confidence + provisional tag dropped
     kwargs = c.patch_memory.call_args.kwargs
     assert kwargs["content"] == "merged fact"
     assert kwargs["confidence"] == 0.95
     assert "capture-extracted" not in kwargs["tags"] and "infra" in kwargs["tags"]
-    assert kwargs["scope"] == "project"  # guards against the PATCH handler nulling scope
+    # must NOT re-assert scope: provisional entries are scope=project with a null project,
+    # and PATCH scope='project' without a project 422s. Tags-only PATCH preserves scope.
+    assert "scope" not in kwargs
     c.delete_memory.assert_awaited_once_with("m2")
 
 
@@ -121,7 +123,7 @@ async def test_refine_promote_drops_provisional_marker(monkeypatch):
     c = _refine_client([_prov("m1", tags=("capture-extracted", "keep")), _prov("m2")])
     refine = AsyncMock(return_value=[{"action": "promote", "id": "m1"}])
     await compaction.run_capture_refinement(c, refine=refine)
-    c.patch_memory.assert_awaited_once_with("m1", tags=["keep"], scope="project")
+    c.patch_memory.assert_awaited_once_with("m1", tags=["keep"])
 
 
 @pytest.mark.asyncio
