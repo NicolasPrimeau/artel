@@ -3,7 +3,7 @@
   "info": {
     "title": "Artel",
     "description": "Self-hosted coordination server for AI agent fleets. Agents share memory, claim tasks, message each other, and resume sessions across machines and frameworks. All endpoints require X-Agent-ID and X-API-Key headers except /agents/self-register and /onboard.",
-    "version": "0.0.1.dev1+g95b4ea3d3"
+    "version": "0.26.2.dev8+g8d2b4602f.d20260630"
   },
   "paths": {
     "/agents/register": {
@@ -1194,6 +1194,16 @@
                 }
               ],
               "title": "Max Content Length"
+            }
+          },
+          {
+            "name": "diversify",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Diversify"
             }
           },
           {

@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import JSONResponse, Response
 
-from ...store import decay, graph, hebbian, merkle, vclock
+from ...store import decay, graph, hebbian, merkle, mmr, vclock
 from ...store.db import AmbiguousId, fts_index, get_db, instance_id, norm_project, resolve_id
 from ...store.embeddings import embed
 from ..auth import (
@@ -102,6 +102,23 @@ router = APIRouter(prefix="/memory", tags=["memory"])
 # Stigmergy: each retrieval deposits pheromone on the entry's trail; trails evaporate
 # with a short half-life so relevance must be continually re-earned, not just accumulated.
 _TRAIL_HALF_LIFE_DAYS = 7.0
+_DIVERSITY_LAMBDA = 0.7
+
+
+def _fetch_vectors(db, ids: list[str]) -> dict[str, list[float]]:
+    if not ids:
+        return {}
+    placeholders = ",".join("?" * len(ids))
+    result: dict[str, list[float]] = {}
+    for r in db.execute(
+        f"SELECT id, vec_to_json(embedding) AS v FROM memory_vec WHERE id IN ({placeholders})",
+        ids,
+    ).fetchall():
+        try:
+            result[r["id"]] = json.loads(r["v"])
+        except (TypeError, ValueError):
+            pass
+    return result
 
 
 def _resolve_entry(entry_id: str) -> str:
@@ -221,6 +238,7 @@ async def search_memory(
     max_distance: float | None = Query(default=None),
     confidence_min: float | None = Query(default=None, ge=0.0, le=1.0),
     max_content_length: int | None = Query(default=None, gt=0),
+    diversify: bool = Query(default=False),
     agent_id: str = ReaderDep,
 ):
     project = norm_project(project)
@@ -311,33 +329,38 @@ async def search_memory(
             rrf[mid] * (0.4 + 0.6 * conf) * (1.0 + 0.2 * math.log1p(trail)) * (0.3 + 0.7 * recency)
         )
 
-    ordered = sorted((m for m in rrf if m in rows), key=_score, reverse=True)
-
-    out = []
-    for mid in ordered:
+    def _passes(mid: str) -> bool:
         r = rows[mid]
         if project and r["project"] != project:
-            continue
+            return False
         if (
             not project
             and allowed is not None
             and r["project"] is not None
             and r["project"] not in allowed
         ):
-            continue
+            return False
         if max_distance is not None and distances.get(mid, 1e9) > max_distance:
-            continue
+            return False
         if confidence_min is not None and (r["confidence"] or 0.0) < confidence_min:
-            continue
+            return False
         if tag and tag not in json.loads(r["tags"]):
-            continue
+            return False
         if type and r["type"] != type:
-            continue
+            return False
         if agent and r["agent_id"] != agent:
-            continue
-        out.append(r)
-        if len(out) >= limit:
-            break
+            return False
+        return True
+
+    ordered = sorted((m for m in rrf if m in rows), key=_score, reverse=True)
+    eligible = [mid for mid in ordered if _passes(mid)]
+    if diversify and len(eligible) > limit:
+        relevance = {mid: _score(mid) for mid in eligible}
+        vectors = _fetch_vectors(db, eligible)
+        chosen = mmr.mmr_select(eligible, relevance, vectors, _DIVERSITY_LAMBDA, limit)
+    else:
+        chosen = eligible[:limit]
+    out = [rows[mid] for mid in chosen]
     if out and agent_id != settings.archivist_agent_id:
         hit_ids = [r["id"] for r in out]
         hit_placeholders = ",".join("?" * len(hit_ids))

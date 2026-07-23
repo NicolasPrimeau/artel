@@ -96,6 +96,7 @@ def search(query, limit=6):
             "limit": str(limit),
             "confidence_min": "0.5",
             "max_content_length": "300",
+            "diversify": "true",
         }
     )
     result = get("/memory/search?" + qs)
