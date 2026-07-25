@@ -368,9 +368,10 @@ async def search_memory(
         with db:
             db.execute(
                 f"UPDATE memory SET read_count = read_count + 1, "
-                f"last_read_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') "
+                f"last_read_at = strftime('%Y-%m-%dT%H:%M:%fZ','now'), "
+                f"confidence = MIN(1.0, confidence + ? * (1.0 - confidence)) "
                 f"WHERE id IN ({hit_placeholders})",
-                hit_ids,
+                (settings.recall_reinforce_gain, *hit_ids),
             )
             for hid in hit_ids:
                 r = rows[hid]
