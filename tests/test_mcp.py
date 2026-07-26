@@ -607,3 +607,60 @@ async def test_explicit_project_overrides_request_context(mcp, monkeypatch):
     entry_id = _extract_id(result)
     row = get_db().execute("SELECT project FROM memory WHERE id=?", (entry_id,)).fetchone()
     assert row["project"] == "artel"
+
+
+async def test_mcp_auth_middleware_reads_project_header():
+    from artel.mcp.config import request_project
+    from artel.server.app import MCPAuthMiddleware
+
+    seen = {}
+
+    async def inner(scope, receive, send):
+        seen["project"] = request_project.get()
+
+    mw = MCPAuthMiddleware(inner)
+    scope = {
+        "type": "http",
+        "headers": [
+            (b"x-agent-id", b"poseidon"),
+            (b"x-api-key", b"k"),
+            (b"x-mcp-project", b"nimbus"),
+        ],
+        "query_string": b"",
+    }
+
+    async def recv():
+        return {}
+
+    async def snd(_m):
+        pass
+
+    await mw(scope, recv, snd)
+    assert seen["project"] == "nimbus"
+    assert request_project.get() is None  # reset after the request
+
+
+async def test_mcp_auth_middleware_absent_project_header_is_none():
+    from artel.mcp.config import request_project
+    from artel.server.app import MCPAuthMiddleware
+
+    seen = {}
+
+    async def inner(scope, receive, send):
+        seen["project"] = request_project.get()
+
+    mw = MCPAuthMiddleware(inner)
+    scope = {
+        "type": "http",
+        "headers": [(b"x-agent-id", b"poseidon"), (b"x-api-key", b"k")],
+        "query_string": b"",
+    }
+
+    async def recv():
+        return {}
+
+    async def snd(_m):
+        pass
+
+    await mw(scope, recv, snd)
+    assert seen["project"] is None

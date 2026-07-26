@@ -153,11 +153,13 @@ class MCPAuthMiddleware:
             await self.app(scope, receive, send)
             return
 
+        from ..mcp.config import request_project
         from ..mcp.server import _agent_id, _api_key
 
         headers = dict(scope.get("headers", []))
         qs = dict(p.split(b"=", 1) for p in scope.get("query_string", b"").split(b"&") if b"=" in p)
         auth_header = headers.get(b"authorization", b"").decode()
+        proj = (headers.get(b"x-mcp-project") or qs.get(b"mcp_project") or b"").decode()
 
         aid = api_key = ""
         if auth_header.startswith("Bearer "):
@@ -199,11 +201,13 @@ class MCPAuthMiddleware:
 
         t1 = _agent_id.set(aid)
         t2 = _api_key.set(api_key)
+        t3 = request_project.set(proj or None)
         try:
             await self.app(scope, receive, send)
         finally:
             _agent_id.reset(t1)
             _api_key.reset(t2)
+            request_project.reset(t3)
 
 
 app = FastAPI(
