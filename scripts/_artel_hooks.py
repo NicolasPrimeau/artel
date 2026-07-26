@@ -80,6 +80,45 @@ def configured():
     return bool(URL and AID and KEY)
 
 
+def _read_json(path):
+    try:
+        with open(path) as fh:
+            return json.load(fh)
+    except Exception:
+        return None
+
+
+def resolve_project(data=None):
+    """Resolve the project this hook should scope to. Env first (if Claude Code
+    exports settings env to hooks), else read the repo's own Artel config relative
+    to the payload cwd — so scoping works even when hooks don't inherit settings env."""
+    env = (
+        os.environ.get("MCP_PROJECT")
+        or os.environ.get("ARTEL_PROJECT")
+        or os.environ.get("CLAUDE_PLUGIN_OPTION_MCP_PROJECT")
+        or ""
+    ).strip()
+    if env:
+        return env
+    cwd = (data or {}).get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    mcp = _read_json(os.path.join(cwd, ".mcp.json")) or {}
+    hdr = (
+        mcp.get("mcpServers", {}).get("artel", {}).get("headers", {}).get("x-mcp-project")
+        if isinstance(mcp, dict)
+        else None
+    )
+    if hdr:
+        return str(hdr).strip()
+    for rel in (".claude/settings.local.json", ".claude/settings.json"):
+        cfg = _read_json(os.path.join(cwd, rel))
+        if isinstance(cfg, dict):
+            block = cfg.get("env") or {}
+            val = block.get("MCP_PROJECT") or block.get("ARTEL_PROJECT")
+            if val:
+                return str(val).strip()
+    return ""
+
+
 def get(path):
     req = urllib.request.Request(URL + path, headers={"x-agent-id": AID, "x-api-key": KEY})
     try:
@@ -89,18 +128,18 @@ def get(path):
         return None
 
 
-def search(query, limit=6):
-    qs = urllib.parse.urlencode(
-        {
-            "q": query[:300],
-            "limit": str(limit),
-            "confidence_min": "0.5",
-            "max_content_length": "300",
-            "diversify": "true",
-            "context": "recall",
-        }
-    )
-    result = get("/memory/search?" + qs)
+def search(query, limit=6, project=""):
+    params = {
+        "q": query[:300],
+        "limit": str(limit),
+        "confidence_min": "0.5",
+        "max_content_length": "300",
+        "diversify": "true",
+        "context": "recall",
+    }
+    if project:
+        params["project"] = project
+    result = get("/memory/search?" + urllib.parse.urlencode(params))
     return result if isinstance(result, list) else []
 
 
@@ -168,7 +207,8 @@ def cmd_recall():
     prompt = (data.get("prompt") or "").strip()
     if len(prompt) < 12 or prompt.lower().strip(" .!?") in ACKS:
         return
-    results = [e for e in search(prompt, limit=6) if isinstance(e, dict)]
+    proj = resolve_project(data)
+    results = [e for e in search(prompt, limit=6, project=proj) if isinstance(e, dict)]
     if not results:
         return
     fresh = set(seen_filter(data.get("session_id", ""), "recall", [e.get("id") for e in results]))
@@ -208,6 +248,7 @@ def cmd_gotcha():
     if not name:
         return
     stem = os.path.splitext(name)[0]
+    proj = resolve_project(data)
 
     def about(entry):
         c = content_lower(entry)
@@ -219,7 +260,9 @@ def cmd_gotcha():
         return sp.endswith("/" + name.lower()) or sp == name.lower()
 
     hits = [
-        e for e in search((name + " " + stem).strip(), limit=4) if isinstance(e, dict) and about(e)
+        e
+        for e in search((name + " " + stem).strip(), limit=4, project=proj)
+        if isinstance(e, dict) and about(e)
     ]
     if not hits:
         return
@@ -276,7 +319,8 @@ def cmd_status():
             return
     except OSError:
         pass
-    tasks = get("/tasks?status=open")
+    proj = resolve_project()
+    tasks = get("/tasks?status=open" + ("&project=" + urllib.parse.quote(proj) if proj else ""))
     msgs = get("/messages/inbox")
     n_tasks = len(tasks) if isinstance(tasks, list) else 0
     n_msgs = len(msgs) if isinstance(msgs, list) else 0
@@ -343,12 +387,15 @@ def compress_transcript(lines):
     return "\n".join(out)[:_CAPTURE_CAP]
 
 
-def _post_capture(content, session_id):
+def _post_capture(content, session_id, project=""):
     base = _cfg("CLAUDE_PLUGIN_OPTION_ARTEL_URL", "ARTEL_URL").rstrip("/")
+    body = {"content": content, "session_id": session_id}
+    if project:
+        body["project"] = project
     req = urllib.request.Request(
         base + "/captures",
         method="POST",
-        data=json.dumps({"content": content, "session_id": session_id}).encode(),
+        data=json.dumps(body).encode(),
         headers={
             "content-type": "application/json",
             "x-agent-id": _cfg("CLAUDE_PLUGIN_OPTION_AGENT_ID", "ARTEL_AGENT_ID"),
@@ -359,7 +406,7 @@ def _post_capture(content, session_id):
         return resp.status in (200, 201)
 
 
-def _drain_session(session_id, transcript_path, force, spool):
+def _drain_session(session_id, transcript_path, force, spool, project=""):
     if not transcript_path or not os.path.exists(transcript_path):
         return
     cursor_path = os.path.join(spool, f"cursor-{session_id}")
@@ -383,7 +430,7 @@ def _drain_session(session_id, transcript_path, force, spool):
     if len(content) < _CAPTURE_MIN_CHARS and not force:
         return  # accumulate: leave the cursor so it grows until floor or a forced flush
     try:
-        if _post_capture(content, session_id):
+        if _post_capture(content, session_id, project):
             _write_text(cursor_path, str(new_offset))
     except Exception:
         pass  # leave the cursor; the next drain retries
@@ -424,13 +471,16 @@ def cmd_drain():
                 sid, path = ev.get("session_id"), ev.get("transcript_path")
                 if not sid or not path:
                     continue
-                info = sessions.setdefault(sid, {"path": path, "force": False})
+                info = sessions.setdefault(sid, {"path": path, "force": False, "project": ""})
                 info["path"] = path
+                proj = resolve_project(ev)
+                if proj:
+                    info["project"] = proj
                 if (ev.get("hook_event_name") or "").lower().startswith("precompact"):
                     info["force"] = True
         for sid, info in sessions.items():
             try:
-                _drain_session(sid, info["path"], info["force"], spool)
+                _drain_session(sid, info["path"], info["force"], spool, info["project"])
             except Exception:
                 pass
         try:

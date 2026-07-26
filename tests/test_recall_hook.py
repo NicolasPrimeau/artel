@@ -21,7 +21,7 @@ def _run_recall(monkeypatch, capsys, search_results, related_results, session_id
     monkeypatch.setattr(
         hooks, "payload", lambda: {"prompt": "how do we deploy the api", "session_id": session_id}
     )
-    monkeypatch.setattr(hooks, "search", lambda q, limit=6: search_results)
+    monkeypatch.setattr(hooks, "search", lambda q, limit=6, project="": search_results)
     monkeypatch.setattr(hooks, "related", lambda eid, limit=2: related_results)
     hooks.cmd_recall()
     out = capsys.readouterr().out
