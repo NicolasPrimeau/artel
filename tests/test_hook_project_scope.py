@@ -118,3 +118,84 @@ def test_post_capture_includes_project(monkeypatch):
     hooks._post_capture("some session content", "sess-1", project="nimbus")
     assert captured["body"]["project"] == "nimbus"
     assert captured["body"]["session_id"] == "sess-1"
+
+
+def test_identity_from_cwd_reads_mcp_json(tmp_path):
+    (tmp_path / ".mcp.json").write_text(
+        json.dumps(
+            {"mcpServers": {"artel": {"headers": {"x-agent-id": "builddata", "x-api-key": "k1"}}}}
+        )
+    )
+    assert hooks._identity_from_cwd(str(tmp_path)) == ("builddata", "k1")
+
+
+def test_identity_from_cwd_ignores_env_placeholders(tmp_path):
+    (tmp_path / ".mcp.json").write_text(
+        json.dumps({"mcpServers": {"artel": {"headers": {"x-agent-id": "${ARTEL_AGENT_ID}"}}}})
+    )
+    assert hooks._identity_from_cwd(str(tmp_path)) == ("", "")
+
+
+def test_drain_attributes_each_session_to_its_own_repo(monkeypatch, tmp_path):
+    # Two concurrent sessions in DIFFERENT repos share one detached drainer.
+    # Each capture must be posted with its own repo's agent/project, not the
+    # forking session's ambient env.
+    import json as _json
+
+    repo_a = tmp_path / "repoA"
+    repo_b = tmp_path / "repoB"
+    for repo, aid, proj in ((repo_a, "agentA", "projA"), (repo_b, "agentB", "projB")):
+        repo.mkdir()
+        (repo / ".mcp.json").write_text(
+            _json.dumps(
+                {
+                    "mcpServers": {
+                        "artel": {
+                            "headers": {
+                                "x-agent-id": aid,
+                                "x-api-key": f"key-{aid}",
+                                "x-mcp-project": proj,
+                            }
+                        }
+                    }
+                }
+            )
+        )
+
+    spool = tmp_path / "spool"
+    spool.mkdir()
+    monkeypatch.setattr(hooks, "_spool_dir", lambda: str(spool))
+
+    # two transcripts, each big enough to clear the size floor
+    for name in ("ta", "tb"):
+        (spool / f"{name}.jsonl").write_text(
+            "\n".join(
+                _json.dumps({"role": "user", "content": f"{name} message number {i} " * 8})
+                for i in range(15)
+            )
+        )
+
+    (spool / "incoming.jsonl").write_text(
+        _json.dumps(
+            {"session_id": "sA", "transcript_path": str(spool / "ta.jsonl"), "cwd": str(repo_a)}
+        )
+        + "\n"
+        + _json.dumps(
+            {"session_id": "sB", "transcript_path": str(spool / "tb.jsonl"), "cwd": str(repo_b)}
+        )
+        + "\n"
+    )
+
+    posted = {}
+    monkeypatch.setattr(
+        hooks,
+        "_post_capture",
+        lambda content, sid, project="", agent_id="", api_key="": (
+            posted.update({sid: (agent_id, api_key, project)}) or True
+        ),
+    )
+
+    hooks.cmd_drain()
+
+    assert posted["sA"] == ("agentA", "key-agentA", "projA")
+    assert posted["sB"] == ("agentB", "key-agentB", "projB")

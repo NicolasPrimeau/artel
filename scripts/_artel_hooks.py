@@ -88,6 +88,40 @@ def _read_json(path):
         return None
 
 
+def _mcp_artel_headers(cwd):
+    mcp = _read_json(os.path.join(cwd, ".mcp.json")) if cwd else None
+    if isinstance(mcp, dict):
+        return mcp.get("mcpServers", {}).get("artel", {}).get("headers", {}) or {}
+    return {}
+
+
+def _clean(val):
+    """Return a config value, ignoring unresolved ${...} env placeholders."""
+    s = str(val).strip() if val else ""
+    return "" if s.startswith("${") else s
+
+
+def _project_from_cwd(cwd):
+    """Read the project a repo declares, from its own on-disk config (no env)."""
+    proj = _clean(_mcp_artel_headers(cwd).get("x-mcp-project"))
+    if proj:
+        return proj
+    for rel in (".claude/settings.local.json", ".claude/settings.json"):
+        cfg = _read_json(os.path.join(cwd, rel)) if cwd else None
+        if isinstance(cfg, dict):
+            block = cfg.get("env") or {}
+            val = block.get("MCP_PROJECT") or block.get("ARTEL_PROJECT")
+            if val:
+                return str(val).strip()
+    return ""
+
+
+def _identity_from_cwd(cwd):
+    """Read (agent_id, api_key) a repo declares, from its own .mcp.json (no env)."""
+    h = _mcp_artel_headers(cwd)
+    return _clean(h.get("x-agent-id")), _clean(h.get("x-api-key"))
+
+
 def resolve_project(data=None):
     """Resolve the project this hook should scope to. Env first (if Claude Code
     exports settings env to hooks), else read the repo's own Artel config relative
@@ -101,22 +135,7 @@ def resolve_project(data=None):
     if env:
         return env
     cwd = (data or {}).get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
-    mcp = _read_json(os.path.join(cwd, ".mcp.json")) or {}
-    hdr = (
-        mcp.get("mcpServers", {}).get("artel", {}).get("headers", {}).get("x-mcp-project")
-        if isinstance(mcp, dict)
-        else None
-    )
-    if hdr:
-        return str(hdr).strip()
-    for rel in (".claude/settings.local.json", ".claude/settings.json"):
-        cfg = _read_json(os.path.join(cwd, rel))
-        if isinstance(cfg, dict):
-            block = cfg.get("env") or {}
-            val = block.get("MCP_PROJECT") or block.get("ARTEL_PROJECT")
-            if val:
-                return str(val).strip()
-    return ""
+    return _project_from_cwd(cwd)
 
 
 def get(path):
@@ -387,7 +406,7 @@ def compress_transcript(lines):
     return "\n".join(out)[:_CAPTURE_CAP]
 
 
-def _post_capture(content, session_id, project=""):
+def _post_capture(content, session_id, project="", agent_id="", api_key=""):
     base = _cfg("CLAUDE_PLUGIN_OPTION_ARTEL_URL", "ARTEL_URL").rstrip("/")
     body = {"content": content, "session_id": session_id}
     if project:
@@ -398,15 +417,15 @@ def _post_capture(content, session_id, project=""):
         data=json.dumps(body).encode(),
         headers={
             "content-type": "application/json",
-            "x-agent-id": _cfg("CLAUDE_PLUGIN_OPTION_AGENT_ID", "ARTEL_AGENT_ID"),
-            "x-api-key": _cfg("CLAUDE_PLUGIN_OPTION_API_KEY", "ARTEL_API_KEY"),
+            "x-agent-id": agent_id or _cfg("CLAUDE_PLUGIN_OPTION_AGENT_ID", "ARTEL_AGENT_ID"),
+            "x-api-key": api_key or _cfg("CLAUDE_PLUGIN_OPTION_API_KEY", "ARTEL_API_KEY"),
         },
     )
     with urllib.request.urlopen(req, timeout=10) as resp:
         return resp.status in (200, 201)
 
 
-def _drain_session(session_id, transcript_path, force, spool, project=""):
+def _drain_session(session_id, transcript_path, force, spool, project="", agent_id="", api_key=""):
     if not transcript_path or not os.path.exists(transcript_path):
         return
     cursor_path = os.path.join(spool, f"cursor-{session_id}")
@@ -430,7 +449,7 @@ def _drain_session(session_id, transcript_path, force, spool, project=""):
     if len(content) < _CAPTURE_MIN_CHARS and not force:
         return  # accumulate: leave the cursor so it grows until floor or a forced flush
     try:
-        if _post_capture(content, session_id, project):
+        if _post_capture(content, session_id, project, agent_id, api_key):
             _write_text(cursor_path, str(new_offset))
     except Exception:
         pass  # leave the cursor; the next drain retries
@@ -471,16 +490,35 @@ def cmd_drain():
                 sid, path = ev.get("session_id"), ev.get("transcript_path")
                 if not sid or not path:
                     continue
-                info = sessions.setdefault(sid, {"path": path, "force": False, "project": ""})
+                info = sessions.setdefault(
+                    sid, {"path": path, "force": False, "project": "", "agent": "", "key": ""}
+                )
                 info["path"] = path
-                proj = resolve_project(ev)
+                # Resolve per event from ITS OWN cwd, not the drainer's ambient env:
+                # the drainer is detached and ships many sessions (possibly different
+                # repos/projects), so trusting its env would mis-attribute the rest.
+                cwd = ev.get("cwd") or ""
+                proj = _project_from_cwd(cwd)
+                aid, key = _identity_from_cwd(cwd)
                 if proj:
                     info["project"] = proj
+                if aid:
+                    info["agent"] = aid
+                if key:
+                    info["key"] = key
                 if (ev.get("hook_event_name") or "").lower().startswith("precompact"):
                     info["force"] = True
         for sid, info in sessions.items():
             try:
-                _drain_session(sid, info["path"], info["force"], spool, info["project"])
+                _drain_session(
+                    sid,
+                    info["path"],
+                    info["force"],
+                    spool,
+                    info["project"],
+                    info["agent"],
+                    info["key"],
+                )
             except Exception:
                 pass
         try:

@@ -60,7 +60,9 @@ def test_drain_ships_once_and_advances_cursor(spool, monkeypatch):
     monkeypatch.setattr(
         hooks,
         "_post_capture",
-        lambda content, sid, project="": posted.append((sid, content, project)) or True,
+        lambda content, sid, project="", agent_id="", api_key="": (
+            posted.append((sid, content, project, agent_id)) or True
+        ),
     )
 
     transcript = spool / "t.jsonl"
@@ -94,7 +96,9 @@ def test_drain_holds_back_trivial_until_precompact_forces(spool, monkeypatch):
     monkeypatch.setattr(
         hooks,
         "_post_capture",
-        lambda content, sid, project="": posted.append((sid, content, project)) or True,
+        lambda content, sid, project="", agent_id="", api_key="": (
+            posted.append((sid, content, project, agent_id)) or True
+        ),
     )
 
     transcript = spool / "t.jsonl"

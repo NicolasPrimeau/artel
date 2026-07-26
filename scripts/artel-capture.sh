@@ -7,6 +7,9 @@
 # drainer dies, the next capture hook's drainer picks up the accumulated payloads.
 d="${ARTEL_SPOOL:-$HOME/.artel/spool}"
 mkdir -p "$d" 2>/dev/null
-{ cat; echo; } >> "$d/incoming.jsonl" 2>/dev/null
+# Single write of payload+newline: two concurrent Stop/PreCompact hooks appending
+# must not interleave into one corrupt (unparseable, then dropped) line.
+payload="$(cat)"
+printf '%s\n' "$payload" >> "$d/incoming.jsonl" 2>/dev/null
 setsid "$(dirname "$0")/artel-drain.sh" >/dev/null 2>&1 </dev/null &
 exit 0
