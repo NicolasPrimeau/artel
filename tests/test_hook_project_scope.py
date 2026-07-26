@@ -98,6 +98,7 @@ def test_recall_scopes_search_to_project(monkeypatch, capsys, tmp_path):
 
 
 def test_post_capture_includes_project(monkeypatch):
+    monkeypatch.setenv("ARTEL_URL", "http://test.local")
     captured = {}
 
     class FakeResp:
@@ -113,7 +114,7 @@ def test_post_capture_includes_project(monkeypatch):
         captured["body"] = json.loads(req.data.decode())
         return FakeResp()
 
-    monkeypatch.setattr(hooks.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
     hooks._post_capture("some session content", "sess-1", project="nimbus")
     assert captured["body"]["project"] == "nimbus"
     assert captured["body"]["session_id"] == "sess-1"
