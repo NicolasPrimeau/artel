@@ -503,3 +503,107 @@ async def test_session_context_map_prefers_headline(mcp):
     map_section = result.split("## Knowledge map", 1)[1].split("\n\n", 1)[0]
     assert "curated one-line summary" in map_section
     assert "raw first line of the body" not in map_section
+
+
+async def test_credential_middleware_reads_project_header():
+    import artel.mcp.server as mcp_mod
+    from artel.mcp.config import request_project
+
+    captured = {}
+
+    async def app(scope, receive, send):
+        captured["project"] = request_project.get()
+        captured["agent"] = mcp_mod._agent_id.get(None)
+
+    mw = mcp_mod._CredentialMiddleware(app)
+    scope = {
+        "type": "http",
+        "headers": [
+            (b"x-agent-id", b"poseidon"),
+            (b"x-api-key", b"k"),
+            (b"x-mcp-project", b"nimbus"),
+        ],
+    }
+
+    async def recv():
+        return {}
+
+    async def snd(_m):
+        pass
+
+    await mw(scope, recv, snd)
+    assert captured["project"] == "nimbus"
+    assert captured["agent"] == "poseidon"
+
+
+async def test_credential_middleware_absent_project_header_is_none():
+    import artel.mcp.server as mcp_mod
+    from artel.mcp.config import request_project
+
+    captured = {}
+
+    async def app(scope, receive, send):
+        captured["project"] = request_project.get()
+
+    mw = mcp_mod._CredentialMiddleware(app)
+    scope = {"type": "http", "headers": [(b"x-agent-id", b"poseidon")]}
+
+    async def recv():
+        return {}
+
+    async def snd(_m):
+        pass
+
+    await mw(scope, recv, snd)
+    assert captured["project"] is None
+
+
+def test_resolve_project_precedence():
+    from artel.mcp.config import MCPSettings, request_project
+
+    s = MCPSettings()
+    s.mcp_project = "envproj"
+    assert s.resolve_project("Override") == "override"
+    assert s.resolve_project() == "envproj"
+
+    tok = request_project.set("CtxProj")
+    try:
+        assert s.resolve_project() == "ctxproj"
+        assert s.resolve_project("override") == "override"
+    finally:
+        request_project.reset(tok)
+    assert s.resolve_project() == "envproj"
+
+
+async def test_memory_write_defaults_project_from_request_context(mcp, monkeypatch):
+    from artel.mcp.config import request_project, settings
+    from artel.store.db import get_db
+
+    monkeypatch.setattr(settings, "mcp_project", "")
+    await mcp.project_join("nimbus")
+    tok = request_project.set("nimbus")
+    try:
+        result = await mcp.memory_write("scoped by x-mcp-project header")
+    finally:
+        request_project.reset(tok)
+
+    entry_id = _extract_id(result)
+    row = get_db().execute("SELECT project FROM memory WHERE id=?", (entry_id,)).fetchone()
+    assert row["project"] == "nimbus"
+
+
+async def test_explicit_project_overrides_request_context(mcp, monkeypatch):
+    from artel.mcp.config import request_project, settings
+    from artel.store.db import get_db
+
+    monkeypatch.setattr(settings, "mcp_project", "")
+    await mcp.project_join("artel")
+    tok = request_project.set("nimbus")
+    try:
+        result = await mcp.memory_write("explicit arg wins", project="artel")
+    finally:
+        request_project.reset(tok)
+
+    entry_id = _extract_id(result)
+    row = get_db().execute("SELECT project FROM memory WHERE id=?", (entry_id,)).fetchone()
+    assert row["project"] == "artel"

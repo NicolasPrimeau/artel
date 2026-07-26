@@ -1,8 +1,13 @@
+import contextvars
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _creds_file = Path.home() / ".config" / "artel" / "credentials"
+
+request_project: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "request_project", default=None
+)
 
 
 class MCPSettings(BaseSettings):
@@ -32,7 +37,7 @@ class MCPSettings(BaseSettings):
         return ""
 
     def resolve_project(self, override: str | None = None) -> str | None:
-        raw = override or self.mcp_project or None
+        raw = override or request_project.get() or self.mcp_project or None
         if raw is None:
             return None
         s = raw.strip().lower()

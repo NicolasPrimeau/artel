@@ -16,7 +16,7 @@ from mcp.types import ToolAnnotations
 from pydantic import AnyUrl
 
 from ..store.db import get_db
-from .config import settings
+from .config import request_project, settings
 
 log = logging.getLogger(__name__)
 
@@ -146,8 +146,10 @@ class _CredentialMiddleware:
             headers = dict(scope.get("headers", []))
             aid = headers.get(b"x-agent-id", b"").decode()
             key = headers.get(b"x-api-key", b"").decode()
+            proj = headers.get(b"x-mcp-project", b"").decode()
             _agent_id.set(aid or settings.mcp_agent_id)
             _api_key.set(key or settings.api_key())
+            request_project.set(proj or None)
         await self._app(scope, receive, send)
 
 
@@ -423,7 +425,7 @@ async def session_context(agent_id: str | None = None) -> str:
     own_id = agent_id or _agent_id.get(settings.mcp_agent_id)
     parts: list[str] = [f"agent: {own_id}"]
 
-    project = settings.mcp_project
+    project = settings.resolve_project()
     if project:
         parts[0] += f"  project: {project}"
         try:
@@ -992,7 +994,7 @@ async def project_list() -> str:
         return "No projects yet."
     lines = []
     for p in projects:
-        marker = " ◀ yours" if p["name"] == settings.mcp_project else ""
+        marker = " ◀ yours" if p["name"] == settings.resolve_project() else ""
         lines.append(
             f"{p['name']}{marker} — {p['memory_count']} memories, {p['task_count']} tasks"
             f" | agents: {', '.join(p['agents']) or 'none'}"

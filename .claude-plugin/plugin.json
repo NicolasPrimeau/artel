@@ -24,7 +24,8 @@
       "url": "${ARTEL_URL}/mcp/",
       "headers": {
         "x-agent-id": "${ARTEL_AGENT_ID}",
-        "x-api-key": "${ARTEL_API_KEY}"
+        "x-api-key": "${ARTEL_API_KEY}",
+        "x-mcp-project": "${MCP_PROJECT}"
       }
     }
   }
