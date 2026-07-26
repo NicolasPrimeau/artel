@@ -58,7 +58,9 @@ def _write_transcript(path, n, tag):
 def test_drain_ships_once_and_advances_cursor(spool, monkeypatch):
     posted = []
     monkeypatch.setattr(
-        hooks, "_post_capture", lambda content, sid: posted.append((sid, content)) or True
+        hooks,
+        "_post_capture",
+        lambda content, sid, project="": posted.append((sid, content, project)) or True,
     )
 
     transcript = spool / "t.jsonl"
@@ -90,7 +92,9 @@ def test_drain_ships_once_and_advances_cursor(spool, monkeypatch):
 def test_drain_holds_back_trivial_until_precompact_forces(spool, monkeypatch):
     posted = []
     monkeypatch.setattr(
-        hooks, "_post_capture", lambda content, sid: posted.append((sid, content)) or True
+        hooks,
+        "_post_capture",
+        lambda content, sid, project="": posted.append((sid, content, project)) or True,
     )
 
     transcript = spool / "t.jsonl"
