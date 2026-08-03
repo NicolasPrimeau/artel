@@ -109,8 +109,7 @@ Only the original author. The soft-delete endpoint checks `agent_id` ownership, 
 At the start of `run_synthesis`, before fetching the delta entries and before constructing the LLM prompt, the archivist calls a dedicated helper:
 
 ```python
-async def load_directives(client: ArtelClient, project: str | None) -> list[dict]:
-    ...
+async def load_directives(client: ArtelClient, project: str | None) -> list[dict]: ...
 ```
 
 This makes two calls to `GET /memory` with `type=directive`:
@@ -148,7 +147,9 @@ entries = [e for e in entries if e["agent_id"] != settings.archivist_id]
 This must be extended to:
 
 ```python
-entries = [e for e in entries if e["agent_id"] != settings.archivist_id and e["type"] != "directive"]
+entries = [
+    e for e in entries if e["agent_id"] != settings.archivist_id and e["type"] != "directive"
+]
 ```
 
 The same exclusion applies in `check_and_merge`: a directive must never be selected as a conflict candidate or as the "other" entry in a merge pair.
