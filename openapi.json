@@ -7736,6 +7736,28 @@
         "properties": {
           "document": {
             "$ref": "#/components/schemas/BlueprintDocument"
+          },
+          "source_entry_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Entry Id"
+          },
+          "source_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Version"
           }
         },
         "type": "object",
@@ -7812,6 +7834,28 @@
           "version": {
             "type": "integer",
             "title": "Version"
+          },
+          "source_entry_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Entry Id"
+          },
+          "source_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Version"
           },
           "created_at": {
             "type": "string",

@@ -216,6 +216,8 @@ class BlueprintEntry(BaseModel):
     document: dict
     created_by: str
     version: int
+    source_entry_id: str | None = None
+    source_version: int | None = None
     created_at: str
 
 

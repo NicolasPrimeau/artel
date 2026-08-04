@@ -40,6 +40,8 @@ def _row_to_blueprint(row: sqlite3.Row) -> BlueprintEntry:
         document=json.loads(row["document"]),
         created_by=row["created_by"],
         version=row["version"],
+        source_entry_id=row["source_entry_id"],
+        source_version=row["source_version"],
         created_at=row["created_at"],
     )
 
@@ -75,8 +77,8 @@ async def create_blueprint(body: BlueprintCreate, agent_id: str = ActorDep):
                 (existing["id"],),
             )
         db.execute(
-            """INSERT INTO blueprints (id, name, project, document, created_by, version)
-               VALUES (?,?,?,?,?,?)""",
+            """INSERT INTO blueprints (id, name, project, document, created_by, version,
+               source_entry_id, source_version) VALUES (?,?,?,?,?,?,?,?)""",
             (
                 blueprint_id,
                 doc.name,
@@ -84,6 +86,8 @@ async def create_blueprint(body: BlueprintCreate, agent_id: str = ActorDep):
                 doc.model_dump_json(),
                 agent_id,
                 (existing["version"] + 1) if existing else 1,
+                body.source_entry_id,
+                body.source_version,
             ),
         )
     row = db.execute("SELECT * FROM blueprints WHERE id=?", (blueprint_id,)).fetchone()

@@ -100,6 +100,8 @@ CREATE TABLE IF NOT EXISTS blueprints (
     document    TEXT NOT NULL,
     created_by  TEXT NOT NULL,
     version     INTEGER NOT NULL DEFAULT 1,
+    source_entry_id TEXT,
+    source_version  INTEGER,
     superseded_at TEXT,
     created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );

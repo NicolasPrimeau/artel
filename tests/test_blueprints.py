@@ -303,3 +303,56 @@ async def test_ordinary_tasks_are_untouched_by_the_reactor(client):
     completed = await _complete(client, task_id)
     assert completed["status"] == "completed"
     assert get_db().execute("SELECT COUNT(*) AS n FROM blueprint_runs").fetchone()["n"] == 0
+
+
+async def test_source_stamp_round_trips_for_the_compiler(client):
+    r = await client.post(
+        "/blueprints",
+        json={"document": MOLD, "source_entry_id": "skill-1", "source_version": 7},
+        headers=HEADERS,
+    )
+    assert r.status_code == 201
+    listed = (await client.get("/blueprints", headers=HEADERS)).json()
+    assert listed[0]["source_entry_id"] == "skill-1"
+    assert listed[0]["source_version"] == 7
+
+
+async def test_compiled_blueprint_runs_end_to_end(client):
+    from unittest.mock import AsyncMock, MagicMock
+
+    from artel.archivist import blueprint_compile
+
+    created: dict = {}
+
+    async def create_blueprint(document, source_entry_id=None, source_version=None):
+        r = await client.post(
+            "/blueprints",
+            json={
+                "document": document,
+                "source_entry_id": source_entry_id,
+                "source_version": source_version,
+            },
+            headers=HEADERS,
+        )
+        assert r.status_code == 201, r.text
+        created.update(r.json())
+        return created
+
+    archivist = MagicMock()
+    archivist.list_entries = AsyncMock(
+        return_value=[{"id": "skill-1", "version": 1, "content": "discover, then probe each"}]
+    )
+    archivist.list_blueprints = AsyncMock(return_value=[])
+    archivist.create_blueprint = create_blueprint
+
+    compiled = await blueprint_compile.run_blueprint_compilation(
+        archivist, compiler=AsyncMock(return_value=MOLD)
+    )
+    assert compiled == 1
+
+    run = await _instantiate(client)
+    await _complete(
+        client, run["nodes"][0]["task_id"], {"sources": [{"name": "on"}, {"name": "qc"}]}
+    )
+    after = (await client.get(f"/blueprints/runs/{run['id']}", headers=HEADERS)).json()
+    assert sorted(n["title"] for n in _nodes(after, "probe")) == ["Probe on", "Probe qc"]

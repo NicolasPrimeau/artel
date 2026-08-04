@@ -112,6 +112,11 @@ def _migrate(conn: sqlite3.Connection) -> None:
     if "completion_payload" not in task_cols:
         conn.execute("ALTER TABLE tasks ADD COLUMN completion_payload TEXT")
         conn.commit()
+    blueprint_cols = {r[1] for r in conn.execute("PRAGMA table_info(blueprints)").fetchall()}
+    if blueprint_cols and "source_entry_id" not in blueprint_cols:
+        conn.execute("ALTER TABLE blueprints ADD COLUMN source_entry_id TEXT")
+        conn.execute("ALTER TABLE blueprints ADD COLUMN source_version INTEGER")
+        conn.commit()
     run_node_cols = {
         r[1] for r in conn.execute("PRAGMA table_info(blueprint_run_nodes)").fetchall()
     }

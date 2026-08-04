@@ -4,6 +4,7 @@ import os
 import pathlib
 import socket
 
+from .blueprint_compile import run_blueprint_compilation
 from .client import ArtelClient
 from .compaction import run_capture_compaction, run_capture_refinement
 from .config import settings
@@ -124,6 +125,7 @@ async def _scheduler(client: ArtelClient) -> None:
             (run_capture_refinement, "capture_refinement"),
             (run_headlines, "headlines"),
             (run_compilation, "compilation"),
+            (run_blueprint_compilation, "blueprint_compilation"),
             (run_task_triage, "task_triage"),
             (run_brief, "brief"),
             (run_deep_synthesis_if_due, "deep_synthesis"),

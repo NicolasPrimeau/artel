@@ -40,6 +40,8 @@ class BlueprintDocument(BaseModel):
 
 class BlueprintCreate(BaseModel):
     document: BlueprintDocument
+    source_entry_id: str | None = None
+    source_version: int | None = None
 
 
 class BlueprintInstantiate(BaseModel):

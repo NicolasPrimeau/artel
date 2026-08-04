@@ -146,6 +146,27 @@ class ArtelClient:
         r = await self._request("POST", "/captures/digest", json={"ids": ids})
         return r.json()
 
+    async def list_blueprints(self) -> list[dict]:
+        r = await self._request("GET", "/blueprints")
+        return r.json()
+
+    async def create_blueprint(
+        self,
+        document: dict,
+        source_entry_id: str | None = None,
+        source_version: int | None = None,
+    ) -> dict:
+        r = await self._request(
+            "POST",
+            "/blueprints",
+            json={
+                "document": document,
+                "source_entry_id": source_entry_id,
+                "source_version": source_version,
+            },
+        )
+        return r.json()
+
     async def get_task(self, task_id: str) -> dict:
         r = await self._request("GET", f"/tasks/{task_id}")
         return r.json()
