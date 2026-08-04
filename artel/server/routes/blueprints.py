@@ -64,7 +64,7 @@ async def create_blueprint(body: BlueprintCreate, agent_id: str = ActorDep):
     if problems:
         raise HTTPException(status_code=422, detail={"blueprint": problems})
     db = get_db()
-    project = default_project_for(agent_id)
+    project = norm_project(body.project) if body.project else default_project_for(agent_id)
     enforce_no_phantom_project(agent_id, project)
     _require_membership(agent_id, project)
     existing = _current(db, doc.name, project)

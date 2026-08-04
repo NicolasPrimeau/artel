@@ -11,6 +11,9 @@ BLUEPRINT_TAG = "blueprint"
 _SKILL_TYPE = "skill"
 _MAX_SKILLS = 10
 _MAX_SKILL_CHARS = 20000
+# A 14k-char skill compiles to a ~15k-char DAG, which overran a 4096-token ceiling and
+# silently produced an unterminated fence. Budget for the whole document, not half of it.
+_MAX_OUTPUT_TOKENS = 16384
 
 _SYSTEM = (
     "You are the Artel archivist compiling a long procedural skill into a BLUEPRINT: a "
@@ -39,9 +42,18 @@ _SYSTEM = (
     "- completion_contract is a JSON Schema subset: type (object/array/string/number/integer/"
     "boolean), required, properties, items, enum, minItems, minLength. Give one to any node "
     "whose output another node consumes. Omit it everywhere else.\n"
-    '- done_check is optional and reads reality: {"kind": "payload", "path": "<field>", '
-    '"min_items": <n>} checks the shape of the output. Use it on correctness-critical nodes. '
-    "Omit it when there is nothing objective to check — do not invent checks.\n"
+    '- done_check is optional: {"kind": "payload", "path": "<field>", "min_items": <n>}. '
+    "Use it on correctness-critical nodes; omit it when there is nothing objective to check. "
+    "Three hard rules, in order:\n"
+    "    (a) A done_check REQUIRES a completion_contract on the SAME node. Without one there "
+    "is no output to check and the node can never pass. No contract -> no done_check.\n"
+    "    (b) path must name a field DECLARED in that node's own completion_contract, written "
+    'as a dotted path from the root of the output (e.g. "viable_sources"). Never use "." or '
+    "the name of another node's field.\n"
+    "    (c) min_items is ONLY valid when path points at something declared "
+    '"type": "array". For a string, integer, or boolean, OMIT min_items entirely — the check '
+    "then simply requires the field to be present and non-empty. Adding min_items to a scalar "
+    "is the single most common mistake; do not make it.\n"
     "- Prefer few, meaty nodes over many trivial ones. A node is a unit of work an agent "
     "claims and finishes, not a single sentence of the original prose."
 )
@@ -57,23 +69,31 @@ _REPAIR = (
 Compiler = Callable[[str, list[str]], Awaitable[dict]]
 
 
-def _strip_fences(text: str) -> str:
+def _extract_json(text: str) -> str:
     s = text.strip()
     if s.startswith("```"):
         lines = s.splitlines()
+        if not any(line.strip().startswith("```") for line in lines[1:]):
+            raise ValueError(
+                "model output was truncated mid-document (unterminated code fence) — "
+                "a bigger blueprint needs a bigger token budget"
+            )
         end = len(lines) - 1
         while end > 0 and not lines[end].strip().startswith("```"):
             end -= 1
         s = "\n".join(lines[1:end]).strip()
-    return s
+    start, end = s.find("{"), s.rfind("}")
+    if start == -1 or end <= start:
+        raise ValueError("model output contained no JSON object")
+    return s[start : end + 1]
 
 
 async def _compile_with_llm(skill_content: str, problems: list[str]) -> dict:
     user = f"Skill:\n{skill_content[:_MAX_SKILL_CHARS]}"
     if problems:
         user = _REPAIR + "\n".join(f"- {p}" for p in problems) + "\n\n" + user
-    text = await complete(system=_SYSTEM, user=user, max_tokens=4096)
-    return json.loads(_strip_fences(text))
+    text = await complete(system=_SYSTEM, user=user, max_tokens=_MAX_OUTPUT_TOKENS)
+    return json.loads(_extract_json(text))
 
 
 def _problems_from(error: Exception) -> list[str]:
@@ -133,7 +153,10 @@ async def run_blueprint_compilation(
                 break
             try:
                 result = await client.create_blueprint(
-                    document, source_entry_id=entry["id"], source_version=entry.get("version")
+                    document,
+                    project=entry.get("project"),
+                    source_entry_id=entry["id"],
+                    source_version=entry.get("version"),
                 )
             except Exception as e:
                 problems = _problems_from(e)

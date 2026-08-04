@@ -183,3 +183,28 @@ async def test_repair_prompt_carries_the_problems(monkeypatch):
     await blueprint_compile._compile_with_llm("prose", ["discover: unknown dependency 'ghost'"])
     assert "rejected by the validator" in captured["user"]
     assert "unknown dependency 'ghost'" in captured["user"]
+
+
+def test_truncated_fence_is_reported_as_truncation():
+    with pytest.raises(ValueError, match="truncated"):
+        blueprint_compile._extract_json('```json\n{"name": "x", "nodes": [{"id": "a"')
+
+
+def test_json_is_extracted_from_surrounding_prose():
+    doc = blueprint_compile._extract_json('Here you go:\n{"name": "x"}\nHope that helps.')
+    assert json.loads(doc) == {"name": "x"}
+
+
+def test_output_without_a_json_object_is_reported():
+    with pytest.raises(ValueError, match="no JSON object"):
+        blueprint_compile._extract_json("I could not compile this skill.")
+
+
+@pytest.mark.asyncio
+async def test_blueprint_inherits_the_skills_project(monkeypatch):
+    monkeypatch.setattr(blueprint_compile, "is_configured", lambda: True)
+    skill = dict(MOLD_SKILL, project="nimbus")
+    c = _client([skill])
+
+    await run_blueprint_compilation(c, compiler=AsyncMock(return_value=GOOD_DOC))
+    assert c.create_blueprint.call_args.kwargs["project"] == "nimbus"

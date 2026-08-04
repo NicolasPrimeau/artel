@@ -214,7 +214,6 @@ async def test_run_completes_when_the_last_task_lands(client):
 
 async def test_failed_done_check_spawns_remediation_instead_of_expanding(client):
     doc = json.loads(json.dumps(MOLD))
-    doc["nodes"][0]["completion_contract"] = None
     doc["nodes"][0]["done_check"] = {"kind": "payload", "path": "sources", "min_items": 2}
     await _put_blueprint(client, doc)
     run = await _instantiate(client)
@@ -232,7 +231,6 @@ async def test_failed_done_check_spawns_remediation_instead_of_expanding(client)
 
 async def test_remediation_completion_resumes_the_run(client):
     doc = json.loads(json.dumps(MOLD))
-    doc["nodes"][0]["completion_contract"] = None
     doc["nodes"][0]["done_check"] = {"kind": "payload", "path": "sources", "min_items": 2}
     await _put_blueprint(client, doc)
     run = await _instantiate(client)
@@ -324,7 +322,7 @@ async def test_compiled_blueprint_runs_end_to_end(client):
 
     created: dict = {}
 
-    async def create_blueprint(document, source_entry_id=None, source_version=None):
+    async def create_blueprint(document, project=None, source_entry_id=None, source_version=None):
         r = await client.post(
             "/blueprints",
             json={
@@ -356,3 +354,88 @@ async def test_compiled_blueprint_runs_end_to_end(client):
     )
     after = (await client.get(f"/blueprints/runs/{run['id']}", headers=HEADERS)).json()
     assert sorted(n["title"] for n in _nodes(after, "probe")) == ["Probe on", "Probe qc"]
+
+
+async def test_payload_done_check_without_a_contract_is_rejected(client):
+    doc = {
+        "name": "uncheckable",
+        "nodes": [
+            {
+                "id": "migrate",
+                "title": "migrate",
+                "done_check": {"kind": "payload", "path": "table_exists"},
+            }
+        ],
+    }
+    r = await client.post("/blueprints", json={"document": doc}, headers=HEADERS)
+    assert r.status_code == 422
+    assert "can never pass" in json.dumps(r.json()["detail"])
+
+
+async def test_done_check_path_must_exist_in_the_contract(client):
+    doc = {
+        "name": "mismatched",
+        "nodes": [
+            {
+                "id": "ingest",
+                "title": "ingest",
+                "completion_contract": {
+                    "type": "object",
+                    "properties": {"rows": {"type": "integer"}},
+                },
+                "done_check": {"kind": "payload", "path": "ghost"},
+            }
+        ],
+    }
+    r = await client.post("/blueprints", json={"document": doc}, headers=HEADERS)
+    assert r.status_code == 422
+    assert "not declared in the completion_contract" in json.dumps(r.json()["detail"])
+
+
+async def test_min_items_done_check_on_a_scalar_is_rejected(client):
+    doc = {
+        "name": "scalar-minitems",
+        "nodes": [
+            {
+                "id": "ingest",
+                "title": "ingest",
+                "completion_contract": {
+                    "type": "object",
+                    "properties": {"row_count": {"type": "integer"}},
+                },
+                "done_check": {"kind": "payload", "path": "row_count", "min_items": 1},
+            }
+        ],
+    }
+    r = await client.post("/blueprints", json={"document": doc}, headers=HEADERS)
+    assert r.status_code == 422
+    assert "requires 'row_count' to be an array" in json.dumps(r.json()["detail"])
+
+
+async def test_a_root_level_array_output_is_accepted(client):
+    doc = {
+        "name": "array-root",
+        "params": [],
+        "nodes": [
+            {
+                "id": "enumerate",
+                "title": "enumerate",
+                "completion_contract": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {"type": "object", "required": ["name"]},
+                },
+            },
+            {
+                "id": "handle",
+                "title": "Handle {item.name}",
+                "deps": ["enumerate"],
+                "foreach": "enumerate",
+            },
+        ],
+    }
+    await client.post("/blueprints", json={"document": doc}, headers=HEADERS)
+    run = (await client.post("/blueprints/array-root/instantiate", json={}, headers=HEADERS)).json()
+    await _complete(client, run["nodes"][0]["task_id"], [{"name": "a"}, {"name": "b"}])
+    after = (await client.get(f"/blueprints/runs/{run['id']}", headers=HEADERS)).json()
+    assert sorted(n["title"] for n in _nodes(after, "handle")) == ["Handle a", "Handle b"]

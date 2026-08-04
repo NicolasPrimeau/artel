@@ -3,6 +3,7 @@ import sqlite3
 from collections.abc import Callable
 
 from .blueprint import (
+    CHECK_PAYLOAD,
     ITEM,
     BlueprintDocument,
     DoneCheck,
@@ -16,7 +17,6 @@ from .blueprint import (
 )
 from .models import new_id
 
-CHECK_PAYLOAD = "payload"
 CHECK_SQLITE = "sqlite"
 EXPECT_ROWS = "rows"
 EXPECT_NO_ROWS = "no_rows"
@@ -27,13 +27,13 @@ EVENT_CHECK_FAILED = "blueprint.node.check_failed"
 EVENT_RUN_COMPLETED = "blueprint.run.completed"
 REMEDIATION_TAG = "remediation"
 
-CheckFn = Callable[[DoneCheck, dict | None, sqlite3.Connection], tuple[bool, str]]
+CheckFn = Callable[[DoneCheck, dict | list | None, sqlite3.Connection], tuple[bool, str]]
 
 
 def _check_payload(
-    check: DoneCheck, payload: dict | None, db: sqlite3.Connection
+    check: DoneCheck, payload: dict | list | None, db: sqlite3.Connection
 ) -> tuple[bool, str]:
-    value = dig(payload or {}, check.path or "")
+    value = dig(payload if payload is not None else {}, check.path or "")
     if value is None:
         return False, f"output has nothing at {check.path!r}"
     if check.min_items is not None:
@@ -47,7 +47,7 @@ def _check_payload(
 
 
 def _check_sqlite(
-    check: DoneCheck, payload: dict | None, db: sqlite3.Connection
+    check: DoneCheck, payload: dict | list | None, db: sqlite3.Connection
 ) -> tuple[bool, str]:
     query = (check.query or "").strip().rstrip(";")
     if not query.lower().startswith("select"):
@@ -72,7 +72,7 @@ def register_check(kind: str, fn: CheckFn) -> None:
 
 
 def evaluate(
-    check: DoneCheck | None, payload: dict | None, db: sqlite3.Connection
+    check: DoneCheck | None, payload: dict | list | None, db: sqlite3.Connection
 ) -> tuple[bool, str]:
     if check is None:
         return True, ""

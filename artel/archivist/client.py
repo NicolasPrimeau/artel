@@ -153,6 +153,7 @@ class ArtelClient:
     async def create_blueprint(
         self,
         document: dict,
+        project: str | None = None,
         source_entry_id: str | None = None,
         source_version: int | None = None,
     ) -> dict:
@@ -161,6 +162,7 @@ class ArtelClient:
             "/blueprints",
             json={
                 "document": document,
+                "project": project,
                 "source_entry_id": source_entry_id,
                 "source_version": source_version,
             },

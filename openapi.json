@@ -7737,6 +7737,17 @@
           "document": {
             "$ref": "#/components/schemas/BlueprintDocument"
           },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          },
           "source_entry_id": {
             "anyOf": [
               {
@@ -10009,6 +10020,10 @@
                 "type": "object"
               },
               {
+                "items": {},
+                "type": "array"
+              },
+              {
                 "type": "null"
               }
             ],
@@ -10276,6 +10291,10 @@
               {
                 "additionalProperties": true,
                 "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
               },
               {
                 "type": "null"

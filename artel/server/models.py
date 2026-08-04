@@ -170,7 +170,7 @@ class TaskEntry(BaseModel):
     tags: list[str]
     depends_on: list[str] = []
     completion_contract: dict | None = None
-    completion_payload: dict | None = None
+    completion_payload: dict | list | None = None
     created_at: str
     updated_at: str
 
@@ -206,7 +206,7 @@ class TaskUpdate(BaseModel):
 
 class TaskAction(BaseModel):
     body: str = ""
-    output: dict | None = None
+    output: dict | list | None = None
 
 
 class BlueprintEntry(BaseModel):

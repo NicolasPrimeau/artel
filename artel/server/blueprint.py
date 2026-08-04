@@ -6,6 +6,10 @@ from pydantic import BaseModel, Field
 FANOUT_ONCE = "once"
 ITEM = "item"
 RUN_TAG_PREFIX = "run"
+CHECK_PAYLOAD = "payload"
+_TYPE_ARRAY = "array"
+_KEY_PROPERTIES = "properties"
+_KEY_TYPE = "type"
 
 _PLACEHOLDER = re.compile(r"\{([a-zA-Z0-9_.]+)\}")
 
@@ -40,6 +44,7 @@ class BlueprintDocument(BaseModel):
 
 class BlueprintCreate(BaseModel):
     document: BlueprintDocument
+    project: str | None = None
     source_entry_id: str | None = None
     source_version: int | None = None
 
@@ -108,10 +113,43 @@ def validate_document(doc: BlueprintDocument) -> list[str]:
                 problems.append(f"{node.id}: foreach refers to unknown node {source!r}")
             elif source not in node.deps:
                 problems.append(f"{node.id}: foreach over {source!r} requires it as a dependency")
+        problems.extend(_check_problems(node))
     problems.extend(_cycles(doc))
     if not any(not n.deps for n in doc.nodes):
         problems.append("blueprint has no root node (every node has dependencies)")
     return problems
+
+
+def contract_at(contract: dict, path: str) -> dict | None:
+    node: dict | None = contract
+    if not path:
+        return node
+    for part in path.split("."):
+        if not isinstance(node, dict):
+            return None
+        node = (node.get(_KEY_PROPERTIES) or {}).get(part)
+    return node if isinstance(node, dict) else None
+
+
+def _check_problems(node: TemplateNode) -> list[str]:
+    check = node.done_check
+    if check is None or check.kind != CHECK_PAYLOAD:
+        return []
+    path = check.path or ""
+    if node.completion_contract is None:
+        return [
+            f"{node.id}: a payload done-check needs a completion_contract on the same node — "
+            "without one there is never an output to check and the node can never pass"
+        ]
+    target = contract_at(node.completion_contract, path)
+    if target is None:
+        return [f"{node.id}: done-check path {path!r} is not declared in the completion_contract"]
+    if check.min_items is not None and target.get(_KEY_TYPE) != _TYPE_ARRAY:
+        return [
+            f"{node.id}: done-check min_items requires {path!r} to be an array in the "
+            f"completion_contract, but it is declared as {target.get(_KEY_TYPE)!r}"
+        ]
+    return []
 
 
 def _cycles(doc: BlueprintDocument) -> list[str]:
