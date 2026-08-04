@@ -9350,6 +9350,18 @@
             "type": "string",
             "title": "Body",
             "default": ""
+          },
+          "output": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
           }
         },
         "type": "object",
@@ -9487,6 +9499,18 @@
             "type": "array",
             "title": "Depends On",
             "default": []
+          },
+          "completion_contract": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completion Contract"
           }
         },
         "type": "object",
@@ -9583,6 +9607,30 @@
             "type": "array",
             "title": "Depends On",
             "default": []
+          },
+          "completion_contract": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completion Contract"
+          },
+          "completion_payload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completion Payload"
           },
           "created_at": {
             "type": "string",

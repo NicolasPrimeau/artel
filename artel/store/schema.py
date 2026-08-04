@@ -71,6 +71,8 @@ CREATE TABLE IF NOT EXISTS tasks (
     priority         TEXT NOT NULL DEFAULT 'normal' CHECK (priority IN ('low','normal','high')),
     due_at           TEXT,
     tags             TEXT NOT NULL DEFAULT '[]',
+    completion_contract TEXT,
+    completion_payload  TEXT,
     created_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     updated_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );

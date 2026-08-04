@@ -664,3 +664,35 @@ async def test_mcp_auth_middleware_absent_project_header_is_none():
 
     await mw(scope, recv, snd)
     assert seen["project"] is None
+
+
+async def test_task_get_surfaces_the_completion_contract(mcp):
+    contract = {"type": "object", "required": ["sources"]}
+    create = await mcp.task_create("fan-out task", completion_contract=contract)
+    task_id = _extract_id(create)
+    result = await mcp.task_get(task_id)
+    assert "completion contract" in result
+    assert "sources" in result
+
+
+async def test_task_complete_rejects_output_that_breaks_the_contract(mcp):
+    create = await mcp.task_create(
+        "contracted task",
+        completion_contract={"type": "object", "required": ["sources"]},
+    )
+    task_id = _extract_id(create)
+    await mcp.task_claim(task_id)
+    result = await mcp.task_complete(task_id, body="done")
+    assert result.startswith("error 422")
+
+
+async def test_task_complete_accepts_contracted_output(mcp):
+    create = await mcp.task_create(
+        "contracted task",
+        completion_contract={"type": "object", "required": ["sources"]},
+    )
+    task_id = _extract_id(create)
+    await mcp.task_claim(task_id)
+    result = await mcp.task_complete(task_id, body="done", output={"sources": ["a"]})
+    assert result.startswith("completed [")
+    assert "output" in await mcp.task_get(task_id)

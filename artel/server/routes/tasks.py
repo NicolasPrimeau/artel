@@ -15,6 +15,7 @@ from ..auth import (
     is_owner,
     project_filter,
 )
+from ..contract import validate_contract, validate_payload
 from ..models import (
     TaskAction,
     TaskComment,
@@ -61,8 +62,15 @@ def _require_project_membership(agent_id: str, project: str | None) -> None:
         raise HTTPException(status_code=403, detail="not a member of this project")
 
 
+def _row_json(row: sqlite3.Row, column: str) -> dict | None:
+    raw = row[column] if column in row.keys() else None
+    return json.loads(raw) if raw else None
+
+
 def _row_to_task(row: sqlite3.Row, depends_on: list[str] | None = None) -> TaskEntry:
     return TaskEntry(
+        completion_contract=_row_json(row, "completion_contract"),
+        completion_payload=_row_json(row, "completion_payload"),
         id=row["id"],
         title=row["title"],
         description=row["description"],
@@ -175,11 +183,16 @@ async def create_task(body: TaskCreate, agent_id: str = ActorDep):
         allowed = _memberships(agent_id)
         if allowed is not None and project not in allowed:
             raise HTTPException(status_code=403, detail="not a member of this project")
+    if body.completion_contract is not None:
+        problems = validate_contract(body.completion_contract)
+        if problems:
+            raise HTTPException(status_code=422, detail={"completion_contract": problems})
     task_id = new_id()
     with db:
         db.execute(
             """INSERT INTO tasks (id, title, description, expected_outcome, created_by,
-               project, priority, assigned_to, due_at, tags) VALUES (?,?,?,?,?,?,?,?,?,?)""",
+               project, priority, assigned_to, due_at, tags, completion_contract)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 task_id,
                 body.title,
@@ -191,6 +204,7 @@ async def create_task(body: TaskCreate, agent_id: str = ActorDep):
                 body.assigned_to,
                 body.due_at,
                 json.dumps(body.tags),
+                json.dumps(body.completion_contract) if body.completion_contract else None,
             ),
         )
         for dep_id in body.depends_on:
@@ -331,15 +345,35 @@ async def complete_task(
     if row["assigned_to"] != agent_id and not is_owner(agent_id):
         raise HTTPException(status_code=403, detail="forbidden")
     _require_project_membership(agent_id, row["project"])
+    contract = _row_json(row, "completion_contract")
+    payload = body.output
+    if contract is not None:
+        if payload is None:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "output": ["this task declares a completion contract and requires an output"],
+                    "completion_contract": contract,
+                },
+            )
+        problems = validate_payload(contract, payload)
+        if problems:
+            raise HTTPException(
+                status_code=422,
+                detail={"output": problems, "completion_contract": contract},
+            )
+    event_payload: dict = {"task_id": task_id}
+    if payload is not None:
+        event_payload["output"] = payload
     with db:
         db.execute(
-            """UPDATE tasks SET status='completed',
+            """UPDATE tasks SET status='completed', completion_payload=?,
                updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?""",
-            (task_id,),
+            (json.dumps(payload) if payload is not None else None, task_id),
         )
         affinity.reinforce(db, agent_id, json.loads(row["tags"]))
         _add_comment(db, task_id, agent_id, "complete", body.body)
-        _emit_event(db, "task.completed", agent_id, {"task_id": task_id})
+        _emit_event(db, "task.completed", agent_id, event_payload)
     row = db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
     return _row_to_task(row)
 

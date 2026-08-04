@@ -152,6 +152,7 @@ class TaskCreate(BaseModel):
     due_at: str | None = None
     tags: list[str] = []
     depends_on: list[str] = []
+    completion_contract: dict | None = None
 
 
 class TaskEntry(BaseModel):
@@ -167,6 +168,8 @@ class TaskEntry(BaseModel):
     due_at: str | None
     tags: list[str]
     depends_on: list[str] = []
+    completion_contract: dict | None = None
+    completion_payload: dict | None = None
     created_at: str
     updated_at: str
 
@@ -202,6 +205,7 @@ class TaskUpdate(BaseModel):
 
 class TaskAction(BaseModel):
     body: str = ""
+    output: dict | None = None
 
 
 class TaskCommentCreate(BaseModel):

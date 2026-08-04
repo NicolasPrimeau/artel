@@ -1417,6 +1417,7 @@ async def task_create(
     priority: str = "normal",
     tags: list[str] | None = None,
     depends_on: list[str] | None = None,
+    completion_contract: dict | None = None,
 ) -> str:
     """Create a task for yourself or another agent to pick up.
 
@@ -1432,6 +1433,15 @@ async def task_create(
         priority: low, normal (default), or high.
         tags: Labels for filtering, e.g. ["writing", "infra"].
         depends_on: Task IDs that must be completed before this task is unblocked.
+        completion_contract: Optional shape the completing agent's structured output must
+            match. When set, task_complete() REJECTS a completion whose output is missing
+            or malformed — use it when something downstream consumes the result (e.g. one
+            follow-up task per discovered item). Omit for ordinary tasks. Supported subset
+            of JSON Schema: type (object/array/string/number/integer/boolean), required,
+            properties, items, enum, minItems, minLength. Example:
+            {"type": "object", "required": ["sources"], "properties": {"sources":
+            {"type": "array", "minItems": 1, "items": {"type": "object",
+            "required": ["name", "url"]}}}}
     """
     c = _http()
     try:
@@ -1445,6 +1455,7 @@ async def task_create(
                 "priority": priority,
                 "tags": tags or [],
                 "depends_on": depends_on or [],
+                "completion_contract": completion_contract,
             },
         )
         r.raise_for_status()
@@ -1506,7 +1517,7 @@ async def task_unclaim(task_id: str, body: str = "") -> str:
 @mcp.tool(
     structured_output=True, annotations=ToolAnnotations(destructiveHint=False, openWorldHint=False)
 )
-async def task_complete(task_id: str, body: str = "") -> str:
+async def task_complete(task_id: str, body: str = "", output: dict | None = None) -> str:
     """Mark your claimed task as completed. Only the claiming agent can complete it.
 
     Call when the task's expected_outcome has been fully achieved. The body is recorded
@@ -1518,10 +1529,14 @@ async def task_complete(task_id: str, body: str = "") -> str:
         task_id: ID of a task you have claimed.
         body: Summary of what was accomplished, including follow-up IDs or links.
               Recommended — it is the only record future agents have of what was done.
+        output: Structured result of the work. Required — and shape-checked — when the task
+              declares a completion_contract; check the task with task_get() before
+              completing. Completion is REJECTED if it is missing or does not match.
+              Optional otherwise, in which case it is stored as-is.
     """
     c = _http()
     try:
-        r = await c.post(f"/tasks/{task_id}/complete", json={"body": body})
+        r = await c.post(f"/tasks/{task_id}/complete", json={"body": body, "output": output})
         r.raise_for_status()
     except _HTTPX_ERRORS as e:
         return _err(e)
@@ -1611,6 +1626,13 @@ async def task_get(task_id: str) -> str:
         lines.append(t["description"])
     if t.get("expected_outcome"):
         lines.append(f"expected outcome: {t['expected_outcome']}")
+    if t.get("completion_contract"):
+        lines.append(
+            "completion contract — task_complete(output=...) must match this shape or it"
+            f" is rejected: {json.dumps(t['completion_contract'])}"
+        )
+    if t.get("completion_payload"):
+        lines.append(f"output: {json.dumps(t['completion_payload'])}")
     if comments:
         lines.append("")
         lines.append("comments:")
