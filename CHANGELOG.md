@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.43.0] — 2026-08-04
+
+### Blueprints — compile a procedure into a self-expanding task DAG
+
+A long procedural skill degrades in an agent's context: it gets sidetracked, stops early, forgets steps. A blueprint moves the procedure out of the prompt and into the task graph, so the board drives the work instead of a wall of prose the agent has to hold in its head.
+
+- **Optional completion contract on tasks.** A task may declare a `completion_contract`; `task_complete` then rejects a completion whose `output` is missing or malformed, leaving the task claimed rather than half-done. Tasks without one are unchanged. Validation covers a JSON Schema subset (`type`, `required`, `properties`, `items`, `enum`, `minItems`, `minLength`) with errors reported by path, so a rejected agent can see what to fix and retry. New: `task_create(completion_contract=…)`, `task_complete(output=…)`.
+- **Server-side reactor.** Instantiating a blueprint materializes only the root wave; each completion expands the next. A `foreach` bound to an upstream task's output creates one task per discovered item, and a successor waits for every fanned-out sibling. The reactor lives in the server, so every MCP surface gets it — the agent's world stays claim → do → complete → repeat, and it never has to know a next phase exists.
+- **Done-checks as gates.** A node may carry a done-check that reads reality (`payload` and `sqlite` backends, pluggable via `register_check`). A failure spawns a remediation task carrying the reason instead of expanding, and supersedes the rejected output so it can never feed the fan-out.
+- **The archivist compiles skills into blueprints.** Memory entries of type `skill` tagged `blueprint` are compiled into blueprint documents, recompiled when the skill is edited, and skipped when it isn't. Validator rejections are fed back for one repair attempt, so a malformed DAG is corrected rather than stored.
+- New MCP tools: `blueprint_instantiate`, `blueprint_run`, `blueprint_list`.
+
+### Memory — trust signals
+
+- **`days_since_author_update`.** Entries now carry `author_updated_at`, refreshed only when the *original author* edits. An archivist edit keeps `updated_at` fresh while the author-scoped stamp correctly goes stale — that gap is the signal.
+- **`shadowed_scope`.** Search flags a project-scoped result that outranks a semantically equivalent global one, so consumers can tell "the only answer" from "the narrower answer overriding a broader one" — even when the broader entry was pushed out of the results.
+
+### Tasks — routing that learns
+
+- Task outcomes are recorded per tag and overall on complete and fail. The archivist consults that history first and skips the model entirely when an agent has a real track record (≥5 attempts, ≥80% success); below that bar a thin record is worse than judgement, so the LLM path stands. New: `GET /agents/performance`.
+
+### Docs
+
+- ACP editors (Zed and friends) reach Artel through the existing MCP server — MCP points down to tools, ACP points up to agents. No adapter needed, and none planned.
+
 ## [0.37.0] — 2026-07-22
 
 ### Plugin — bug fixes from an end-to-end hook audit
