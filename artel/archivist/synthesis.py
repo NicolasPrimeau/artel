@@ -1011,6 +1011,46 @@ async def run_deep_synthesis_if_due(client: ArtelClient) -> None:
         log.warning("run_deep_synthesis_if_due failed: %s", e)
 
 
+_MIN_PERF_SAMPLE = 5
+_MIN_PERF_SUCCESS = 0.8
+
+
+def _proven_assignee(
+    history: list[dict], tags: list[str], eligible: set[str]
+) -> tuple[str, str] | None:
+    best: tuple[str, str] | None = None
+    best_key = (0.0, 0)
+    for row in history:
+        if row.get("tag") not in tags or row.get("agent_id") not in eligible:
+            continue
+        if row.get("attempts", 0) < _MIN_PERF_SAMPLE:
+            continue
+        if row.get("success_rate", 0.0) < _MIN_PERF_SUCCESS:
+            continue
+        key = (row["success_rate"], row["attempts"])
+        if key > best_key:
+            best_key = key
+            best = (
+                row["agent_id"],
+                f"{row['completed']}/{row['attempts']} completed on '{row['tag']}'"
+                f" ({int(row['success_rate'] * 100)}% success)",
+            )
+    return best
+
+
+def _performance_block(history: list[dict], eligible: set[str]) -> str:
+    lines = []
+    for row in history:
+        if row.get("agent_id") not in eligible or not row.get("attempts"):
+            continue
+        scope = row["tag"] or "overall"
+        lines.append(
+            f"- {row['agent_id']} [{scope}]: {row['completed']} completed, "
+            f"{row['failed']} failed ({int(row['success_rate'] * 100)}% success)"
+        )
+    return "\n".join(lines[:20])
+
+
 async def suggest_task_assignment(task_id: str, client: ArtelClient) -> None:
     try:
         if not is_configured():
@@ -1060,6 +1100,30 @@ async def suggest_task_assignment(task_id: str, client: ArtelClient) -> None:
             work_str = ("; ".join(work[:5])) if work else "no recent work"
             agent_block_lines.append(f"- {a['id']}: {work_str}")
         agent_block = "\n".join(agent_block_lines)
+
+        # Recorded outcomes beat inference when the record is thick enough. A thin
+        # record is worse than the model's judgement, so best_for returns nothing
+        # until an agent actually has a track record on one of these tags.
+        task_tags = task.get("tags") or []
+        try:
+            history = await client.get_agent_performance()
+        except Exception as e:
+            log.warning("suggest_task_assignment: could not fetch performance: %s", e)
+            history = []
+        proven = _proven_assignee(history, task_tags, active_ids)
+        if proven:
+            chosen, evidence = proven
+            try:
+                await client.add_task_comment(
+                    task_id,
+                    f"[archivist] Suggested: {chosen} — {evidence} (from recorded outcomes)",
+                )
+                log.info("archivist routed %s to %s from history", task_id[:8], chosen)
+            except Exception as e:
+                log.warning("suggest_task_assignment: could not add comment to %s: %s", task_id, e)
+            return
+
+        history_block = _performance_block(history, active_ids)
         try:
             text = await complete(
                 system="You are the Artel archivist routing a new task to the best available agent. Output only a JSON object with keys: agent_id (string or null — the agent ID best suited for this task, null if you cannot determine), rationale (string — one sentence explaining your choice).",
@@ -1067,7 +1131,8 @@ async def suggest_task_assignment(task_id: str, client: ArtelClient) -> None:
                     f'New task: "{task["title"]}"\n'
                     f"Description: {task.get('description') or 'none'}\n\n"
                     f"Active agents and recent work:\n{agent_block}\n\n"
-                    "Which agent is best suited for this task? Output only the JSON object."
+                    + (f"Recorded outcomes:\n{history_block}\n\n" if history_block else "")
+                    + "Which agent is best suited for this task? Output only the JSON object."
                 ),
                 max_tokens=256,
             )

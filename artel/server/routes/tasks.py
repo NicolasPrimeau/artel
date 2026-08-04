@@ -3,7 +3,7 @@ import sqlite3
 
 from fastapi import APIRouter, Body, HTTPException, Query
 
-from ...store import affinity
+from ...store import affinity, performance
 from ...store.db import AmbiguousId, get_db, norm_project, resolve_id
 from ..auth import (
     ActorDep,
@@ -373,6 +373,7 @@ async def complete_task(
             (json.dumps(payload) if payload is not None else None, task_id),
         )
         affinity.reinforce(db, agent_id, json.loads(row["tags"]))
+        performance.record(db, agent_id, task_id, json.loads(row["tags"]), "completed")
         _add_comment(db, task_id, agent_id, "complete", body.body)
         _emit_event(db, "task.completed", agent_id, event_payload)
         on_task_completed(db, task_id, agent_id)
@@ -479,6 +480,7 @@ async def fail_task(
                updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?""",
             (task_id,),
         )
+        performance.record(db, agent_id, task_id, json.loads(row["tags"]), "failed")
         _add_comment(db, task_id, agent_id, "fail", body.body)
         _emit_event(db, "task.failed", agent_id, {"task_id": task_id})
     row = db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()

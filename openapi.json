@@ -6,6 +6,89 @@
     "version": "0.0.1.dev1+g0fddb097b"
   },
   "paths": {
+    "/agents/performance": {
+      "get": {
+        "tags": [
+          "agents"
+        ],
+        "summary": "Per-agent task outcome history, overall and per tag",
+        "operationId": "agent_performance_agents_performance_get",
+        "parameters": [
+          {
+            "name": "tag",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tag"
+            }
+          },
+          {
+            "name": "x-agent-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Agent-Id"
+            }
+          },
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgentPerformance"
+                  },
+                  "title": "Response Agent Performance Agents Performance Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/agents/register": {
       "post": {
         "tags": [
@@ -7673,6 +7756,54 @@
         ],
         "title": "AgentCreated"
       },
+      "AgentPerformance": {
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id"
+          },
+          "tag": {
+            "type": "string",
+            "title": "Tag"
+          },
+          "completed": {
+            "type": "integer",
+            "title": "Completed"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          },
+          "attempts": {
+            "type": "integer",
+            "title": "Attempts"
+          },
+          "success_rate": {
+            "type": "number",
+            "title": "Success Rate"
+          },
+          "avg_seconds": {
+            "type": "number",
+            "title": "Avg Seconds"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "agent_id",
+          "tag",
+          "completed",
+          "failed",
+          "attempts",
+          "success_rate",
+          "avg_seconds",
+          "updated_at"
+        ],
+        "title": "AgentPerformance"
+      },
       "AgentRegister": {
         "properties": {
           "agent_id": {
@@ -9443,6 +9574,50 @@
             "type": "integer",
             "title": "Headline Version",
             "default": 0
+          },
+          "author_updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Updated At"
+          },
+          "days_since_author_update": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Since Author Update"
+          },
+          "shadowed_scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shadowed Scope"
+          },
+          "shadowed_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shadowed Id"
           }
         },
         "type": "object",

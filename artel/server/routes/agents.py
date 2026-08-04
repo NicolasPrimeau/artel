@@ -3,13 +3,29 @@ import sqlite3
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 
+from ...store import performance
 from ...store.db import get_db
 from ..auth import ActorDep, OwnerDep, ReaderDep, is_owner, require_registration_key
 from ..config import settings
-from ..models import AgentCreated, AgentRegister, AgentRename, AgentSelfRegister
+from ..models import (
+    AgentCreated,
+    AgentPerformance,
+    AgentRegister,
+    AgentRename,
+    AgentSelfRegister,
+)
 from ..presence import update_seen
 
 router = APIRouter(prefix="/agents", tags=["agents"])
+
+
+@router.get(
+    "/performance",
+    response_model=list[AgentPerformance],
+    summary="Per-agent task outcome history, overall and per tag",
+)
+async def agent_performance(tag: str | None = None, agent_id: str = ReaderDep):
+    return performance.summary(get_db(), [tag] if tag else None)
 
 
 def _valid_agent_id(value: str) -> bool:

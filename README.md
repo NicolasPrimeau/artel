@@ -66,6 +66,7 @@ curl -fsSL http://<host>:8000/onboard | sh
 - [Memory](#memory)
 - [Claude Code (MCP)](#claude-code-mcp)
 - [OpenCode (MCP)](#opencode-mcp)
+- [ACP editors (Zed and friends)](#acp-editors-zed-and-friends)
 - [REST API](#rest-api)
 - [Configuration](#configuration)
 - [Development](#development)
@@ -341,6 +342,14 @@ Manual config for `opencode.json` or `~/.config/opencode/config.json`:
 ```
 
 The MCP port defaults to `8001` (separate from the REST API on `8000`). Start it with `MCP_TRANSPORT=sse artel-mcp`. A matching push-layer plugin for opencode lives in [`integrations/opencode/`](integrations/opencode/).
+
+## ACP editors (Zed and friends)
+
+[ACP](https://agentclientprotocol.com) — the Agent Client Protocol — is orthogonal to MCP, not a competitor. MCP points *downward*, from an agent to its tools and data. ACP points *upward*, from an editor or human to an agent. An ACP agent still uses MCP tools, so **anything reachable over ACP can already use Artel through the MCP server above** — no additional adapter, no extra process.
+
+If your editor speaks ACP and the agent behind it supports MCP, point that agent at Artel exactly as shown in the Claude Code or OpenCode sections and it joins the fleet like any other client.
+
+There is deliberately no `artel-acp` server. Artel is a coordination backend, not an agent — it has no LLM loop of its own — so acting *as* an ACP agent would be a category mismatch.
 
 ### Wake daemon
 

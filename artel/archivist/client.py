@@ -146,6 +146,11 @@ class ArtelClient:
         r = await self._request("POST", "/captures/digest", json={"ids": ids})
         return r.json()
 
+    async def get_agent_performance(self, tag: str | None = None) -> list[dict]:
+        params = {"tag": tag} if tag else {}
+        r = await self._request("GET", "/agents/performance", params=params)
+        return r.json()
+
     async def list_blueprints(self) -> list[dict]:
         r = await self._request("GET", "/blueprints")
         return r.json()

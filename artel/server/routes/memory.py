@@ -103,6 +103,9 @@ router = APIRouter(prefix="/memory", tags=["memory"])
 # with a short half-life so relevance must be continually re-earned, not just accumulated.
 _TRAIL_HALF_LIFE_DAYS = 7.0
 _DIVERSITY_LAMBDA = 0.7
+# Two entries this close on the same query are answering the same question, so a
+# narrower-scope winner is overriding the broader one rather than merely outranking it.
+_SHADOW_SIMILARITY = 0.85
 
 
 def _fetch_vectors(db, ids: list[str]) -> dict[str, list[float]]:
@@ -121,6 +124,43 @@ def _fetch_vectors(db, ids: list[str]) -> dict[str, list[float]]:
     return result
 
 
+def _detect_shadowing(db, chosen: list[str], ordered: list[str], rows: dict) -> dict[str, str]:
+    """Map each returned project-scoped id to the global id it is overriding.
+
+    A narrower-scope entry ranked above a semantically equivalent global one is not
+    just winning on relevance — it is overriding it, and the caller cannot see that
+    from distance alone. The broader entry may not even be in the results.
+    """
+    winners = [mid for mid in chosen if rows[mid]["project"] is not None]
+    if not winners:
+        return {}
+    rank = {mid: i for i, mid in enumerate(ordered)}
+    globals_ = [
+        mid for mid in ordered if rows[mid]["project"] is None and rows[mid]["deleted_at"] is None
+    ]
+    if not globals_:
+        return {}
+    vectors = _fetch_vectors(db, winners + globals_)
+    shadowed: dict[str, str] = {}
+    for winner in winners:
+        wv = vectors.get(winner)
+        if wv is None:
+            continue
+        best, best_sim = None, _SHADOW_SIMILARITY
+        for candidate in globals_:
+            if rank.get(candidate, 0) <= rank.get(winner, 0):
+                continue
+            cv = vectors.get(candidate)
+            if cv is None:
+                continue
+            sim = mmr.cosine(wv, cv)
+            if sim >= best_sim:
+                best, best_sim = candidate, sim
+        if best is not None:
+            shadowed[winner] = best
+    return shadowed
+
+
 def _resolve_entry(entry_id: str) -> str:
     try:
         resolved = resolve_id("memory", entry_id)
@@ -131,9 +171,22 @@ def _resolve_entry(entry_id: str) -> str:
     return resolved
 
 
+def _days_since(stamp: str | None) -> float | None:
+    if not stamp:
+        return None
+    try:
+        then = datetime.fromisoformat(str(stamp).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return round(max(0.0, (datetime.now(UTC) - then).total_seconds() / 86400.0), 2)
+
+
 def _row_to_entry(row: sqlite3.Row) -> MemoryEntry:
     keys = row.keys()
+    author_updated_at = row["author_updated_at"] if "author_updated_at" in keys else None
     return MemoryEntry(
+        author_updated_at=author_updated_at,
+        days_since_author_update=_days_since(author_updated_at),
         id=row["id"],
         type=row["type"],
         agent_id=row["agent_id"],
@@ -184,8 +237,9 @@ async def write_memory(
     with db:
         db.execute(
             """INSERT INTO memory (id, type, agent_id, project, scope, content,
-               confidence, parents, tags, expires_at, created_at, updated_at, vclock)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+               confidence, parents, tags, expires_at, created_at, updated_at, vclock,
+               author_updated_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 entry_id,
                 body.type,
@@ -200,6 +254,7 @@ async def write_memory(
                 now,
                 now,
                 vclock.dump(vclock.bump({}, instance_id())),
+                now,
             ),
         )
         if vec is not None:
@@ -362,6 +417,7 @@ async def search_memory(
     else:
         chosen = eligible[:limit]
     out = [rows[mid] for mid in chosen]
+    shadowed = _detect_shadowing(db, chosen, ordered, rows)
     if out and agent_id != settings.archivist_agent_id:
         hit_ids = [r["id"] for r in out]
         hit_placeholders = ",".join("?" * len(hit_ids))
@@ -425,6 +481,10 @@ async def search_memory(
                     )
                     recall_bandit.log_surface(db, agent_id, hid, feats, (r["read_count"] or 0) + 1)
     entries = [_row_to_entry(r) for r in out]
+    for e in entries:
+        if e.id in shadowed:
+            e.shadowed_id = shadowed[e.id]
+            e.shadowed_scope = "global"
     if max_content_length is not None:
         for e in entries:
             if len(e.content) > max_content_length:
@@ -872,6 +932,11 @@ async def patch_memory(
             f"version={row['version'] + 1}",
             "vclock=?",
         ]
+        # Only the original author refreshes the author-scoped stamp. An archivist
+        # edit keeps updated_at fresh while author_updated_at correctly goes stale —
+        # that gap is the whole signal.
+        if row["agent_id"] == agent_id:
+            set_parts.append("author_updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')")
         bumped = vclock.dump(vclock.bump(vclock.parse(row["vclock"]), instance_id()))
         with db:
             if body.content is not None and vec is not None:

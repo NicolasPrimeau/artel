@@ -143,6 +143,12 @@ def _migrate(conn: sqlite3.Connection) -> None:
             "ALTER TABLE memory ADD COLUMN distinct_reader_count INTEGER NOT NULL DEFAULT 0"
         )
         conn.commit()
+    if "author_updated_at" not in mem_cols:
+        conn.execute("ALTER TABLE memory ADD COLUMN author_updated_at TEXT")
+        # Backfill from updated_at: for entries never touched by anyone else this is
+        # exactly right, and for the rest it is the most optimistic honest guess.
+        conn.execute("UPDATE memory SET author_updated_at = updated_at")
+        conn.commit()
     if "vclock" not in mem_cols:
         conn.execute("ALTER TABLE memory ADD COLUMN vclock TEXT")
         conn.commit()

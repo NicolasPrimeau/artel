@@ -78,6 +78,10 @@ class MemoryEntry(BaseModel):
     stale: bool = False
     headline: str | None = None
     headline_version: int = 0
+    author_updated_at: str | None = None
+    days_since_author_update: float | None = None
+    shadowed_scope: str | None = None
+    shadowed_id: str | None = None
 
 
 class HeadlinePatch(BaseModel):
@@ -207,6 +211,17 @@ class TaskUpdate(BaseModel):
 class TaskAction(BaseModel):
     body: str = ""
     output: dict | list | None = None
+
+
+class AgentPerformance(BaseModel):
+    agent_id: str
+    tag: str
+    completed: int
+    failed: int
+    attempts: int
+    success_rate: float
+    avg_seconds: float
+    updated_at: str
 
 
 class BlueprintEntry(BaseModel):
