@@ -25,6 +25,7 @@ from ..models import (
     TaskUpdate,
     new_id,
 )
+from ..reactor import on_task_completed
 
 
 def _fetch_deps(db: sqlite3.Connection, task_ids: list[str]) -> dict[str, list[str]]:
@@ -374,6 +375,7 @@ async def complete_task(
         affinity.reinforce(db, agent_id, json.loads(row["tags"]))
         _add_comment(db, task_id, agent_id, "complete", body.body)
         _emit_event(db, "task.completed", agent_id, event_payload)
+        on_task_completed(db, task_id, agent_id)
     row = db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
     return _row_to_task(row)
 

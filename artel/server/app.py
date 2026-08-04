@@ -36,6 +36,7 @@ from .jwt_utils import verify_token
 from .mdns import MDNSService
 from .routes.agents import router as agents_router
 from .routes.archivist import router as archivist_router
+from .routes.blueprints import router as blueprints_router
 from .routes.captures import router as captures_router
 from .routes.compile import router as compile_router
 from .routes.decisions import router as decisions_router
@@ -225,6 +226,7 @@ app.include_router(memory_router)
 app.include_router(captures_router)
 app.include_router(compile_router)
 app.include_router(tasks_router)
+app.include_router(blueprints_router)
 app.include_router(decisions_router)
 app.include_router(messages_router)
 app.include_router(events_router)

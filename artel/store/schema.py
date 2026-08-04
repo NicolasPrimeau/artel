@@ -93,6 +93,42 @@ CREATE TABLE IF NOT EXISTS task_deps (
     PRIMARY KEY (task_id, depends_on)
 );
 
+CREATE TABLE IF NOT EXISTS blueprints (
+    id          TEXT PRIMARY KEY,
+    name        TEXT NOT NULL,
+    project     TEXT,
+    document    TEXT NOT NULL,
+    created_by  TEXT NOT NULL,
+    version     INTEGER NOT NULL DEFAULT 1,
+    superseded_at TEXT,
+    created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+
+CREATE TABLE IF NOT EXISTS blueprint_runs (
+    id           TEXT PRIMARY KEY,
+    blueprint_id TEXT NOT NULL,
+    name         TEXT NOT NULL,
+    params       TEXT NOT NULL DEFAULT '{}',
+    project      TEXT,
+    created_by   TEXT NOT NULL,
+    status       TEXT NOT NULL DEFAULT 'running' CHECK (status IN ('running','completed')),
+    created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    updated_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+
+CREATE TABLE IF NOT EXISTS blueprint_run_nodes (
+    run_id     TEXT NOT NULL,
+    node_id    TEXT NOT NULL,
+    task_id    TEXT NOT NULL,
+    item       TEXT,
+    superseded INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    PRIMARY KEY (run_id, task_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_blueprint_run_nodes_node ON blueprint_run_nodes(run_id, node_id);
+CREATE INDEX IF NOT EXISTS idx_blueprints_name ON blueprints(name, superseded_at);
+
 CREATE TABLE IF NOT EXISTS decisions (
     id           TEXT PRIMARY KEY,
     project      TEXT,

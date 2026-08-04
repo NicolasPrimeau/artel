@@ -31,6 +31,7 @@ GraphRel = Literal["grounds", "relies_on", "applies_to", "contradicts", "corrobo
 TaskStatus = Literal["open", "claimed", "completed", "failed"]
 TaskCommentKind = Literal["comment", "claim", "unclaim", "complete", "fail"]
 Priority = Literal["low", "normal", "high"]
+BlueprintRunStatus = Literal["running", "completed"]
 LogLevel = Literal["info", "warning", "error"]
 
 
@@ -206,6 +207,38 @@ class TaskUpdate(BaseModel):
 class TaskAction(BaseModel):
     body: str = ""
     output: dict | None = None
+
+
+class BlueprintEntry(BaseModel):
+    id: str
+    name: str
+    project: str | None
+    document: dict
+    created_by: str
+    version: int
+    created_at: str
+
+
+class BlueprintRunNode(BaseModel):
+    node_id: str
+    task_id: str
+    title: str
+    status: TaskStatus
+    item: object | None = None
+    superseded: bool = False
+
+
+class BlueprintRunEntry(BaseModel):
+    id: str
+    blueprint_id: str
+    name: str
+    params: dict
+    project: str | None
+    created_by: str
+    status: BlueprintRunStatus
+    created_at: str
+    updated_at: str
+    nodes: list[BlueprintRunNode] = []
 
 
 class TaskCommentCreate(BaseModel):

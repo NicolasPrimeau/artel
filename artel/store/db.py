@@ -112,6 +112,14 @@ def _migrate(conn: sqlite3.Connection) -> None:
     if "completion_payload" not in task_cols:
         conn.execute("ALTER TABLE tasks ADD COLUMN completion_payload TEXT")
         conn.commit()
+    run_node_cols = {
+        r[1] for r in conn.execute("PRAGMA table_info(blueprint_run_nodes)").fetchall()
+    }
+    if run_node_cols and "superseded" not in run_node_cols:
+        conn.execute(
+            "ALTER TABLE blueprint_run_nodes ADD COLUMN superseded INTEGER NOT NULL DEFAULT 0"
+        )
+        conn.commit()
     mem_cols = {r[1] for r in conn.execute("PRAGMA table_info(memory)").fetchall()}
     if "expires_at" not in mem_cols:
         conn.execute("ALTER TABLE memory ADD COLUMN expires_at TEXT")

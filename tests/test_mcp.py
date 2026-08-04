@@ -696,3 +696,59 @@ async def test_task_complete_accepts_contracted_output(mcp):
     result = await mcp.task_complete(task_id, body="done", output={"sources": ["a"]})
     assert result.startswith("completed [")
     assert "output" in await mcp.task_get(task_id)
+
+
+async def _seed_blueprint(client_headers=None):
+    from artel.server.blueprint import BlueprintCreate
+    from artel.server.routes.blueprints import create_blueprint
+
+    doc = {
+        "name": "probe-mold",
+        "description": "discover then probe",
+        "params": ["domain"],
+        "nodes": [
+            {
+                "id": "discover",
+                "title": "Discover sources for {domain}",
+                "completion_contract": {"type": "object", "required": ["sources"]},
+            },
+            {
+                "id": "probe",
+                "title": "Probe {item}",
+                "deps": ["discover"],
+                "foreach": "discover.sources",
+            },
+        ],
+    }
+    return await create_blueprint(BlueprintCreate(document=doc), TEST_AGENT)
+
+
+async def test_blueprint_list_and_instantiate(mcp):
+    await _seed_blueprint()
+    listed = await mcp.blueprint_list()
+    assert "probe-mold" in listed
+    assert "params: domain" in listed
+
+    run = await mcp.blueprint_instantiate("probe-mold", {"domain": "liquor"})
+    assert "[running]" in run
+    assert "Discover sources for liquor" in run
+
+
+async def test_blueprint_instantiate_rejects_missing_params(mcp):
+    await _seed_blueprint()
+    result = await mcp.blueprint_instantiate("probe-mold", {})
+    assert result.startswith("error 422")
+
+
+async def test_blueprint_run_shows_the_fan_out(mcp):
+    await _seed_blueprint()
+    run = await mcp.blueprint_instantiate("probe-mold", {"domain": "liquor"})
+    run_id = run.split("run [")[1].split("]")[0]
+    task_id = run.split("task: ")[1].strip().splitlines()[0]
+
+    await mcp.task_claim(task_id)
+    await mcp.task_complete(task_id, output={"sources": ["ontario", "quebec"]})
+
+    after = await mcp.blueprint_run(run_id)
+    assert "Probe ontario" in after
+    assert "Probe quebec" in after

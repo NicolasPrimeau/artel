@@ -1741,6 +1741,104 @@ async def task_remove_dependency(task_id: str, dep_id: str) -> str:
     return f"dependency [{dep_id}] removed from [{task_id}]"
 
 
+# ── Blueprints ────────────────────────────────────────────────────────────────
+
+
+def _fmt_run(run: dict) -> str:
+    lines = [
+        f"run [{run['id']}] [{run['status']}] blueprint: {run['name']}",
+        f"params: {json.dumps(run['params'])}",
+    ]
+    for node in run.get("nodes", []):
+        flag = " (superseded)" if node.get("superseded") else ""
+        lines.append(f"  [{node['status']}] {node['node_id']}: {node['title']}{flag}")
+        lines.append(f"    task: {node['task_id']}")
+    return "\n".join(lines)
+
+
+@mcp.tool(
+    structured_output=True, annotations=ToolAnnotations(destructiveHint=False, openWorldHint=False)
+)
+async def blueprint_instantiate(name: str, params: dict | None = None) -> str:
+    """Start a blueprint run — scaffolds a multi-step procedure as a self-expanding task DAG.
+
+    A blueprint is a compiled procedure: template tasks plus the dependencies between
+    them. Instantiating creates only the FIRST wave of real tasks. As each one is
+    completed, the server expands the next wave automatically — including fan-out,
+    where one task per discovered item is created from the completing task's output.
+
+    You do not drive the run. After instantiating, work it like any other board:
+    claim the next open task, do it, complete it, repeat. The next tasks appear on
+    their own, so nothing depends on you remembering the procedure.
+
+    Args:
+        name: Blueprint name, as listed by blueprint_list().
+        params: Values for the blueprint's declared parameters, e.g. {"domain": "liquor"}.
+            Missing parameters are rejected.
+    """
+    c = _http()
+    try:
+        r = await c.post(
+            f"/blueprints/{name}/instantiate",
+            json={"params": params or {}, "project": settings.resolve_project(None)},
+        )
+        r.raise_for_status()
+    except _HTTPX_ERRORS as e:
+        return _err(e)
+    return _fmt_run(r.json())
+
+
+@mcp.tool(
+    structured_output=True,
+    annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False),
+)
+async def blueprint_run(run_id: str) -> str:
+    """Show a blueprint run: its status and every task materialized so far.
+
+    Use to see how far a run has expanded and which tasks are still open.
+    Read-only — no side effects.
+
+    Args:
+        run_id: The run ID returned by blueprint_instantiate().
+    """
+    c = _http()
+    try:
+        r = await c.get(f"/blueprints/runs/{run_id}")
+        r.raise_for_status()
+    except _HTTPX_ERRORS as e:
+        return _err(e)
+    return _fmt_run(r.json())
+
+
+@mcp.tool(
+    structured_output=True,
+    annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False),
+)
+async def blueprint_list() -> str:
+    """List the blueprints available to instantiate.
+
+    A blueprint is a procedure compiled into a task DAG — instantiate one with
+    blueprint_instantiate() instead of trying to follow a long procedure by hand.
+    Read-only — no side effects.
+    """
+    c = _http()
+    try:
+        r = await c.get("/blueprints")
+        r.raise_for_status()
+    except _HTTPX_ERRORS as e:
+        return _err(e)
+    entries = r.json()
+    if not entries:
+        return "No blueprints."
+    lines = []
+    for entry in entries:
+        doc = entry["document"]
+        params = ", ".join(doc.get("params", [])) or "none"
+        lines.append(f"[{entry['name']}] v{entry['version']} — {doc.get('description', '')}")
+        lines.append(f"  params: {params} | nodes: {len(doc.get('nodes', []))}")
+    return "\n".join(lines)
+
+
 # ── Decisions ─────────────────────────────────────────────────────────────────
 
 
