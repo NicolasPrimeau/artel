@@ -12,9 +12,9 @@ from .llm import complete, is_configured
 log = logging.getLogger(__name__)
 
 _BATCH = 20
-# The scheduler kills a pass at 300s. Stop short of that so the pass ends on its own
-# terms with its progress recorded, instead of being cancelled mid-capture.
-_PASS_BUDGET_SECONDS = 240.0
+# Under the scheduler's ceiling for this pass. Stop short of it so the pass ends on
+# its own terms with its progress recorded, instead of being cancelled mid-capture.
+_PASS_BUDGET_SECONDS = 480.0
 _RELATED_LIMIT = 6
 
 _PROVISIONAL_TAG = "capture-extracted"

@@ -207,6 +207,8 @@ async def test_budget_keeps_the_work_done_before_it_expired(monkeypatch):
         for i in range(4)
     ]
     c = _client(caps)
+    # Pin the budget so the test does not depend on the production constant.
+    monkeypatch.setattr(compaction, "_PASS_BUDGET_SECONDS", 240.0)
 
     # Replace the clock only inside compaction — patching the real time module
     # perturbs pytest's own timing. Each read advances 100s against a 240s budget,

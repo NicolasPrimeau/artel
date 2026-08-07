@@ -4,6 +4,7 @@ import logging
 import math
 import re
 import secrets
+import time
 from datetime import UTC, datetime, timedelta
 
 from ..store import graph
@@ -142,6 +143,11 @@ async def _check_directive_conflicts(directives: list[dict], client: ArtelClient
 def _utc_ago(hours: int) -> str:
     return (datetime.now(UTC) - timedelta(hours=hours)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
+
+# Under the scheduler's ceiling for this pass. run_synthesis chains up to three model
+# calls plus op execution; when it overran, the cursor never advanced and the same
+# entries were re-processed next cycle — cleanup ops already applied, then applied again.
+_SYNTHESIS_BUDGET_SECONDS = 480.0
 
 _SYNTHESIS_CURSOR_KEY = "archivist_last_synthesis"
 
@@ -686,6 +692,7 @@ async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
             log.warning("directive conflict check failed: %s", e)
 
     local_id = instance_id()
+    deadline = time.monotonic() + _SYNTHESIS_BUDGET_SECONDS
     run_started = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z")
     cutoff = _read_synthesis_cursor() or _utc_ago(since_hours)
     entries = await client.get_delta(cutoff)
@@ -808,12 +815,18 @@ async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
         "- Output ONLY the JSON array. No prose, no explanation, no markdown fences."
     )
 
-    raw_insight_ops = await _llm_ops_pass(insight_system, insight_user, "insight")
-    insight_ops = [o for o in raw_insight_ops if o.get("op") in _INSIGHT_OPS]
-
-    await _execute_operations(
-        insight_ops, client, entries, open_task_titles=open_titles, open_task_ids=open_ids
-    )
+    # Cleanup has already been applied. If there is no room left for the insight pass,
+    # skip it and still advance the cursor: re-running cleanup over the same entries next
+    # cycle is worse than deferring insight, which picks them up on a fresh delta.
+    insight_ops: list[dict] = []
+    if time.monotonic() >= deadline:
+        log.info("synthesis budget spent on cleanup; deferring insight pass to the next cycle")
+    else:
+        raw_insight_ops = await _llm_ops_pass(insight_system, insight_user, "insight")
+        insight_ops = [o for o in raw_insight_ops if o.get("op") in _INSIGHT_OPS]
+        await _execute_operations(
+            insight_ops, client, entries, open_task_titles=open_titles, open_task_ids=open_ids
+        )
 
     all_ops = cleanup_ops + insight_ops
     op_counts: dict = {}

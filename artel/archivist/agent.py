@@ -31,6 +31,9 @@ from .synthesis import (
 
 log = logging.getLogger(__name__)
 
+_PASS_TIMEOUT = 300.0
+_HEAVY_PASS_TIMEOUT = 600.0
+
 _HEARTBEAT = pathlib.Path("/tmp/archivist.heartbeat")
 _INSTANCE_ID = f"{socket.gethostname()}:{os.getpid()}"
 _is_leader = asyncio.Event()
@@ -114,29 +117,32 @@ async def _scheduler(client: ArtelClient) -> None:
             await asyncio.wait_for(capture_metrics(), timeout=30.0)
         except Exception as e:
             log.error("capture_metrics failed: %s", e)
-        for fn, name in (
-            (run_capture_compaction, "capture_compaction"),
-            (run_feed_triage, "feed_triage"),
-            (run_conflict_resolution, "conflict_resolution"),
-            (run_synthesis, "synthesis"),
-            (decay_confidence, "decay"),
-            (run_promotion, "promotion"),
-            (run_recall_feedback, "recall_feedback"),
-            (run_capture_refinement, "capture_refinement"),
-            (run_headlines, "headlines"),
-            (run_compilation, "compilation"),
-            (run_blueprint_compilation, "blueprint_compilation"),
-            (run_task_triage, "task_triage"),
-            (run_brief, "brief"),
-            (run_deep_synthesis_if_due, "deep_synthesis"),
-            (run_utilization_prune_if_due, "utilization_prune"),
+        # LLM-heavy passes chain several model calls plus their op execution; a flat 300s
+        # was below what one pass costs, so they were cancelled mid-work every cycle. Each
+        # now self-limits internally and gets a ceiling that its internal budget fits under.
+        for fn, name, budget in (
+            (run_capture_compaction, "capture_compaction", _HEAVY_PASS_TIMEOUT),
+            (run_feed_triage, "feed_triage", _PASS_TIMEOUT),
+            (run_conflict_resolution, "conflict_resolution", _PASS_TIMEOUT),
+            (run_synthesis, "synthesis", _HEAVY_PASS_TIMEOUT),
+            (decay_confidence, "decay", _PASS_TIMEOUT),
+            (run_promotion, "promotion", _PASS_TIMEOUT),
+            (run_recall_feedback, "recall_feedback", _PASS_TIMEOUT),
+            (run_capture_refinement, "capture_refinement", _HEAVY_PASS_TIMEOUT),
+            (run_headlines, "headlines", _HEAVY_PASS_TIMEOUT),
+            (run_compilation, "compilation", _PASS_TIMEOUT),
+            (run_blueprint_compilation, "blueprint_compilation", _HEAVY_PASS_TIMEOUT),
+            (run_task_triage, "task_triage", _PASS_TIMEOUT),
+            (run_brief, "brief", _PASS_TIMEOUT),
+            (run_deep_synthesis_if_due, "deep_synthesis", _HEAVY_PASS_TIMEOUT),
+            (run_utilization_prune_if_due, "utilization_prune", _PASS_TIMEOUT),
         ):
             if not _is_leader.is_set():
                 break
             try:
-                await asyncio.wait_for(fn(client), timeout=300.0)
+                await asyncio.wait_for(fn(client), timeout=budget)
             except TimeoutError:
-                log.error("%s timed out after 300s", name)
+                log.error("%s timed out after %.0fs", name, budget)
             except asyncio.CancelledError:
                 raise
             except Exception as e:

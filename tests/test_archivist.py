@@ -922,3 +922,61 @@ class TestRunSynthesisStructured:
         client.create_task.assert_called_once()
         assert client.create_task.call_args.kwargs["title"] == "Audit deploy pipeline"
         assert client.create_task.call_args.kwargs["priority"] == "high"
+
+
+@pytest.mark.asyncio
+async def test_synthesis_defers_insight_when_the_budget_is_spent(monkeypatch):
+    """Cleanup ops are already applied by this point; the cursor must still advance.
+
+    When the pass overran, the cursor never advanced, so the next cycle re-ran cleanup
+    over entries it had already cleaned.
+    """
+    from artel.archivist import synthesis as syn
+
+    monkeypatch.setattr(syn, "is_configured", lambda: True)
+    monkeypatch.setattr(syn, "instance_id", lambda: "inst")
+    monkeypatch.setattr(syn, "_read_synthesis_cursor", lambda: "2026-01-01T00:00:00.000Z")
+    written: dict = {}
+    monkeypatch.setattr(syn, "_write_synthesis_cursor", lambda v: written.update(cursor=v))
+
+    class _Clock:
+        def __init__(self):
+            self.t = 0.0
+
+        def monotonic(self):
+            self.t += 1000.0
+            return self.t
+
+    monkeypatch.setattr(syn, "time", _Clock())
+
+    passes: list[str] = []
+
+    async def fake_ops(system, user, label):
+        passes.append(label)
+        return []
+
+    monkeypatch.setattr(syn, "_llm_ops_pass", fake_ops)
+
+    c = MagicMock()
+    c.get_directives = AsyncMock(return_value=[])
+    c.get_delta = AsyncMock(
+        return_value=[
+            {
+                "id": f"m{i}",
+                "agent_id": "a",
+                "type": "memory",
+                "content": f"c{i}",
+                "confidence": 1.0,
+                "tags": [],
+                "origin": None,
+            }
+            for i in range(3)
+        ]
+    )
+    c.list_tasks = AsyncMock(return_value=[])
+    c.log = AsyncMock()
+
+    await syn.run_synthesis(c)
+
+    assert passes == ["cleanup"], "insight must be deferred once the budget is spent"
+    assert written.get("cursor"), "the cursor must advance even when insight is deferred"
