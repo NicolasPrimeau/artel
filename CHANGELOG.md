@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.43.1] — 2026-08-06
+
+### Archivist — passes that were losing their work
+
+Found by auditing a live instance. Three bugs sharing one shape: work was performed, then discarded because it was never acknowledged.
+
+- **The capture queue was livelocked.** `capture_compaction` timed out on every cycle for three days; 481 captures were pending and *zero* had ever been digested. The queue serves the oldest 20 undigested rows and only acknowledged them after the whole batch, so the pass was cancelled before acknowledging anything, the same 20 rows were re-served next cycle, and nothing newer was reachable. Captures are now acknowledged one at a time as their memory lands.
+- **Pass budgets did not fit the passes.** Every pass shared a flat 300s ceiling while `run_synthesis` chains up to three model calls plus op execution — measured at ~32s median per call, observed at 66s. LLM-heavy passes now get 600s and self-limit internally; `run_synthesis` defers its insight pass and still advances its cursor when the budget is spent, so cleanup is never re-run over entries it already cleaned.
+- **Shortened entry ids were treated as hallucinations.** Op guards required exact UUID equality, but the model routinely answers with a prefix (`22fdedbb`). Ids now resolve by unique prefix against the entries in the pass, as the REST API already does. Ambiguous prefixes still resolve to nothing.
+- **A task naming a non-existent project was lost.** The archivist is barred from creating projects, so the op returned 403 and the task vanished. Unknown project names are now dropped and the task is created unscoped; a failure to fetch the project list leaves scoping untouched.
+
+
 ## [0.43.0] — 2026-08-04
 
 ### Blueprints — compile a procedure into a self-expanding task DAG
