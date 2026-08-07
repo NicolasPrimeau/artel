@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
@@ -11,6 +12,9 @@ from .llm import complete, is_configured
 log = logging.getLogger(__name__)
 
 _BATCH = 20
+# The scheduler kills a pass at 300s. Stop short of that so the pass ends on its own
+# terms with its progress recorded, instead of being cancelled mid-capture.
+_PASS_BUDGET_SECONDS = 240.0
 _RELATED_LIMIT = 6
 
 _PROVISIONAL_TAG = "capture-extracted"
@@ -118,7 +122,17 @@ async def run_capture_compaction(client: ArtelClient, *, extract: Extractor = _e
 
     digested: list[str] = []
     facts_written = updates_applied = 0
+    deadline = time.monotonic() + _PASS_BUDGET_SECONDS
     for cap in pending:
+        # Stop cleanly before the scheduler's timeout kills us mid-capture. Being
+        # cancelled is what previously lost the whole batch's progress.
+        if time.monotonic() >= deadline:
+            log.info(
+                "capture_compaction budget reached: %d/%d captures this pass",
+                len(digested),
+                len(pending),
+            )
+            break
         content = cap.get("content") or ""
         related = await client.search_memory(content[:400], limit=_RELATED_LIMIT)
         try:
@@ -132,13 +146,14 @@ async def run_capture_compaction(client: ArtelClient, *, extract: Extractor = _e
         written, updated = await _integrate(cap, result, {r["id"] for r in related}, client)
         facts_written += written
         updates_applied += updated
-        digested.append(cap["id"])
-
-    if digested:
+        # Acknowledge each capture as soon as its memory has landed. Batching this
+        # until the end meant a timeout discarded every capture's progress and the
+        # queue re-served the same oldest rows forever, never reaching newer ones.
         try:
-            await client.digest_captures(digested)
+            await client.digest_captures([cap["id"]])
+            digested.append(cap["id"])
         except Exception as e:
-            log.warning("could not mark captures digested: %s", e)
+            log.warning("could not mark capture %s digested: %s", cap["id"][:8], e)
     await client.log(
         action="capture_compaction",
         message=(

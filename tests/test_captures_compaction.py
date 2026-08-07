@@ -143,3 +143,87 @@ async def test_refine_skips_when_too_few_provisional(monkeypatch):
     refine = AsyncMock()
     await compaction.run_capture_refinement(c, refine=refine)
     refine.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_each_capture_is_digested_as_it_lands(monkeypatch):
+    """A pass killed mid-batch must keep the progress it made.
+
+    Digesting only after the whole loop meant a 300s scheduler timeout discarded
+    every capture's acknowledgement, so the queue re-served the same oldest rows
+    forever and newer captures were never reached.
+    """
+    monkeypatch.setattr(compaction, "is_configured", lambda: True)
+    caps = [
+        {"id": f"c{i}", "content": f"fact {i}", "session_id": "s1", "project": "p"}
+        for i in range(3)
+    ]
+    c = _client(caps)
+    extract = AsyncMock(return_value=ExtractResult(facts=["a durable fact"], updates=[]))
+
+    await compaction.run_capture_compaction(c, extract=extract)
+
+    assert c.digest_captures.await_count == 3
+    assert [call.args[0] for call in c.digest_captures.await_args_list] == [["c0"], ["c1"], ["c2"]]
+
+
+@pytest.mark.asyncio
+async def test_a_failed_capture_does_not_block_the_ones_behind_it(monkeypatch):
+    monkeypatch.setattr(compaction, "is_configured", lambda: True)
+    caps = [
+        {"id": "bad", "content": "x", "session_id": "s1", "project": "p"},
+        {"id": "good", "content": "y", "session_id": "s1", "project": "p"},
+    ]
+    c = _client(caps)
+    extract = AsyncMock(
+        side_effect=[RuntimeError("model blew up"), ExtractResult(facts=["kept"], updates=[])]
+    )
+
+    await compaction.run_capture_compaction(c, extract=extract)
+
+    digested = [call.args[0][0] for call in c.digest_captures.await_args_list]
+    assert digested == ["good"]
+
+
+@pytest.mark.asyncio
+async def test_pass_stops_at_its_budget_instead_of_being_cancelled(monkeypatch):
+    monkeypatch.setattr(compaction, "is_configured", lambda: True)
+    monkeypatch.setattr(compaction, "_PASS_BUDGET_SECONDS", 0.0)
+    c = _client([{"id": "c0", "content": "x", "session_id": "s1", "project": "p"}])
+    extract = AsyncMock(return_value=ExtractResult(facts=["f"], updates=[]))
+
+    await compaction.run_capture_compaction(c, extract=extract)
+
+    extract.assert_not_awaited()
+    c.digest_captures.assert_not_awaited()
+    c.log.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_budget_keeps_the_work_done_before_it_expired(monkeypatch):
+    monkeypatch.setattr(compaction, "is_configured", lambda: True)
+    caps = [
+        {"id": f"c{i}", "content": f"fact {i}", "session_id": "s1", "project": "p"}
+        for i in range(4)
+    ]
+    c = _client(caps)
+
+    # Replace the clock only inside compaction — patching the real time module
+    # perturbs pytest's own timing. Each read advances 100s against a 240s budget,
+    # so the pass gets through two captures and then stops.
+    class _Clock:
+        def __init__(self):
+            self.t = 0.0
+
+        def monotonic(self):
+            self.t += 100.0
+            return self.t
+
+    monkeypatch.setattr(compaction, "time", _Clock())
+    extract = AsyncMock(return_value=ExtractResult(facts=["f"], updates=[]))
+
+    await compaction.run_capture_compaction(c, extract=extract)
+
+    digested = [call.args[0][0] for call in c.digest_captures.await_args_list]
+    assert digested == ["c0", "c1"], "work done before the budget expired must stay digested"
+    c.log.assert_awaited()
