@@ -980,3 +980,111 @@ async def test_synthesis_defers_insight_when_the_budget_is_spent(monkeypatch):
 
     assert passes == ["cleanup"], "insight must be deferred once the budget is spent"
     assert written.get("cursor"), "the cursor must advance even when insight is deferred"
+
+
+def _entries(*ids):
+    return [
+        {
+            "id": i,
+            "agent_id": "a",
+            "type": "memory",
+            "content": f"c-{i[:4]}",
+            "confidence": 1.0,
+            "tags": [],
+            "project": None,
+        }
+        for i in ids
+    ]
+
+
+ID_A = "22fdedbb-1111-4111-8111-111111111111"
+ID_B = "fd61bd32-2222-4222-8222-222222222222"
+
+
+def test_shortened_ids_resolve_to_the_entry_they_name():
+    from artel.archivist.synthesis import _resolve_op_id
+
+    valid = {ID_A, ID_B}
+    assert _resolve_op_id("22fdedbb", valid) == ID_A
+    assert _resolve_op_id(ID_B, valid) == ID_B
+
+
+def test_unresolvable_and_ambiguous_ids_are_refused():
+    from artel.archivist.synthesis import _resolve_op_id
+
+    assert _resolve_op_id("deadbeef", {ID_A, ID_B}) is None
+    assert _resolve_op_id("22fd", {ID_A, ID_B}) is None, "too short to be trusted"
+    assert _resolve_op_id(None, {ID_A}) is None
+    ambiguous = {"abcd1234-aaaa-4aaa-8aaa-" + "1" * 12, "abcd1234-bbbb-4bbb-8bbb-" + "2" * 12}
+    assert _resolve_op_id("abcd1234", ambiguous) is None, "ambiguous prefix must not act"
+
+
+@pytest.mark.asyncio
+async def test_merge_op_accepts_shortened_ids(monkeypatch):
+    from artel.archivist import synthesis as syn
+
+    c = MagicMock()
+    c.write_memory = AsyncMock(return_value={"id": "new"})
+    c.delete_memory = AsyncMock()
+    c.get_memory = AsyncMock(return_value={"tags": []})
+    c.patch_memory = AsyncMock()
+
+    await syn._execute_operations(
+        [{"op": "merge", "entries": ["22fdedbb", "fd61bd32"], "merged_content": "merged"}],
+        c,
+        _entries(ID_A, ID_B),
+    )
+
+    c.write_memory.assert_awaited_once()
+    assert c.delete_memory.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_task_op_survives_an_invented_project(monkeypatch):
+    from artel.archivist import synthesis as syn
+
+    syn._projects_cache.clear()
+    c = MagicMock()
+    c.list_projects = AsyncMock(return_value=[{"name": "artel"}])
+    c.create_task = AsyncMock(return_value={"id": "t1"})
+
+    await syn._execute_operations(
+        [{"op": "task", "title": "do the thing", "project": "not-a-real-project"}], c, []
+    )
+
+    c.create_task.assert_awaited_once()
+    assert c.create_task.await_args.kwargs["project"] is None
+    assert c.create_task.await_args.kwargs["title"] == "do the thing"
+
+
+@pytest.mark.asyncio
+async def test_task_op_keeps_a_real_project(monkeypatch):
+    from artel.archivist import synthesis as syn
+
+    syn._projects_cache.clear()
+    c = MagicMock()
+    c.list_projects = AsyncMock(return_value=[{"name": "artel"}, {"name": "nimbus"}])
+    c.create_task = AsyncMock(return_value={"id": "t1"})
+
+    await syn._execute_operations(
+        [{"op": "task", "title": "scoped work", "project": "nimbus"}], c, []
+    )
+
+    assert c.create_task.await_args.kwargs["project"] == "nimbus"
+
+
+@pytest.mark.asyncio
+async def test_task_op_keeps_its_project_when_the_list_is_unavailable():
+    """A transient failure to list projects is not evidence a project is fake."""
+    from artel.archivist import synthesis as syn
+
+    syn._projects_cache.clear()
+    c = MagicMock()
+    c.list_projects = AsyncMock(side_effect=RuntimeError("server down"))
+    c.create_task = AsyncMock(return_value={"id": "t1"})
+
+    await syn._execute_operations(
+        [{"op": "task", "title": "scoped work", "project": "nimbus"}], c, []
+    )
+
+    assert c.create_task.await_args.kwargs["project"] == "nimbus"

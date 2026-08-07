@@ -189,6 +189,10 @@ class ArtelClient:
         r = await self._request("GET", "/tasks", params=params)
         return r.json()
 
+    async def list_projects(self) -> list[dict]:
+        r = await self._request("GET", "/projects")
+        return r.json()
+
     async def create_task(
         self,
         title: str,

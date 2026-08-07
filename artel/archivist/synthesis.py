@@ -271,6 +271,52 @@ def _parse_operations(text: str) -> list[dict]:
     return ops
 
 
+_MIN_ID_PREFIX = 8
+
+
+def _resolve_op_id(raw: object, valid_ids: set[str]) -> str | None:
+    """Resolve a model-supplied entry id against the ids actually in this pass.
+
+    The model frequently returns a shortened id ("22fdedbb") rather than the full
+    UUID it was given. Those are real references, not hallucinations, and were being
+    discarded — Artel's own API resolves id prefixes, so this pass should too. An
+    ambiguous prefix resolves to nothing: acting on the wrong entry is worse than
+    skipping the op.
+    """
+    if not isinstance(raw, str):
+        return None
+    candidate = raw.strip()
+    if candidate in valid_ids:
+        return candidate
+    if len(candidate) < _MIN_ID_PREFIX:
+        return None
+    matches = [vid for vid in valid_ids if vid.startswith(candidate)]
+    return matches[0] if len(matches) == 1 else None
+
+
+_PROJECTS_TTL_SECONDS = 600.0
+_projects_cache: dict[str, object] = {}
+
+
+async def _known_projects(client: ArtelClient) -> set[str] | None:
+    """Project names, cached briefly — a new project must become visible without a restart.
+
+    Returns None when the list cannot be fetched. Callers must then leave scoping alone:
+    a transient API failure is not evidence that a project does not exist.
+    """
+    fetched_at = _projects_cache.get("at")
+    if not isinstance(fetched_at, float) or time.monotonic() - fetched_at > _PROJECTS_TTL_SECONDS:
+        try:
+            names = {p["name"] for p in await client.list_projects() if p.get("name")}
+        except Exception as e:
+            log.warning("could not list projects: %s", e)
+            return None
+        _projects_cache["names"] = names
+        _projects_cache["at"] = time.monotonic()
+    value = _projects_cache.get("names")
+    return value if isinstance(value, set) else None
+
+
 async def _execute_operations(
     ops: list[dict],
     client: ArtelClient,
@@ -287,12 +333,17 @@ async def _execute_operations(
         op_name = op.get("op")
         try:
             if op_name == "merge":
-                ids = op.get("entries", [])
-                if len(ids) < 2:
-                    log.warning("merge op requires at least 2 entries, got %d", len(ids))
+                raw_ids = op.get("entries", [])
+                if len(raw_ids) < 2:
+                    log.warning("merge op requires at least 2 entries, got %d", len(raw_ids))
                     continue
-                if any(eid not in valid_ids for eid in ids):
-                    log.warning("merge op references hallucinated IDs: %s", ids)
+                resolved = [_resolve_op_id(r, valid_ids) for r in raw_ids]
+                if any(r is None for r in resolved):
+                    log.warning("merge op references unresolvable IDs: %s", raw_ids)
+                    continue
+                ids = list(dict.fromkeys(resolved))
+                if len(ids) < 2:
+                    log.warning("merge op resolved to fewer than 2 distinct entries: %s", raw_ids)
                     continue
                 merged_content = op.get("merged_content", "")
                 if not merged_content:
@@ -323,9 +374,9 @@ async def _execute_operations(
                 log.info("archivist merged entries %s", ids)
 
             elif op_name == "promote":
-                eid = op.get("entry")
-                if eid not in valid_ids:
-                    log.warning("promote op references hallucinated ID: %s", eid)
+                eid = _resolve_op_id(op.get("entry"), valid_ids)
+                if eid is None:
+                    log.warning("promote op references unresolvable ID: %s", op.get("entry"))
                     continue
                 if entries_by_id.get(eid, {}).get("type") in ("skill", "directive", "doc"):
                     log.warning("promote op skipped for non-memory entry: %s", eid)
@@ -334,9 +385,15 @@ async def _execute_operations(
                 log.info("archivist promoted entry %s", eid)
 
             elif op_name == "link":
-                src, dst, rel = op.get("src"), op.get("dst"), op.get("rel")
-                if src not in valid_ids or dst not in valid_ids or src == dst:
-                    log.warning("link op references hallucinated/self IDs: %s -> %s", src, dst)
+                rel = op.get("rel")
+                src = _resolve_op_id(op.get("src"), valid_ids)
+                dst = _resolve_op_id(op.get("dst"), valid_ids)
+                if src is None or dst is None or src == dst:
+                    log.warning(
+                        "link op references unresolvable/self IDs: %s -> %s",
+                        op.get("src"),
+                        op.get("dst"),
+                    )
                     continue
                 if rel not in (graph.CORROBORATES, graph.CONTRADICTS):
                     log.warning("link op has invalid rel: %s", rel)
@@ -347,9 +404,9 @@ async def _execute_operations(
                 log.info("archivist linked %s -%s-> %s", src[:8], rel, dst[:8])
 
             elif op_name == "prune":
-                eid = op.get("entry")
-                if eid not in valid_ids:
-                    log.warning("prune op references hallucinated ID: %s", eid)
+                eid = _resolve_op_id(op.get("entry"), valid_ids)
+                if eid is None:
+                    log.warning("prune op references unresolvable ID: %s", op.get("entry"))
                     continue
                 entry = entries_by_id[eid]
                 current_conf = entry.get("confidence", 1.0)
@@ -365,9 +422,9 @@ async def _execute_operations(
                     log.info("archivist flagged entry %s for decay", eid)
 
             elif op_name == "tag":
-                eid = op.get("entry")
-                if eid not in valid_ids:
-                    log.warning("tag op references hallucinated ID: %s", eid)
+                eid = _resolve_op_id(op.get("entry"), valid_ids)
+                if eid is None:
+                    log.warning("tag op references unresolvable ID: %s", op.get("entry"))
                     continue
                 add_tags = op.get("add_tags", [])
                 current_entry = await client.get_memory(eid)
@@ -377,18 +434,20 @@ async def _execute_operations(
                 log.info("archivist tagged entry %s with %s", eid, add_tags)
 
             elif op_name == "adjust_confidence":
-                eid = op.get("entry")
-                if eid not in valid_ids:
-                    log.warning("adjust_confidence op references hallucinated ID: %s", eid)
+                eid = _resolve_op_id(op.get("entry"), valid_ids)
+                if eid is None:
+                    log.warning(
+                        "adjust_confidence op references unresolvable ID: %s", op.get("entry")
+                    )
                     continue
                 confidence = max(0.0, min(1.0, float(op.get("confidence", 1.0))))
                 await client.patch_memory(eid, confidence=confidence)
                 log.info("archivist adjusted confidence of %s to %s", eid, confidence)
 
             elif op_name == "split":
-                eid = op.get("entry")
-                if eid not in valid_ids:
-                    log.warning("split op references hallucinated ID: %s", eid)
+                eid = _resolve_op_id(op.get("entry"), valid_ids)
+                if eid is None:
+                    log.warning("split op references unresolvable ID: %s", op.get("entry"))
                     continue
                 parts = op.get("parts", [])
                 if len(parts) < 2:
@@ -416,11 +475,13 @@ async def _execute_operations(
                 log.info("archivist split entry %s into %d parts", eid, len(parts))
 
             elif op_name == "extract":
-                from_id = op.get("from")
-                into_id = op.get("into")
-                if from_id not in valid_ids or into_id not in valid_ids:
+                from_id = _resolve_op_id(op.get("from"), valid_ids)
+                into_id = _resolve_op_id(op.get("into"), valid_ids)
+                if from_id is None or into_id is None:
                     log.warning(
-                        "extract op references hallucinated IDs: from=%s into=%s", from_id, into_id
+                        "extract op references unresolvable IDs: from=%s into=%s",
+                        op.get("from"),
+                        op.get("into"),
                     )
                     continue
                 if from_id == into_id:
@@ -455,11 +516,21 @@ async def _execute_operations(
                 priority = op.get("priority", "normal")
                 if priority not in ("low", "normal", "high"):
                     priority = "normal"
+                # The archivist is barred from creating projects, so a project name the
+                # model invented turns the whole op into a 403 and the task is lost.
+                # Keep the task, drop the bad scope.
+                project = op.get("project")
+                known = await _known_projects(client) if project else None
+                if project and known is not None and project not in known:
+                    log.warning(
+                        "task op named unknown project %r; creating it unscoped instead", project
+                    )
+                    project = None
                 await client.create_task(
                     title=title,
                     description=op.get("description"),
                     priority=priority,
-                    project=op.get("project"),
+                    project=project,
                 )
                 open_norm.add(_normalize_task_title(title))
                 log.info("archivist created task: %s", title[:60])
@@ -577,10 +648,13 @@ async def on_task_completed(task_id: str, agent_id: str, client: ArtelClient) ->
     for update in result.get("update_ids", []):
         if not isinstance(update, dict):
             continue
-        uid = update.get("id", "")
         new_content = update.get("content", "")
-        if uid not in valid_ids or not new_content.strip():
-            log.warning("task completion update references unknown or empty id: %s", uid)
+        uid = _resolve_op_id(update.get("id", ""), valid_ids)
+        if uid is None or not new_content.strip():
+            log.warning(
+                "task completion update references unresolvable or empty id: %s",
+                update.get("id"),
+            )
             continue
         try:
             await client.patch_memory(uid, content=new_content)
