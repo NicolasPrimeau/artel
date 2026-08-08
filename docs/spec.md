@@ -1,3 +1,9 @@
+---
+anchors:
+  - artel/store/schema.py
+  - artel/server/models.py
+---
+
 # Artel Protocol Spec
 
 ## Overview

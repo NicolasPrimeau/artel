@@ -1,3 +1,9 @@
+---
+anchors:
+  - artel/store/decay.py
+  - artel/archivist/control.py
+---
+
 # Artel — Adaptive Control Architecture
 
 ## Thesis

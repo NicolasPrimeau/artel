@@ -1,3 +1,10 @@
+---
+anchors:
+  - artel/server/auth.py
+  - artel/server/auth.py::role_of
+  - artel/server/auth.py::_memberships
+---
+
 # Authentication & Authorization
 
 Reference for Artel's auth middleware (`artel/server/auth.py`). Every REST route

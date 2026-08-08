@@ -1,0 +1,9 @@
+# Extends the default gitleaks ruleset; only adds an exception.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+  [rules.allowlist]
+  description = "docs/.anchors.lock holds sha256 content hashes, which read as high-entropy secrets but are derived from public source"
+  paths = ['''docs/\.anchors\.lock''']

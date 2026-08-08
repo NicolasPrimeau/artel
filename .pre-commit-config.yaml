@@ -10,3 +10,16 @@ repos:
     rev: v8.30.0
     hooks:
       - id: gitleaks
+
+  # Surfaces prose pages whose subject code changed in this commit. Never blocks:
+  # you are told, and you decide whether the page still reads true.
+  - repo: local
+    hooks:
+      - id: docs-freshness
+        name: docs describe current code
+        entry: bash -c 'python3 scripts/check_docs.py || true'
+        language: system
+        pass_filenames: false
+        verbose: true
+        always_run: true
+        stages: [pre-commit]

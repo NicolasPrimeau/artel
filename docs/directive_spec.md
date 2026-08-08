@@ -1,3 +1,8 @@
+---
+anchors:
+  - artel/server/models.py
+---
+
 # Directive Entry Type — Design Spec
 
 ## Overview

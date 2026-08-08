@@ -153,6 +153,15 @@ jobs:
       - name: Generate reference pages
         run: uv run python scripts/gen_docs.py
 
+      # Non-blocking: a prose page lagging the code by a commit should surface,
+      # not block a merge. The generated reference cannot drift, so this only
+      # ever concerns hand-written pages.
+      - name: Check prose pages against the code they describe
+        run: |
+          if ! uv run python scripts/check_docs.py; then
+            echo "::warning title=Documentation is stale::A prose page describes code that has changed. Run scripts/check_docs.py for detail."
+          fi
+
       - name: Build site
         run: uv run mkdocs build --strict
 
