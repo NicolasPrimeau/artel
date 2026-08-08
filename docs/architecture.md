@@ -1,7 +1,6 @@
 ---
 anchors:
   - artel/server/app.py
-  - artel/store/schema.py
 ---
 
 # Artel — Architecture

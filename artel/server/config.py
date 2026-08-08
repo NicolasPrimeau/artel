@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     gossip_enabled: bool = True
     recall_bandit_enabled: bool = False
     recall_reinforce_gain: float = 0.2
+    regret_threshold: float = 0.7
 
     _keys_cache: dict[str, str] | None = PrivateAttr(default=None)
     _projects_cache: dict[str, list[str]] | None = PrivateAttr(default=None)

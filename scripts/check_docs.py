@@ -67,12 +67,23 @@ def _front_matter(text: str) -> dict:
     return meta
 
 
+CONTENT_ANCHOR = "*"
+
+
 def _anchor_sha(anchor: str) -> str | None:
     """Current sha of an anchor, or None if the file or symbol no longer exists."""
     path, _, symbol = anchor.partition("::")
     source_file = ROOT / path
     if not source_file.exists():
         return None
+    if symbol == CONTENT_ANCHOR:
+        # Whole-file hash. A module anchor hashes the file's SHAPE — imports and
+        # top-level symbol names — so it is blind to a file whose content is data:
+        # adding a table to a SQL schema string moves no symbol. Use this form for
+        # those, and the module form when you mean the interface.
+        import hashlib
+
+        return hashlib.sha256(source_file.read_bytes()).hexdigest()
     units = compile_source(path, source_file.read_text())
     for unit in units:
         if unit.symbol == symbol:

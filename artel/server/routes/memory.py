@@ -124,6 +124,28 @@ def _fetch_vectors(db, ids: list[str]) -> dict[str, list[float]]:
     return result
 
 
+def _record_regret(db, rows, hit_ids: list[str], agent_id: str) -> None:
+    """Log a read of an already-low-confidence entry.
+
+    This is the decay controller's sensor. It counts EVENTS, not a standing
+    population: an entry pinned at the floor is measured once per read, not once
+    per cycle forever, so the signal can actually return to zero when decay stops
+    costing anyone anything.
+    """
+    for hid in hit_ids:
+        row = rows.get(hid) if isinstance(rows, dict) else None
+        if row is None:
+            continue
+        confidence = row["confidence"] if row["confidence"] is not None else 1.0
+        if confidence >= settings.regret_threshold:
+            continue
+        db.execute(
+            """INSERT INTO decay_regret_events (id, memory_id, agent_id, project, confidence)
+               VALUES (?,?,?,?,?)""",
+            (new_id(), hid, agent_id, row["project"], confidence),
+        )
+
+
 def _detect_shadowing(db, chosen: list[str], ordered: list[str], rows: dict) -> dict[str, str]:
     """Map each returned project-scoped id to the global id it is overriding.
 
@@ -422,6 +444,8 @@ async def search_memory(
         hit_ids = [r["id"] for r in out]
         hit_placeholders = ",".join("?" * len(hit_ids))
         with db:
+            # Before reinforcement lifts them back above the threshold.
+            _record_regret(db, rows, hit_ids, agent_id)
             db.execute(
                 f"UPDATE memory SET read_count = read_count + 1, "
                 f"last_read_at = strftime('%Y-%m-%dT%H:%M:%fZ','now'), "
@@ -805,6 +829,10 @@ async def get_memory(
         if allowed is not None and row["project"] not in allowed:
             raise HTTPException(status_code=403, detail="not a member of this project")
     with db:
+        # The archivist reads constantly as part of its own passes; counting those
+        # as regret would make the controller chase its own tail.
+        if agent_id != settings.archivist_agent_id:
+            _record_regret(db, {entry_id: row}, [entry_id], agent_id)
         db.execute(
             "UPDATE memory SET read_count = read_count + 1, last_read_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?",
             (entry_id,),

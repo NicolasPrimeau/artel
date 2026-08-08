@@ -51,6 +51,7 @@ SETTING_NOTES: dict[str, str] = {
     "gossip_enabled": "Exchange peer lists with meshed instances.",
     "recall_bandit_enabled": "Enable the contextual bandit for recall ranking. Off means observe-only.",
     "recall_reinforce_gain": "How strongly a retrieval reinforces an entry's confidence.",
+    "regret_threshold": "Confidence below which reading an entry is recorded as a decay-regret event — the decay controller's sensor.",
     "artel_url": "Base URL of the Artel server to connect to.",
     "mcp_agent_id": "Agent identity for the MCP adapter.",
     "mcp_agent_key": "API key for the MCP adapter.",

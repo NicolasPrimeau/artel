@@ -32,7 +32,12 @@ uv run python scripts/check_docs.py --update  # re-bless after correcting a page
 
 A page goes stale on exactly the signal a compiled memory does: the code it is anchored to moved. This is a hash comparison, not a judgement — there is no model involved and no way for it to be confidently wrong.
 
-Module anchors hash the file's *shape* — its imports and top-level symbols — not its bytes. Editing a function body does not restale a page anchored to the module, only one anchored to that symbol. Choose the granularity that matches what the page actually claims.
+Module anchors hash the file's *shape* — its imports and top-level symbols — not its bytes. Editing a function body does not restale a page anchored to the module, only one anchored to that symbol. A third form, `path::*`, hashes the whole file, for files whose content *is* data: adding a table to a SQL schema string moves no symbol, so a module anchor is blind to it.
+
+**Choose the anchor that matches what the page actually claims.** A protocol spec describing the API should anchor to the models and routes, not to the storage schema — otherwise every internal table addition raises a false alarm, and an anchor that cries wolf gets ignored. Equally, a module anchor on a file that is pure data will never fire at all, which is worse than no anchor because it looks like coverage.
+
+!!! warning "Blessing an already-stale page freezes the error"
+    Anchors only detect drift *after* the point you blessed them. If a page was already wrong when you added its anchor, the lockfile records that as correct and nothing will ever flag it. Read the page against the code the first time you anchor it — this exact trap was hit while setting this up, and `spec.md` had been documenting entry types and scopes that no longer existed.
 
 ## Where it runs
 

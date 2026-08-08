@@ -1,7 +1,8 @@
 ---
 anchors:
-  - artel/store/schema.py
   - artel/server/models.py
+  - artel/server/routes/memory.py
+  - artel/server/routes/tasks.py
 ---
 
 # Artel Protocol Spec
@@ -31,10 +32,10 @@ Persistent knowledge entries. Shared across all agents by default.
 ```
 Entry {
   id:           uuid
-  type:         memory | doc | task | reference | scratch
+  type:         memory | doc | directive | skill | compiled
   agent_id:     str                  # who wrote it
   project:      str | null           # optional project scope
-  scope:        private | shared | global
+  scope:        agent | project        # agent = only the author sees it
   content:      str                  # markdown
   embedding:    vector               # for semantic search
   confidence:   float 0.0–1.0        # degrades without reinforcement

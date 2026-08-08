@@ -112,6 +112,12 @@ def _migrate(conn: sqlite3.Connection) -> None:
     if "completion_payload" not in task_cols:
         conn.execute("ALTER TABLE tasks ADD COLUMN completion_payload TEXT")
         conn.commit()
+    metric_cols = {r[1] for r in conn.execute("PRAGMA table_info(archivist_metrics)").fetchall()}
+    if metric_cols and "prune_regret_count" not in metric_cols:
+        conn.execute(
+            "ALTER TABLE archivist_metrics ADD COLUMN prune_regret_count INTEGER NOT NULL DEFAULT 0"
+        )
+        conn.commit()
     blueprint_cols = {r[1] for r in conn.execute("PRAGMA table_info(blueprints)").fetchall()}
     if blueprint_cols and "source_entry_id" not in blueprint_cols:
         conn.execute("ALTER TABLE blueprints ADD COLUMN source_entry_id TEXT")

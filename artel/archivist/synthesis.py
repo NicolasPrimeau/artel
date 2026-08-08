@@ -147,9 +147,30 @@ def _utc_ago(hours: int) -> str:
 # Under the scheduler's ceiling for this pass. run_synthesis chains up to three model
 # calls plus op execution; when it overran, the cursor never advanced and the same
 # entries were re-processed next cycle — cleanup ops already applied, then applied again.
+# A prune sets confidence to the floor; later reads reinforce it back up. Anything
+# flagged and still under this is a prune the fleet disagreed with.
+_PRUNE_REGRET_CEILING = 0.7
+
 _SYNTHESIS_BUDGET_SECONDS = 480.0
 
 _SYNTHESIS_CURSOR_KEY = "archivist_last_synthesis"
+
+
+def _recent_prune_regret() -> int:
+    """How many pruned entries the fleet has since gone looking for."""
+    try:
+        return (
+            get_db()
+            .execute(
+                """SELECT COUNT(*) FROM memory WHERE deleted_at IS NULL
+                   AND read_count > 0 AND confidence < ?
+                   AND EXISTS (SELECT 1 FROM json_each(tags) WHERE value = 'archivist-flagged')""",
+                (_PRUNE_REGRET_CEILING,),
+            )
+            .fetchone()[0]
+        )
+    except Exception:
+        return 0
 
 
 def _read_synthesis_cursor() -> str | None:
@@ -832,6 +853,18 @@ async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
         preamble = conflict_warning + "\n\n" + preamble if preamble else conflict_warning
 
     cleanup_system = "You are the Artel archivist running a cleanup pass. Your only job is to deduplicate and consolidate memory. Merge redundant entries, prune obsolete ones, split overloaded entries, extract misplaced segments. Do not promote, tag, or create tasks."
+    # Feedback on the prune policy, delivered to the pass that actually decides
+    # prunes. decay_rate cannot move this population — a prune drops confidence to
+    # the floor in one step — so pointing the controller at it was pointless.
+    prune_regret = _recent_prune_regret()
+    if prune_regret:
+        cleanup_system += (
+            f" CALIBRATION: {prune_regret} entr{'y' if prune_regret == 1 else 'ies'} you"
+            " previously pruned have since been read by other agents, meaning the fleet"
+            " still wanted knowledge you judged worthless. Prune more conservatively:"
+            " when an entry is merely old or narrow rather than clearly superseded,"
+            " leave it alone."
+        )
     if preamble:
         cleanup_system = preamble + "\n\n" + cleanup_system
 
@@ -993,6 +1026,18 @@ async def run_deep_synthesis(client: ArtelClient) -> None:
     preamble = _build_directive_preamble(directives)
 
     cleanup_system = "You are the Artel archivist running a cleanup pass. Your only job is to deduplicate and consolidate memory. Merge redundant entries, prune obsolete ones, split overloaded entries, extract misplaced segments. Do not promote, tag, or create tasks."
+    # Feedback on the prune policy, delivered to the pass that actually decides
+    # prunes. decay_rate cannot move this population — a prune drops confidence to
+    # the floor in one step — so pointing the controller at it was pointless.
+    prune_regret = _recent_prune_regret()
+    if prune_regret:
+        cleanup_system += (
+            f" CALIBRATION: {prune_regret} entr{'y' if prune_regret == 1 else 'ies'} you"
+            " previously pruned have since been read by other agents, meaning the fleet"
+            " still wanted knowledge you judged worthless. Prune more conservatively:"
+            " when an entry is merely old or narrow rather than clearly superseded,"
+            " leave it alone."
+        )
     if preamble:
         cleanup_system = preamble + "\n\n" + cleanup_system
 
@@ -1803,9 +1848,27 @@ async def capture_metrics(project: str | None = None) -> None:
     ).fetchone()[0]
     utilization_rate = utilized / total if total > 0 else 0.0
 
+    # FLOW: regret events since the previous capture. This is what the decay
+    # controller acts on. It can reach zero — no one read a decayed entry this
+    # cycle — which the previous sensor structurally could not.
+    prev = db.execute(
+        "SELECT MAX(captured_at) FROM archivist_metrics WHERE project IS ?", (project,)
+    ).fetchone()[0]
+    since = prev or cycle_cutoff
+    regret_params: tuple = (since, project) if project else (since,)
     decay_regret = db.execute(
+        "SELECT COUNT(*) FROM decay_regret_events WHERE created_at > ?"
+        + (" AND project = ?" if project else ""),
+        regret_params,
+    ).fetchone()[0]
+
+    # STOCK: entries the archivist pruned that someone then wanted. Real signal,
+    # but it is feedback on the LLM's prune policy — decay_rate cannot move it,
+    # since a prune sets confidence to the floor in one step. Recorded and fed
+    # back into the synthesis prompt rather than into the controller.
+    prune_regret = db.execute(
         f"""SELECT COUNT(*) FROM memory WHERE {active}
-            AND read_count > 0 AND confidence < 0.7
+            AND read_count > 0 AND confidence < {_PRUNE_REGRET_CEILING}
             AND EXISTS (SELECT 1 FROM json_each(tags) WHERE value = 'archivist-flagged')""",
         proj_params,
     ).fetchone()[0]
@@ -1875,8 +1938,8 @@ async def capture_metrics(project: str | None = None) -> None:
             """INSERT INTO archivist_metrics
                (id, project, total_entries, utilization_rate, decay_regret_count,
                 synthesis_count, synthesis_uptake_rate, contradiction_count,
-                net_growth, merge_count, decay_count, params)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+                net_growth, merge_count, decay_count, params, prune_regret_count)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 mid,
                 project,
@@ -1890,6 +1953,7 @@ async def capture_metrics(project: str | None = None) -> None:
                 merge_count,
                 decay_count,
                 params_json,
+                prune_regret,
             ),
         )
 

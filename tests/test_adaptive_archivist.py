@@ -648,7 +648,13 @@ class TestCaptureMetrics:
         row = raw_db.execute("SELECT utilization_rate FROM archivist_metrics").fetchone()
         assert row[0] == pytest.approx(1.0, abs=1e-6)
 
-    async def test_decay_regret_count_identifies_flagged_hot_entries(self, raw_db):
+    async def test_prune_regret_counts_flagged_entries_someone_still_reads(self, raw_db):
+        """This population is feedback on the prune policy, not on decay_rate.
+
+        A prune drops confidence to the floor in one step, so no decay rate can
+        move these — which is why they are recorded separately from the flow the
+        controller acts on.
+        """
         _insert_memory(raw_db, read_count=5, confidence=0.4, tags=["archivist-flagged"])
         _insert_memory(raw_db, read_count=0, confidence=0.4, tags=["archivist-flagged"])
         _insert_memory(raw_db, read_count=3, confidence=0.9, tags=["archivist-flagged"])
@@ -662,8 +668,11 @@ class TestCaptureMetrics:
             s.control_decay_enabled = False
             await capture_metrics()
 
-        row = raw_db.execute("SELECT decay_regret_count FROM archivist_metrics").fetchone()
-        assert row[0] == 1
+        row = raw_db.execute(
+            "SELECT decay_regret_count, prune_regret_count FROM archivist_metrics"
+        ).fetchone()
+        assert row[1] == 1, "flagged, low-confidence and still read"
+        assert row[0] == 0, "no read events this cycle, so the controller sees nothing"
 
     async def test_contradiction_count_counts_conflict_tagged_entries(self, raw_db):
         _insert_memory(raw_db, tags=["archivist-conflict"])

@@ -564,7 +564,12 @@ async def test_comprehensive_metrics_snapshot_reflects_known_state(arch):
 
     assert snap["total_entries"] == 8
     assert snap["contradiction_count"] == 2
-    assert snap["decay_regret_count"] == 2
+    # Two decayed entries, read five times each. The controller's sensor counts the
+    # ten READS, not the two entries: an entry wanted five times while decayed cost
+    # the fleet five times. The three reads of full-confidence entries cost nothing
+    # and are not counted.
+    assert snap["decay_regret_count"] == 10
+    assert snap["prune_regret_count"] == 2, "the standing flagged population, tracked separately"
     assert snap["utilization_rate"] == pytest.approx(5 / 8, abs=1e-6)
 
 

@@ -94,6 +94,21 @@ CREATE TABLE IF NOT EXISTS task_deps (
     PRIMARY KEY (task_id, depends_on)
 );
 
+-- A regret EVENT: someone read an entry whose confidence had already been driven
+-- low. This is the flow the decay controller needs. The previous sensor counted a
+-- standing population pinned at the floor, which can only ratchet upward and can
+-- never reach a setpoint of zero.
+CREATE TABLE IF NOT EXISTS decay_regret_events (
+    id           TEXT PRIMARY KEY,
+    memory_id    TEXT NOT NULL,
+    agent_id     TEXT NOT NULL,
+    project      TEXT,
+    confidence   REAL NOT NULL,
+    created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_regret_events_time ON decay_regret_events(created_at);
+
 CREATE TABLE IF NOT EXISTS agent_performance (
     agent_id      TEXT NOT NULL,
     tag           TEXT NOT NULL,
