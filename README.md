@@ -4,6 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.md)
 [![Glama](https://glama.ai/mcp/servers/NicolasPrimeau/artel/badges/score.svg)](https://glama.ai/mcp/servers/NicolasPrimeau/artel)
 [![smithery badge](https://smithery.ai/badge/nicolas-primeau/artel)](https://smithery.ai/servers/nicolas-primeau/artel)
+[![Docs](https://img.shields.io/badge/docs-artel-teal)](https://nicolasprimeau.github.io/artel/)
 
 Self-hosted coordination layer for AI agent fleets. A shared memory your agents read from and write to — with semantic search, tasks, async messaging, and session handoffs. The Claude Code plugin makes memory **ambient**: it pushes the right knowledge into a session at the right moment, and captures what happens back out — no agent has to remember to. Instances mesh together as CRDTs, compiled memory stays anchored to your code, and an autonomous archivist keeps the whole store clean and coherent. Any agent that speaks HTTP or MCP can join.
 
@@ -378,119 +379,28 @@ Artel exposes `artel://inbox/<agent-id>` as an MCP resource. Subscribe to it and
 
 ## REST API
 
-All requests require `X-Agent-ID` and `X-API-Key` headers (except `/agents/register` and `/onboard`). Full schema: [`openapi.json`](openapi.json).
+All requests require `X-Agent-ID` and `X-API-Key` headers (except `/agents/self-register` and `/onboard`).
 
-```
-Memory
-  POST   /memory                     write
-  GET    /memory                     list with filters
-  GET    /memory/search?q=           semantic search
-  GET    /memory/delta?since=        changes since timestamp
-  GET    /memory/:id                 get entry
-  PATCH  /memory/:id                 update
-  DELETE /memory/:id                 soft delete
-  DELETE /memory                     bulk soft delete (body: {"ids":[...]})
-  GET    /memory/feed.atom           Atom 1.0 feed
-  GET    /memory/feed.json           JSON Feed 1.1 (mesh substrate)
+**[Full REST reference →](https://nicolasprimeau.github.io/artel/reference/rest/)** — every endpoint, generated from the OpenAPI schema.
+**[MCP tool reference →](https://nicolasprimeau.github.io/artel/reference/mcp-tools/)** — all 47 tools an agent can call.
 
-Captures  (raw session-slice ingest queue → archivist compaction; never meshed or searched)
-  POST   /captures                   append a session slice (agent)
-  GET    /captures                   list pending for compaction (archivist only)
-  POST   /captures/digest            mark captures digested (archivist only)
-
-Tasks
-  POST   /tasks                      create
-  GET    /tasks                      list
-  GET    /tasks/:id                  get task
-  PATCH  /tasks/:id                  update
-  POST   /tasks/:id/claim            claim
-  POST   /tasks/:id/unclaim          unclaim
-  POST   /tasks/:id/complete         complete
-  POST   /tasks/:id/fail             fail
-  GET    /tasks/:id/comments         list comments
-  POST   /tasks/:id/comments         add comment
-
-Messages
-  POST   /messages                   send
-  GET    /messages                   list all sent/received (?read=true|false&limit=)
-  GET    /messages/inbox             unread inbox
-  POST   /messages/inbox/read-all    mark all read
-  GET    /messages/:id               get message by ID
-  POST   /messages/:id/read          mark one read
-
-Projects
-  POST   /projects                   create and join
-  GET    /projects                   list
-  GET    /projects/mine              your projects
-  POST   /projects/:id/join          join
-  DELETE /projects/:id/leave         leave
-
-Feeds
-  GET    /feeds                      list subscriptions
-  POST   /feeds                      subscribe
-  PATCH  /feeds/:id                  update name/tags/interval
-  DELETE /feeds/:id                  unsubscribe
-
-Mesh
-  GET    /mesh/peers                 list linked peers
-  POST   /mesh/peers                 link a peer
-  DELETE /mesh/peers/:id             unlink
-  POST   /mesh/peers/:id/sync        sync now
-  GET    /mesh/discovered            LAN peers via mDNS
-  POST   /mesh/link-discovered       link a discovered peer
-  POST   /mesh/handshake             mutual handshake (unauthenticated, RFC 1918 only)
-  GET    /mesh/tokens                list mesh tokens
-  POST   /mesh/tokens                create token
-  PATCH  /mesh/tokens/:id            update token
-  DELETE /mesh/tokens/:id            revoke token
-
-Agents
-  POST   /agents/register            register
-  PATCH  /agents/me                  rename self
-  PATCH  /agents/:id                 rename any (owner)
-  DELETE /agents/:id                 delete (owner)
-  GET    /agents                     list with presence (api_key shown to owner only)
-  GET    /onboard                    onboarding script
-
-Logs
-  POST   /logs                       write log entry (agent+)
-  GET    /logs                       list entries (owner)
-
-OAuth (for MCP clients that require it)
-  GET    /.well-known/oauth-authorization-server
-  POST   /oauth/register             dynamic client registration
-  GET    /oauth/authorize            authorization code + PKCE
-  POST   /oauth/token                token endpoint
-
-Other
-  POST   /events                    emit event
-  GET    /events/stream             SSE stream
-  POST   /sessions/handoff          save handoff
-  GET    /sessions/handoff          load handoff + memory delta (your own)
-```
+A running server also serves interactive docs at `/docs` and the raw schema at [`openapi.json`](openapi.json).
 
 ---
 
 ## Configuration
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `AGENT_KEYS` | | `agent-id:api-key` pairs, comma-separated. Optional `:proj1;proj2` suffix scopes an agent to projects. |
-| `REGISTRATION_KEY` | | Required to register agents (leave blank to disable open registration) |
-| `DB_PATH` | `artel.db` | SQLite path |
-| `PUBLIC_URL` | | Base URL for onboard script and OAuth metadata |
-| `UI_PASSWORD` | | Web UI password |
-| `UI_AGENT_ID` | `artel-ui` | Dashboard agent, auto-created on startup |
-| `UI_DEFAULT_THEME` | `gruvbox` | Default UI theme for new sessions. Options: `gruvbox`, `tokyo-night`, `nord`, `dracula`, `kanagawa`, `rose-pine`, `everforest`, `monokai`, `cobalt`, `solarized`, `hacker`, `mellow`, `volcano`, `ayu`, `flexoki`, `oxocarbon` |
-| `ARCHIVIST_PROVIDER` | `anthropic` | LLM provider: `anthropic` or `openai` |
-| `ARCHIVIST_MODEL` | | Defaults to `claude-sonnet-4-6` / `gpt-4o` |
-| `ARCHIVIST_API_KEY` | | Falls back to `ANTHROPIC_API_KEY` for Anthropic |
-| `ARCHIVIST_BASE_URL` | | OpenAI-compatible base URL (Ollama, Mistral, etc.) |
-| `SYNTHESIS_INTERVAL` | `3600` | Seconds between archivist synthesis passes |
-| `DECAY_RATE` | `0.9` | Confidence multiplier per decay cycle |
-| `DECAY_WINDOW_DAYS` | `7` | Days before decay applies to unmodified entries |
+Configured entirely through environment variables (or a `.env` file). The essentials:
 
-Plugin-side capture uses `ARTEL_SPOOL` (default `~/.artel/spool`) for the local write-ahead spool.
+| Variable | Description |
+|----------|-------------|
+| `AGENT_KEYS` | `agent-id:api-key` pairs, comma-separated. Optional `:proj1;proj2` suffix scopes an agent to projects. |
+| `UI_PASSWORD` | Password for the dashboard. |
+| `ANTHROPIC_API_KEY` | Enables the archivist. Without it, Artel runs in passive mode. |
+| `REGISTRATION_KEY` | Required by `/agents/self-register`. Unset disables open registration. |
+| `PUBLIC_URL` | Externally reachable base URL, used in OAuth metadata and onboarding. |
+
+**[Full configuration reference →](https://nicolasprimeau.github.io/artel/reference/configuration/)** — all 56 settings across the server, MCP adapter, and archivist, generated from the settings classes.
 
 ---
 

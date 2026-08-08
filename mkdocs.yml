@@ -1,0 +1,71 @@
+site_name: Artel
+site_description: Self-hosted coordination layer for AI agent fleets
+site_url: https://nicolasprimeau.github.io/artel/
+repo_url: https://github.com/NicolasPrimeau/artel
+repo_name: NicolasPrimeau/artel
+edit_uri: edit/master/docs/
+
+theme:
+  name: material
+  logo: logo-400.svg
+  favicon: logo-400.png
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.highlight
+    - toc.follow
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+
+# Marketing drafts live under docs/ but are not part of the manual.
+exclude_docs: |
+  reddit-posts.md
+  blog/
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Concepts:
+      - Architecture: architecture.md
+      - Specification: spec.md
+      - Authentication: auth.md
+      - Directives: directive_spec.md
+      - Adaptive control: adaptive-control.md
+  - Reference:
+      - MCP tools: reference/mcp-tools.md
+      - REST API: reference/rest.md
+      - Configuration: reference/configuration.md
+  - Project:
+      - Roadmap: plan.md

@@ -127,6 +127,42 @@ jobs:
           done
           exit 1
 
+  docs:
+    needs: test
+    if: github.ref == 'refs/heads/master' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync
+
+      # Regenerated on every publish rather than committed, so the reference can
+      # never be stale relative to the code it documents.
+      - name: Generate reference pages
+        run: uv run python scripts/gen_docs.py
+
+      - name: Build site
+        run: uv run mkdocs build --strict
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4
+
   release:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest

@@ -34,3 +34,5 @@ scripts/sync_env_secrets.py
 !logo.png
 !docs/logo-400.png
 !docs/dash_*.png
+site/
+docs/reference/
