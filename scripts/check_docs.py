@@ -15,11 +15,14 @@ goes stale on exactly the same signal a compiled memory does: the code it is
 anchored to moved. Editing a function body does not restale a page anchored to
 the module, because the module anchor hashes the file's shape, not its bytes.
 
-    check_docs.py            report status, exit 1 if anything is stale
-    check_docs.py --json     machine-readable report
-    check_docs.py --update   re-bless every anchor at its current sha
+    check_docs.py             report status, exit 1 if anything is stale
+    check_docs.py --json      machine-readable report
+    check_docs.py --update    re-bless every anchor at its current sha
+    check_docs.py --open-task file an Artel task for the stale pages
 
-No LLM, no server, no network. Staleness is a hash comparison, not a judgement.
+The check itself needs no LLM, no server and no network. Staleness is a hash
+comparison, not a judgement. --open-task is the only part that talks to Artel,
+and it only ever files work for a human or agent to do — it never edits a page.
 """
 
 import argparse
@@ -119,10 +122,81 @@ def update() -> int:
     return 0
 
 
+TASK_TAG = "docs-freshness"
+
+
+def _artel() -> tuple[str, dict] | None:
+    import os
+
+    url = os.environ.get("ARTEL_URL")
+    agent = os.environ.get("ARTEL_AGENT_ID")
+    key = os.environ.get("ARTEL_API_KEY") or os.environ.get("ARTEL_KEY")
+    if not (url and agent and key):
+        print(
+            "set ARTEL_URL, ARTEL_AGENT_ID and ARTEL_API_KEY to file a task",
+            file=sys.stderr,
+        )
+        return None
+    return url.rstrip("/"), {"x-agent-id": agent, "x-api-key": key}
+
+
+def open_task(stale: list[dict]) -> int:
+    """File one task for the current stale set, or comment on the open one.
+
+    Deliberately idempotent: a check that runs on every commit must not breed a
+    task per commit for the same drift.
+    """
+    import httpx
+
+    creds = _artel()
+    if creds is None:
+        return 1
+    url, headers = creds
+    pages = sorted({r["page"] for r in stale})
+    body = "\n".join(f"- {r['page']} -> {r['anchor']} ({r['status']})" for r in stale)
+    with httpx.Client(base_url=url, headers=headers, timeout=30) as c:
+        try:
+            existing = c.get("/tasks", params={"status": "open", "tag": TASK_TAG})
+            existing.raise_for_status()
+            open_tasks = existing.json()
+        except Exception as e:
+            print(f"could not reach Artel: {e}", file=sys.stderr)
+            return 1
+        if open_tasks:
+            task_id = open_tasks[0]["id"]
+            c.post(f"/tasks/{task_id}/comments", json={"body": f"Still stale:\n{body}"})
+            print(f"commented on open task {task_id[:8]}")
+            return 0
+        r = c.post(
+            "/tasks",
+            json={
+                "title": f"Documentation is stale: {len(pages)} page(s) describe changed code",
+                "description": (
+                    "scripts/check_docs.py found prose pages whose anchored code has moved.\n\n"
+                    f"{body}\n\n"
+                    "Re-read each page against the current code, correct what is now wrong, "
+                    "then run `uv run python scripts/check_docs.py --update` to re-bless the "
+                    "anchors. Do not re-bless without reading — that just hides the drift."
+                ),
+                "expected_outcome": "Each listed page reads true against current code and check_docs.py exits 0.",
+                "priority": "normal",
+                "tags": [TASK_TAG, "docs"],
+            },
+        )
+        if r.status_code >= 400:
+            print(f"could not create task: {r.status_code} {r.text[:200]}", file=sys.stderr)
+            return 1
+        print(f"filed task {r.json()['id'][:8]} for {len(pages)} stale page(s)")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--update", action="store_true", help="re-bless anchors at current shas")
     parser.add_argument("--json", action="store_true", help="machine-readable report")
+    parser.add_argument(
+        "--open-task", action="store_true", help="file an Artel task for stale pages"
+    )
     args = parser.parse_args()
 
     if args.update:
@@ -132,6 +206,11 @@ def main() -> int:
     if args.json:
         print(json.dumps(report, indent=2))
     stale = [r for r in report if r["status"] != FRESH]
+    if args.open_task:
+        if not stale:
+            print("nothing stale; no task filed")
+            return 0
+        return open_task(stale)
     if not args.json:
         if not report:
             print("no anchored pages yet")

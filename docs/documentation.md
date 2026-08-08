@@ -40,6 +40,14 @@ Module anchors hash the file's *shape* — its imports and top-level symbols —
 | --- | --- |
 | `pre-commit` | Reports stale pages. Never blocks a commit. |
 | CI, every push to master | Regenerates reference, warns on stale prose, builds, publishes to GitHub Pages. |
+| `--open-task` | Files the drift as an Artel task for someone to act on. |
+
+```bash
+export ARTEL_URL=... ARTEL_AGENT_ID=... ARTEL_API_KEY=...
+uv run python scripts/check_docs.py --open-task
+```
+
+It is idempotent: if a `docs-freshness` task is already open it comments on that one instead of filing another, so running it on every commit cannot breed a task per commit.
 
 The freshness check is deliberately non-blocking. A prose page lagging the code by one commit should be visible, not a merge gate.
 
@@ -53,4 +61,6 @@ The freshness check is deliberately non-blocking. A prose page lagging the code 
 
 An agent does not write these docs unattended. Drift *detection* is safe to automate because it is deterministic. Drift *correction* is not: a model that fluently misdescribes a parameter produces something worse than a stale page, because a reader cannot tell it is wrong. Stale docs teach distrust; confidently wrong docs waste an hour.
 
-So the intended loop is: the checker flags a page, a human or agent reads the diff and rewrites the prose, and the change goes through review like any other. If that is ever automated, it should produce a pull request — never a direct publish.
+So the loop stops at filing work: the checker flags a page, `--open-task` puts it on the board, and a human or agent reads the diff and rewrites the prose. The rewrite goes through review like any other change.
+
+If the rewrite is ever automated, it should produce a pull request — never a direct publish. The checker deliberately has no path that edits a page.
