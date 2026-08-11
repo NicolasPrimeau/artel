@@ -68,5 +68,6 @@ nav:
       - REST API: reference/rest.md
       - Configuration: reference/configuration.md
   - Project:
+      - What the plugin costs: overhead.md
       - How these docs stay true: documentation.md
       - Roadmap: plan.md
