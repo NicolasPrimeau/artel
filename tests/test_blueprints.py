@@ -749,3 +749,35 @@ async def test_git_check_without_a_configured_repo_fails_loudly(client, monkeypa
 
     after = (await client.get(f"/blueprints/runs/{run['id']}", headers=HEADERS)).json()
     assert not _nodes(after, "review"), "an unconfigured check must block, never pass by default"
+
+
+async def test_an_unknown_done_check_kind_blocks_rather_than_passes(client):
+    """A gate that does not recognise itself must refuse, never wave through.
+
+    Found by sabotage testing: making evaluate() return True for an unknown kind
+    left the whole suite green, so a typo'd check kind would have silently
+    satisfied every gate in a blueprint.
+    """
+    doc = {
+        "name": "typo-check",
+        "nodes": [
+            {
+                "id": "gate",
+                "title": "gate",
+                "completion_contract": {"type": "object", "required": ["ok"]},
+                "done_check": {"kind": "pyaload", "path": "ok"},
+            },
+            {"id": "after", "title": "after", "deps": ["gate"]},
+        ],
+    }
+    r = await client.post("/blueprints", json={"document": doc}, headers=HEADERS)
+    assert r.status_code == 201, "an unrecognised kind is a runtime refusal, not a parse error"
+
+    run = (await client.post("/blueprints/typo-check/instantiate", json={}, headers=HEADERS)).json()
+    await _complete(client, run["nodes"][0]["task_id"], {"ok": True})
+
+    after = (await client.get(f"/blueprints/runs/{run['id']}", headers=HEADERS)).json()
+    assert not _nodes(after, "after"), "an unknown check must not advance the graph"
+    remediation = _nodes(after, "gate")[1]
+    task = (await client.get(f"/tasks/{remediation['task_id']}", headers=HEADERS)).json()
+    assert "unknown done-check kind" in task["description"]

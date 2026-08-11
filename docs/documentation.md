@@ -62,6 +62,33 @@ The freshness check is deliberately non-blocking. A prose page lagging the code 
 2. If it describes specific code, add `anchors` front matter and run `check_docs.py --update`.
 3. `uv run mkdocs serve` to preview locally.
 
+## Testing for silence
+
+The failure mode this codebase actually produces is not a crash — it is a quiet,
+believable wrong answer. Captures digested but never acknowledged. An inert plugin
+reporting "0 tokens of overhead". An unauthenticated CLI returning empty patches
+indistinguishable from failed fixes. A docs anchor blessing a page that was
+already wrong.
+
+Ordinary tests miss all of these, because a mock always behaves and the assertion
+is usually "it worked" rather than "a break would be noticed".
+
+`scripts/sabotage.py` reintroduces each real failure and asks whether anything
+goes red. It found a live one immediately: making an unknown done-check *pass*
+instead of fail left the entire suite green, so a typo'd check kind would have
+satisfied every gate in a blueprint silently.
+
+```bash
+uv run python scripts/sabotage.py    # 7/7 caught, on a clean tree
+```
+
+Two rules that fall out of it, and that most of this week's bugs violated:
+
+- **Never let one value mean both "working, nothing to do" and "broken".** Zero
+  injected tokens meant both. Separate the liveness signal from the volume signal.
+- **A gate that cannot evaluate itself must refuse, never wave through.** Every
+  degrade-to-allow path here has eventually fired.
+
 ## What is deliberately not automated
 
 An agent does not write these docs unattended. Drift *detection* is safe to automate because it is deterministic. Drift *correction* is not: a model that fluently misdescribes a parameter produces something worse than a stale page, because a reader cannot tell it is wrong. Stale docs teach distrust; confidently wrong docs waste an hour.
