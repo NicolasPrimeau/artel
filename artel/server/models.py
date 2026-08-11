@@ -1,5 +1,5 @@
 import uuid
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import AfterValidator, BaseModel, Field
 
@@ -174,7 +174,7 @@ class TaskEntry(BaseModel):
     tags: list[str]
     depends_on: list[str] = []
     completion_contract: dict | None = None
-    completion_payload: dict | list | None = None
+    completion_payload: Any = None
     created_at: str
     updated_at: str
 
@@ -210,7 +210,9 @@ class TaskUpdate(BaseModel):
 
 class TaskAction(BaseModel):
     body: str = ""
-    output: dict | list | None = None
+    # The contract subset allows a scalar root (string/number/boolean), so the
+    # payload must too. Shape is enforced by the contract validator, not here.
+    output: Any = None
 
 
 class AgentPerformance(BaseModel):
@@ -233,6 +235,9 @@ class BlueprintEntry(BaseModel):
     version: int
     source_entry_id: str | None = None
     source_version: int | None = None
+    node_count: int = 0
+    lowered_nodes: int = 0
+    lowered_fraction: float = 0.0
     created_at: str
 
 

@@ -15,6 +15,7 @@ from ..blueprint import (
     BlueprintCreate,
     BlueprintDocument,
     BlueprintInstantiate,
+    lowered_fraction,
     validate_document,
 )
 from ..contract import validate_contract
@@ -33,7 +34,12 @@ def _require_membership(agent_id: str, project: str | None) -> None:
 
 
 def _row_to_blueprint(row: sqlite3.Row) -> BlueprintEntry:
+    doc = BlueprintDocument(**json.loads(row["document"]))
+    lowered = sum(1 for n in doc.nodes if n.run is not None)
     return BlueprintEntry(
+        node_count=len(doc.nodes),
+        lowered_nodes=lowered,
+        lowered_fraction=round(lowered_fraction(doc), 3),
         id=row["id"],
         name=row["name"],
         project=row["project"],

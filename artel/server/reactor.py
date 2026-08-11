@@ -1,12 +1,15 @@
 import json
+import logging
 import sqlite3
 from collections.abc import Callable
 
+from . import blueprint as blueprint_module
 from .blueprint import (
     CHECK_PAYLOAD,
     ITEM,
     BlueprintDocument,
     DoneCheck,
+    NodeAction,
     TemplateNode,
     dig,
     find_run_tag,
@@ -17,6 +20,8 @@ from .blueprint import (
 )
 from .models import new_id
 
+log = logging.getLogger(__name__)
+
 CHECK_SQLITE = "sqlite"
 EXPECT_ROWS = "rows"
 EXPECT_NO_ROWS = "no_rows"
@@ -25,6 +30,7 @@ STATUS_COMPLETED = "completed"
 EVENT_EXPANDED = "blueprint.node.expanded"
 EVENT_CHECK_FAILED = "blueprint.node.check_failed"
 EVENT_RUN_COMPLETED = "blueprint.run.completed"
+EVENT_ACTION_FAILED = "blueprint.node.action_failed"
 REMEDIATION_TAG = "remediation"
 
 CheckFn = Callable[[DoneCheck, dict | list | None, sqlite3.Connection], tuple[bool, str]]
@@ -69,6 +75,49 @@ CHECKS: dict[str, CheckFn] = {CHECK_PAYLOAD: _check_payload, CHECK_SQLITE: _chec
 
 def register_check(kind: str, fn: CheckFn) -> None:
     CHECKS[kind] = fn
+
+
+# --- actions: node bodies the server runs itself -----------------------------------
+# The reactor could already VERIFY mechanically but not ACT mechanically. These are
+# the executors. Same registry shape as CHECKS deliberately: a deployment adds git,
+# http or shell backends by registering them, and core ships only what is safe to
+# run against a model-authored document.
+
+ACTION_SQLITE = "sqlite"
+ACTION_CONSTANT = "constant"
+
+ActionFn = Callable[[NodeAction, dict, sqlite3.Connection], object]
+
+
+def _action_sqlite(action: NodeAction, context: dict, db: sqlite3.Connection) -> object:
+    query = (action.query or "").strip().rstrip(";")
+    rendered = render(query, context)
+    if not rendered.lower().startswith("select"):
+        raise ValueError("sqlite action must be a single SELECT")
+    if ";" in rendered:
+        raise ValueError("sqlite action must be a single statement")
+    rows = db.execute(rendered).fetchall()
+    return [dict(r) for r in rows]
+
+
+def _action_constant(action: NodeAction, context: dict, db: sqlite3.Connection) -> object:
+    if isinstance(action.value, str):
+        return render(action.value, context)
+    return action.value
+
+
+ACTIONS: dict[str, ActionFn] = {
+    ACTION_SQLITE: _action_sqlite,
+    ACTION_CONSTANT: _action_constant,
+}
+
+
+def register_action(kind: str, fn: ActionFn) -> None:
+    ACTIONS[kind] = fn
+    blueprint_module.ACTION_KINDS.add(kind)
+
+
+blueprint_module.ACTION_KINDS.update(ACTIONS)
 
 
 def evaluate(
@@ -223,7 +272,77 @@ def _finish_if_done(
     return True
 
 
-def on_task_completed(db: sqlite3.Connection, task_id: str, agent_id: str) -> None:
+def _machine_nodes(doc: BlueprintDocument) -> dict[str, TemplateNode]:
+    return {n.id: n for n in doc.nodes if n.run is not None}
+
+
+def _run_action(node: TemplateNode, context: dict, db: sqlite3.Connection) -> tuple[bool, object]:
+    fn = ACTIONS.get(node.run.kind) if node.run else None
+    if fn is None:
+        return False, f"unknown action kind {node.run.kind!r}" if node.run else "no action"
+    try:
+        return True, fn(node.run, context, db)
+    except Exception as e:
+        return False, f"{type(e).__name__}: {e}"
+
+
+def _settle(
+    db: sqlite3.Connection,
+    run: sqlite3.Row,
+    doc: BlueprintDocument,
+    agent_id: str,
+    limit: int = 200,
+) -> None:
+    """Execute every open machine node, then let the reactor react to it.
+
+    A lowered node still gets a task row, a backpointer, a contract check and a
+    done-check — it is completed by the server rather than claimed by an agent.
+    Keeping the bookkeeping identical is what makes `foreach` over a machine
+    node's output work with no special cases.
+    """
+    machine = _machine_nodes(doc)
+    if not machine:
+        return
+    for _ in range(limit):
+        rows = db.execute(
+            """SELECT n.task_id, n.node_id, n.item FROM blueprint_run_nodes n
+               JOIN tasks t ON t.id = n.task_id
+               WHERE n.run_id=? AND n.superseded=0 AND t.status='open'""",
+            (run["id"],),
+        ).fetchall()
+        pending = [r for r in rows if r["node_id"] in machine]
+        if not pending:
+            return
+        for row in pending:
+            node = machine[row["node_id"]]
+            item = json.loads(row["item"]) if row["item"] else None
+            ok, result = _run_action(node, _context(run, item), db)
+            if not ok:
+                db.execute(
+                    """UPDATE tasks SET status='failed',
+                       updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?""",
+                    (row["task_id"],),
+                )
+                _emit(
+                    db,
+                    EVENT_ACTION_FAILED,
+                    agent_id,
+                    {"run_id": run["id"], "node_id": node.id, "error": str(result)[:300]},
+                )
+                continue
+            payload = json.dumps(result) if result is not None else None
+            db.execute(
+                """UPDATE tasks SET status='completed', completion_payload=?,
+                   updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?""",
+                (payload, row["task_id"]),
+            )
+            on_task_completed(db, row["task_id"], agent_id, settle=False)
+    log.warning("blueprint run %s hit the settle limit", run["id"])
+
+
+def on_task_completed(
+    db: sqlite3.Connection, task_id: str, agent_id: str, settle: bool = True
+) -> None:
     task = db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
     if not task:
         return
@@ -274,6 +393,8 @@ def on_task_completed(db: sqlite3.Connection, task_id: str, agent_id: str) -> No
         )
         return
     created = _expand(db, run, doc, node_id)
+    if created and settle:
+        _settle(db, run, doc, agent_id)
     if created:
         _emit(
             db,
@@ -302,4 +423,5 @@ def start_run(
     for node in doc.nodes:
         if not node.deps:
             create_node_task(db, run, node, _context(run))
+    _settle(db, run, doc, agent_id)
     return run_id

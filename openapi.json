@@ -7999,6 +7999,21 @@
             ],
             "title": "Source Version"
           },
+          "node_count": {
+            "type": "integer",
+            "title": "Node Count",
+            "default": 0
+          },
+          "lowered_nodes": {
+            "type": "integer",
+            "title": "Lowered Nodes",
+            "default": 0
+          },
+          "lowered_fraction": {
+            "type": "number",
+            "title": "Lowered Fraction",
+            "default": 0.0
+          },
           "created_at": {
             "type": "string",
             "title": "Created At"
@@ -9978,6 +9993,51 @@
         ],
         "title": "MessageSend"
       },
+      "NodeAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Query"
+          },
+          "value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "NodeAction",
+        "description": "A node body the server can execute itself, with no model and no agent.\n\nThis is what \"lowering\" means here: a node whose work is mechanical stops\nbeing English an agent interprets and becomes something the reactor runs.\nActions are a NAMED REGISTRY, never free-form commands \u2014 a blueprint document\nis model-authored, so accepting arbitrary shell would make the compiler an\nremote execution primitive."
+      },
       "PeerLink": {
         "properties": {
           "id": {
@@ -10189,19 +10249,6 @@
             "default": ""
           },
           "output": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "items": {},
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Output"
           }
         },
@@ -10462,19 +10509,6 @@
             "title": "Completion Contract"
           },
           "completion_payload": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "items": {},
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Completion Payload"
           },
           "created_at": {
@@ -10657,6 +10691,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/DoneCheck"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NodeAction"
               },
               {
                 "type": "null"

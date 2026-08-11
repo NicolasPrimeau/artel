@@ -63,7 +63,7 @@ def _require_project_membership(agent_id: str, project: str | None) -> None:
         raise HTTPException(status_code=403, detail="not a member of this project")
 
 
-def _row_json(row: sqlite3.Row, column: str) -> dict | list | None:
+def _row_json(row: sqlite3.Row, column: str):
     raw = row[column] if column in row.keys() else None
     return json.loads(raw) if raw else None
 

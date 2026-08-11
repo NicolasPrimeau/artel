@@ -1835,7 +1835,11 @@ async def blueprint_list() -> str:
         doc = entry["document"]
         params = ", ".join(doc.get("params", [])) or "none"
         lines.append(f"[{entry['name']}] v{entry['version']} — {doc.get('description', '')}")
-        lines.append(f"  params: {params} | nodes: {len(doc.get('nodes', []))}")
+        pct = int(entry.get("lowered_fraction", 0) * 100)
+        lines.append(
+            f"  params: {params} | nodes: {len(doc.get('nodes', []))}"
+            f" | {entry.get('lowered_nodes', 0)} run without a model ({pct}%)"
+        )
     return "\n".join(lines)
 
 

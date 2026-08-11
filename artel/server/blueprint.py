@@ -22,6 +22,22 @@ class DoneCheck(BaseModel):
     expect: str | None = None
 
 
+class NodeAction(BaseModel):
+    """A node body the server can execute itself, with no model and no agent.
+
+    This is what "lowering" means here: a node whose work is mechanical stops
+    being English an agent interprets and becomes something the reactor runs.
+    Actions are a NAMED REGISTRY, never free-form commands — a blueprint document
+    is model-authored, so accepting arbitrary shell would make the compiler an
+    remote execution primitive.
+    """
+
+    kind: str
+    query: str | None = None
+    value: object | None = None
+    path: str | None = None
+
+
 class TemplateNode(BaseModel):
     id: str
     title: str
@@ -33,6 +49,7 @@ class TemplateNode(BaseModel):
     foreach: str | None = None
     completion_contract: dict | None = None
     done_check: DoneCheck | None = None
+    run: NodeAction | None = None
 
 
 class BlueprintDocument(BaseModel):
@@ -114,10 +131,36 @@ def validate_document(doc: BlueprintDocument) -> list[str]:
             elif source not in node.deps:
                 problems.append(f"{node.id}: foreach over {source!r} requires it as a dependency")
         problems.extend(_check_problems(node))
+        problems.extend(_action_problems(node))
     problems.extend(_cycles(doc))
     if not any(not n.deps for n in doc.nodes):
         problems.append("blueprint has no root node (every node has dependencies)")
     return problems
+
+
+ACTION_KINDS: set[str] = set()
+
+
+def _action_problems(node: TemplateNode) -> list[str]:
+    if node.run is None:
+        return []
+    if ACTION_KINDS and node.run.kind not in ACTION_KINDS:
+        return [
+            f"{node.id}: unknown action kind {node.run.kind!r};"
+            f" registered kinds are {sorted(ACTION_KINDS)}"
+        ]
+    return []
+
+
+def lowered_fraction(doc: BlueprintDocument) -> float:
+    """How much of this blueprint the server can run without a model.
+
+    The number to drive upward. A node that resists lowering is one that
+    genuinely needs judgement; a node that is prose out of habit is not.
+    """
+    if not doc.nodes:
+        return 0.0
+    return sum(1 for n in doc.nodes if n.run is not None) / len(doc.nodes)
 
 
 def contract_at(contract: dict, path: str) -> dict | None:

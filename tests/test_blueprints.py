@@ -439,3 +439,196 @@ async def test_a_root_level_array_output_is_accepted(client):
     await _complete(client, run["nodes"][0]["task_id"], [{"name": "a"}, {"name": "b"}])
     after = (await client.get(f"/blueprints/runs/{run['id']}", headers=HEADERS)).json()
     assert sorted(n["title"] for n in _nodes(after, "handle")) == ["Handle a", "Handle b"]
+
+
+# --- lowered nodes: bodies the server runs itself, no model, no agent -------------
+
+
+async def test_a_machine_node_completes_without_an_agent(client):
+    doc = {
+        "name": "lowered",
+        "nodes": [
+            {
+                "id": "gather",
+                "title": "Count the tasks",
+                "run": {"kind": "sqlite", "query": "SELECT COUNT(*) AS n FROM tasks"},
+            }
+        ],
+    }
+    await client.post("/blueprints", json={"document": doc}, headers=HEADERS)
+    run = (await client.post("/blueprints/lowered/instantiate", json={}, headers=HEADERS)).json()
+
+    node = _nodes(run, "gather")[0]
+    assert node["status"] == "completed", "nobody claimed it; the server ran it"
+    task = (await client.get(f"/tasks/{node['task_id']}", headers=HEADERS)).json()
+    assert task["completion_payload"][0]["n"] >= 0
+
+
+async def test_a_machine_node_feeds_a_prose_fan_out(client):
+    """The point of keeping the bookkeeping identical: foreach needs no special case."""
+    doc = {
+        "name": "mixed",
+        "nodes": [
+            {
+                "id": "discover",
+                "title": "Find the work",
+                "run": {
+                    "kind": "constant",
+                    "value": [{"name": "alpha"}, {"name": "beta"}, {"name": "gamma"}],
+                },
+            },
+            {
+                "id": "handle",
+                "title": "Handle {item.name}",
+                "deps": ["discover"],
+                "foreach": "discover",
+            },
+        ],
+    }
+    await client.post("/blueprints", json={"document": doc}, headers=HEADERS)
+    run = (await client.post("/blueprints/mixed/instantiate", json={}, headers=HEADERS)).json()
+
+    assert _nodes(run, "discover")[0]["status"] == "completed"
+    handled = sorted(n["title"] for n in _nodes(run, "handle"))
+    assert handled == ["Handle alpha", "Handle beta", "Handle gamma"]
+    assert all(n["status"] == "open" for n in _nodes(run, "handle")), "prose nodes still wait"
+
+
+async def test_chained_machine_nodes_settle_in_one_pass(client):
+    doc = {
+        "name": "chain",
+        "nodes": [
+            {"id": "a", "title": "a", "run": {"kind": "constant", "value": {"step": 1}}},
+            {
+                "id": "b",
+                "title": "b",
+                "deps": ["a"],
+                "run": {"kind": "constant", "value": {"step": 2}},
+            },
+            {
+                "id": "c",
+                "title": "c",
+                "deps": ["b"],
+                "run": {"kind": "constant", "value": {"step": 3}},
+            },
+        ],
+    }
+    await client.post("/blueprints", json={"document": doc}, headers=HEADERS)
+    run = (await client.post("/blueprints/chain/instantiate", json={}, headers=HEADERS)).json()
+
+    assert [n["node_id"] for n in run["nodes"]] == ["a", "b", "c"]
+    assert all(n["status"] == "completed" for n in run["nodes"])
+    assert run["status"] == "completed", "a fully lowered blueprint needs no agent at all"
+
+
+async def test_machine_node_renders_run_params(client):
+    doc = {
+        "name": "rendered",
+        "params": ["target"],
+        "nodes": [
+            {"id": "echo", "title": "echo", "run": {"kind": "constant", "value": "built {target}"}}
+        ],
+    }
+    await client.post("/blueprints", json={"document": doc}, headers=HEADERS)
+    run = (
+        await client.post(
+            "/blueprints/rendered/instantiate",
+            json={"params": {"target": "liquor"}},
+            headers=HEADERS,
+        )
+    ).json()
+    task = (await client.get(f"/tasks/{_nodes(run, 'echo')[0]['task_id']}", headers=HEADERS)).json()
+    assert task["completion_payload"] == "built liquor"
+
+
+async def test_a_failing_action_fails_its_task_and_stops_the_branch(client):
+    doc = {
+        "name": "brokenaction",
+        "nodes": [
+            {"id": "bad", "title": "bad", "run": {"kind": "sqlite", "query": "SELECT * FROM nope"}},
+            {"id": "after", "title": "after", "deps": ["bad"]},
+        ],
+    }
+    await client.post("/blueprints", json={"document": doc}, headers=HEADERS)
+    run = (
+        await client.post("/blueprints/brokenaction/instantiate", json={}, headers=HEADERS)
+    ).json()
+    assert _nodes(run, "bad")[0]["status"] == "failed"
+    assert not _nodes(run, "after"), "successors must not expand from a failed action"
+
+
+async def test_sqlite_action_refuses_anything_but_a_select(client):
+    doc = {
+        "name": "hostileaction",
+        "nodes": [
+            {"id": "x", "title": "x", "run": {"kind": "sqlite", "query": "DELETE FROM tasks"}}
+        ],
+    }
+    await client.post("/blueprints", json={"document": doc}, headers=HEADERS)
+    before = (await client.get("/tasks", headers=HEADERS)).json()
+    run = (
+        await client.post("/blueprints/hostileaction/instantiate", json={}, headers=HEADERS)
+    ).json()
+    assert _nodes(run, "x")[0]["status"] == "failed"
+    after = (await client.get("/tasks", headers=HEADERS)).json()
+    assert len(after) >= len(before), "the delete must not have run"
+
+
+async def test_unknown_action_kind_is_rejected_at_compile_time(client):
+    doc = {
+        "name": "unknownaction",
+        "nodes": [{"id": "x", "title": "x", "run": {"kind": "shell", "value": "rm -rf /"}}],
+    }
+    r = await client.post("/blueprints", json={"document": doc}, headers=HEADERS)
+    assert r.status_code == 422
+    assert "unknown action kind" in json.dumps(r.json()["detail"])
+
+
+async def test_machine_node_output_is_still_contract_checked(client):
+    doc = {
+        "name": "contracted-machine",
+        "nodes": [
+            {
+                "id": "x",
+                "title": "x",
+                "run": {"kind": "constant", "value": {"wrong": 1}},
+                "completion_contract": {"type": "object", "required": ["sources"]},
+            }
+        ],
+    }
+    r = await client.post("/blueprints", json={"document": doc}, headers=HEADERS)
+    assert r.status_code == 201, "a machine node may declare a contract like any other"
+
+
+def test_lowered_fraction_reports_progress():
+    from artel.server.blueprint import BlueprintDocument, lowered_fraction
+
+    doc = BlueprintDocument(
+        name="half",
+        nodes=[
+            {"id": "a", "title": "a", "run": {"kind": "constant", "value": 1}},
+            {"id": "b", "title": "b"},
+        ],
+    )
+    assert lowered_fraction(doc) == 0.5
+
+
+async def test_blueprint_listing_reports_how_much_is_lowered(client):
+    doc = {
+        "name": "measured",
+        "nodes": [
+            {"id": "a", "title": "a", "run": {"kind": "constant", "value": 1}},
+            {"id": "b", "title": "b", "deps": ["a"]},
+            {"id": "c", "title": "c", "deps": ["b"]},
+            {"id": "d", "title": "d", "deps": ["c"]},
+        ],
+    }
+    await client.post("/blueprints", json={"document": doc}, headers=HEADERS)
+    entry = [
+        b
+        for b in (await client.get("/blueprints", headers=HEADERS)).json()
+        if b["name"] == "measured"
+    ][0]
+    assert entry["node_count"] == 4
+    assert entry["lowered_nodes"] == 1
+    assert entry["lowered_fraction"] == 0.25
