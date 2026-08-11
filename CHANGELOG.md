@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.44.0] — 2026-08-11
+
+### Blueprints — lowering, and checks that read the repository
+
+A blueprint was a build system with an LLM front-end and no code generator: every node bottomed out in prose for an agent to interpret, so the target was always stochastic. Two changes move it toward being a compiler.
+
+- **Node bodies the server runs itself.** A node may carry `run` — an action executed by the reactor with no model and no agent. Actions are a named registry (`sqlite`, `constant`, extensible via `register_action`), never free-form commands: a blueprint document is model-authored, and accepting arbitrary shell would make the compiler a remote execution primitive. Lowered nodes keep the whole pipeline — task row, backpointer, contract, done-check — so `foreach` over a machine node's output needs no special case. Blueprints now report `lowered_fraction`, which is the number worth driving up: a node that resists lowering genuinely needs judgement; a node that is prose out of habit does not.
+- **Git-anchored done-checks.** A completion contract checks what the agent *says*; this reads what it *did*. `{"kind": "git", "anchor": "path.py::symbol", "expect": "changed"}` hashes the symbol's span via the compile-mode compiler, with the baseline captured when the task is created — without that a `changed` check is unfalsifiable, since it can only compare HEAD to itself. An agent can return a perfectly-shaped payload claiming it fixed a function; it cannot fake `HEAD`.
+
+### Archivist — a control loop that can actually reach its own output
+
+The decay controller measured a standing population of entries pinned at `decay_floor` while its actuator was `decay_rate` — which cannot move entries that a prune op sets to the floor in one step. The count read 27, 29, 30, 29 over a day while the controller sat saturated against an error it could not remove. The sensor is now a **flow** (`decay_regret_events`, one row per read of an already-decayed entry), which reaches zero on a quiet cycle. The standing population is kept as `prune_regret_count` and fed to the pass that actually decides prunes.
+
+### Documentation that cannot drift
+
+A generated site at [nicolasprimeau.github.io/artel](https://nicolasprimeau.github.io/artel/). MCP tools from their docstrings, REST from `openapi.json`, configuration from the settings classes — regenerated at publish time rather than committed, so no copy can disagree with the code. Prose pages carry compile-mode anchors and go stale when the code they describe moves.
+
+### Measurement where there had been assertion
+
+- `scripts/measure_hook_overhead.py` — what the plugin costs a session: ~17.6s and ~4,200 tokens for 20 prompts and 60 tool calls, dominated by `PreToolUse` at 189 ms per tool call. The README's "~10 ms, off the hot path" describes the capture hook alone.
+- `scripts/sabotage.py` — reintroduces real failures and asks whether the suite notices. It immediately found a live one: an unknown done-check kind passed instead of failing, so a typo'd kind would have satisfied every gate silently.
+- `bench/` — an Artel on/off harness for SWE-bench Verified, reporting non-inferiority rather than superiority.
+
+
 ## [0.43.1] — 2026-08-06
 
 ### Archivist — passes that were losing their work
