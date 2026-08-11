@@ -126,6 +126,9 @@ def _migrate(conn: sqlite3.Connection) -> None:
     run_node_cols = {
         r[1] for r in conn.execute("PRAGMA table_info(blueprint_run_nodes)").fetchall()
     }
+    if run_node_cols and "baseline" not in run_node_cols:
+        conn.execute("ALTER TABLE blueprint_run_nodes ADD COLUMN baseline TEXT")
+        conn.commit()
     if run_node_cols and "superseded" not in run_node_cols:
         conn.execute(
             "ALTER TABLE blueprint_run_nodes ADD COLUMN superseded INTEGER NOT NULL DEFAULT 0"

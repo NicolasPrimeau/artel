@@ -20,6 +20,8 @@ class DoneCheck(BaseModel):
     min_items: int | None = None
     query: str | None = None
     expect: str | None = None
+    anchor: str | None = None
+    value: str | None = None
 
 
 class NodeAction(BaseModel):

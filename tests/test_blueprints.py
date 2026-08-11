@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from artel.store.db import get_db
 from tests.conftest import HEADERS, HEADERS2
 
@@ -632,3 +634,118 @@ async def test_blueprint_listing_reports_how_much_is_lowered(client):
     assert entry["node_count"] == 4
     assert entry["lowered_nodes"] == 1
     assert entry["lowered_fraction"] == 0.25
+
+
+# --- git-anchored checks: read what the agent DID, not what it said --------------
+
+
+@pytest.fixture
+def code_repo(tmp_path, monkeypatch):
+    import subprocess
+
+    from artel.server.config import settings as server_settings
+
+    (tmp_path / "auth.py").write_text("def role_of(a):\n    return 'agent'\n")
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-m", "init"],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    monkeypatch.setattr(server_settings, "blueprint_repo_root", str(tmp_path))
+    return tmp_path
+
+
+def _edit_and_commit(repo, body):
+    import subprocess
+
+    (repo / "auth.py").write_text(body)
+    subprocess.run(["git", "add", "-A"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-m", "work"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+    )
+
+
+GIT_MOLD = {
+    "name": "code-fix",
+    "nodes": [
+        {
+            "id": "fix",
+            "title": "Fix role_of",
+            "completion_contract": {"type": "object", "required": ["done"]},
+            "done_check": {"kind": "git", "anchor": "auth.py::role_of", "expect": "changed"},
+        },
+        {"id": "review", "title": "Review the fix", "deps": ["fix"]},
+    ],
+}
+
+
+async def test_a_shaped_payload_cannot_satisfy_a_git_check(client, code_repo):
+    """The whole point: an agent can claim success, but it cannot fake HEAD."""
+    await client.post("/blueprints", json={"document": GIT_MOLD}, headers=HEADERS)
+    run = (await client.post("/blueprints/code-fix/instantiate", json={}, headers=HEADERS)).json()
+
+    # A perfectly valid payload — and no code was touched.
+    await _complete(client, run["nodes"][0]["task_id"], {"done": True})
+
+    after = (await client.get(f"/blueprints/runs/{run['id']}", headers=HEADERS)).json()
+    assert not _nodes(after, "review"), "must not advance on an unverified claim"
+    remediation = _nodes(after, "fix")[1]
+    task = (await client.get(f"/tasks/{remediation['task_id']}", headers=HEADERS)).json()
+    assert "unchanged since this task was created" in task["description"]
+
+
+async def test_the_check_passes_once_the_code_actually_changes(client, code_repo):
+    await client.post("/blueprints", json={"document": GIT_MOLD}, headers=HEADERS)
+    run = (await client.post("/blueprints/code-fix/instantiate", json={}, headers=HEADERS)).json()
+
+    _edit_and_commit(
+        code_repo,
+        "def role_of(a):\n    if a == 'archivist':\n        return a\n    return 'agent'\n",
+    )
+    await _complete(client, run["nodes"][0]["task_id"], {"done": True})
+
+    after = (await client.get(f"/blueprints/runs/{run['id']}", headers=HEADERS)).json()
+    assert len(_nodes(after, "review")) == 1, "real work advances the graph"
+
+
+async def test_editing_the_wrong_function_does_not_satisfy_the_check(client, code_repo):
+    """Symbol-level precision — a change somewhere else in the file is not the fix."""
+    (code_repo / "auth.py").write_text(
+        "def role_of(a):\n    return 'agent'\n\n\ndef unrelated():\n    return 1\n"
+    )
+    await client.post("/blueprints", json={"document": GIT_MOLD}, headers=HEADERS)
+    run = (await client.post("/blueprints/code-fix/instantiate", json={}, headers=HEADERS)).json()
+    import subprocess
+
+    subprocess.run(["git", "add", "-A"], cwd=code_repo, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-m", "elsewhere"],
+        cwd=code_repo,
+        check=True,
+        capture_output=True,
+    )
+    _edit_and_commit(
+        code_repo, "def role_of(a):\n    return 'agent'\n\n\ndef unrelated():\n    return 999\n"
+    )
+    await _complete(client, run["nodes"][0]["task_id"], {"done": True})
+
+    after = (await client.get(f"/blueprints/runs/{run['id']}", headers=HEADERS)).json()
+    assert not _nodes(after, "review")
+
+
+async def test_git_check_without_a_configured_repo_fails_loudly(client, monkeypatch):
+    from artel.server.config import settings as server_settings
+
+    monkeypatch.setattr(server_settings, "blueprint_repo_root", "")
+    await client.post("/blueprints", json={"document": GIT_MOLD}, headers=HEADERS)
+    run = (await client.post("/blueprints/code-fix/instantiate", json={}, headers=HEADERS)).json()
+    await _complete(client, run["nodes"][0]["task_id"], {"done": True})
+
+    after = (await client.get(f"/blueprints/runs/{run['id']}", headers=HEADERS)).json()
+    assert not _nodes(after, "review"), "an unconfigured check must block, never pass by default"

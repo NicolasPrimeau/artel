@@ -150,6 +150,7 @@ CREATE TABLE IF NOT EXISTS blueprint_run_nodes (
     task_id    TEXT NOT NULL,
     item       TEXT,
     superseded INTEGER NOT NULL DEFAULT 0,
+    baseline   TEXT,
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     PRIMARY KEY (run_id, task_id)
 );

@@ -4,6 +4,7 @@ import sqlite3
 from collections.abc import Callable
 
 from . import blueprint as blueprint_module
+from . import git_anchor
 from .blueprint import (
     CHECK_PAYLOAD,
     ITEM,
@@ -18,11 +19,13 @@ from .blueprint import (
     run_tag,
     successors,
 )
+from .config import settings
 from .models import new_id
 
 log = logging.getLogger(__name__)
 
 CHECK_SQLITE = "sqlite"
+CHECK_GIT = "git"
 EXPECT_ROWS = "rows"
 EXPECT_NO_ROWS = "no_rows"
 STATUS_RUNNING = "running"
@@ -33,11 +36,12 @@ EVENT_RUN_COMPLETED = "blueprint.run.completed"
 EVENT_ACTION_FAILED = "blueprint.node.action_failed"
 REMEDIATION_TAG = "remediation"
 
-CheckFn = Callable[[DoneCheck, dict | list | None, sqlite3.Connection], tuple[bool, str]]
+CheckContext = dict
+CheckFn = Callable[[DoneCheck, object, sqlite3.Connection, CheckContext], tuple[bool, str]]
 
 
 def _check_payload(
-    check: DoneCheck, payload: dict | list | None, db: sqlite3.Connection
+    check: DoneCheck, payload: object, db: sqlite3.Connection, context: CheckContext
 ) -> tuple[bool, str]:
     value = dig(payload if payload is not None else {}, check.path or "")
     if value is None:
@@ -53,7 +57,7 @@ def _check_payload(
 
 
 def _check_sqlite(
-    check: DoneCheck, payload: dict | list | None, db: sqlite3.Connection
+    check: DoneCheck, payload: object, db: sqlite3.Connection, context: CheckContext
 ) -> tuple[bool, str]:
     query = (check.query or "").strip().rstrip(";")
     if not query.lower().startswith("select"):
@@ -70,7 +74,35 @@ def _check_sqlite(
     return bool(rows), ("" if rows else "query returned no rows")
 
 
-CHECKS: dict[str, CheckFn] = {CHECK_PAYLOAD: _check_payload, CHECK_SQLITE: _check_sqlite}
+def _check_git(
+    check: DoneCheck, payload: object, db: sqlite3.Connection, context: CheckContext
+) -> tuple[bool, str]:
+    """Reads the repository, so a well-shaped payload cannot satisfy it.
+
+    The baseline for a `changed` expectation is captured when the task is CREATED
+    (see create_node_task). Comparing only against HEAD at completion would prove
+    nothing — the file may have looked that way all along.
+    """
+    anchor = check.anchor or check.path
+    if not anchor:
+        return False, "a git done-check needs an anchor"
+    try:
+        return git_anchor.evaluate(
+            settings.blueprint_repo_root,
+            anchor,
+            check.expect or git_anchor.EXPECT_CHANGED,
+            check.value,
+            context.get("baseline"),
+        )
+    except git_anchor.GitAnchorError as e:
+        return False, str(e)
+
+
+CHECKS: dict[str, CheckFn] = {
+    CHECK_PAYLOAD: _check_payload,
+    CHECK_SQLITE: _check_sqlite,
+    CHECK_GIT: _check_git,
+}
 
 
 def register_check(kind: str, fn: CheckFn) -> None:
@@ -121,14 +153,17 @@ blueprint_module.ACTION_KINDS.update(ACTIONS)
 
 
 def evaluate(
-    check: DoneCheck | None, payload: dict | list | None, db: sqlite3.Connection
+    check: DoneCheck | None,
+    payload: object,
+    db: sqlite3.Connection,
+    context: CheckContext | None = None,
 ) -> tuple[bool, str]:
     if check is None:
         return True, ""
     fn = CHECKS.get(check.kind)
     if fn is None:
         return False, f"unknown done-check kind {check.kind!r}"
-    return fn(check, payload, db)
+    return fn(check, payload, db, context or {})
 
 
 def _load_run(db: sqlite3.Connection, run_id: str) -> sqlite3.Row | None:
@@ -187,6 +222,7 @@ def create_node_task(
     title_prefix: str = "",
 ) -> str:
     task_id = new_id()
+    baseline = _capture_baseline(node)
     tags = list(node.tags) + [run_tag(run["id"], node.id)]
     if title_prefix:
         tags.append(REMEDIATION_TAG)
@@ -207,10 +243,33 @@ def create_node_task(
         ),
     )
     db.execute(
-        "INSERT INTO blueprint_run_nodes (run_id, node_id, task_id, item) VALUES (?,?,?,?)",
-        (run["id"], node.id, task_id, json.dumps(item) if item is not None else None),
+        """INSERT INTO blueprint_run_nodes (run_id, node_id, task_id, item, baseline)
+           VALUES (?,?,?,?,?)""",
+        (run["id"], node.id, task_id, json.dumps(item) if item is not None else None, baseline),
     )
     return task_id
+
+
+def _capture_baseline(node: TemplateNode) -> str | None:
+    """Snapshot what the repo looks like BEFORE the work starts.
+
+    Without this a `changed` check is unfalsifiable: it can only compare HEAD to
+    itself. The snapshot is what makes "the agent actually edited this function"
+    a claim about the work rather than about the file.
+    """
+    check = node.done_check
+    if check is None or check.kind != CHECK_GIT:
+        return None
+    if (check.expect or git_anchor.EXPECT_CHANGED) != git_anchor.EXPECT_CHANGED:
+        return None
+    anchor = check.anchor or check.path
+    if not anchor:
+        return None
+    try:
+        return git_anchor.anchor_sha(settings.blueprint_repo_root, anchor)
+    except git_anchor.GitAnchorError as e:
+        log.warning("could not capture git baseline for %s: %s", node.id, e)
+        return None
 
 
 def _context(run: sqlite3.Row, item: object | None = None, index: int | None = None) -> dict:
@@ -360,7 +419,16 @@ def on_task_completed(
     if node is None:
         return
     payload = json.loads(task["completion_payload"]) if task["completion_payload"] else None
-    passed, reason = evaluate(node.done_check, payload, db)
+    node_row = db.execute(
+        "SELECT baseline FROM blueprint_run_nodes WHERE run_id=? AND task_id=?",
+        (run_id, task_id),
+    ).fetchone()
+    context = {
+        "baseline": node_row["baseline"] if node_row else None,
+        "task_id": task_id,
+        "run_id": run_id,
+    }
+    passed, reason = evaluate(node.done_check, payload, db, context)
     if not passed:
         item_row = db.execute(
             "SELECT item FROM blueprint_run_nodes WHERE run_id=? AND task_id=?",
