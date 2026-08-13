@@ -81,19 +81,22 @@ This means project-specific instructions override global ones, and archivist-pri
 
 ## 3. Write Permissions
 
-**Clear answer: only humans and designated trusted agents may write directives. The archivist must never write a directive.**
+> **Superseded — this section described an allowlist that was never built.**
+> `DIRECTIVE_WRITERS` does not exist in the code. The original intent below
+> (human-authored only, archivist excluded) was not what shipped: the first
+> implementation gated on `can_curate_memory`, which *includes* the archivist.
+> As of v0.44.1 the gate is `can_write_directive` and any agent may write one.
+> See "As implemented" below.
 
-Rationale: directives are authoritative. If the archivist could write directives, it could instruct itself, creating a self-modification loop with no human checkpoint. Directives are the human override layer — keeping them human-authored preserves that invariant.
+Original rationale, kept for context: directives are authoritative. If the archivist could write directives, it could instruct itself, creating a self-modification loop with no human checkpoint. Directives were conceived as the human override layer.
 
-Implementation:
+**As implemented:**
 
-The server enforces this at the API layer. When `POST /memory` is called with `type="directive"`, the server checks whether the calling `agent_id` is in a configurable allowlist stored in settings: `DIRECTIVE_WRITERS`. This defaults to including only the `UI_AGENT_ID` (poseidon, the human-facing agent).
+`POST /memory` with `type="directive"` calls `can_write_directive(agent_id)` (`artel/server/auth.py`), which is `ROLE_RANK[role] >= ROLE_RANK["agent"]`. So `agent`, `archivist`, and `owner` may write directives; `viewer` receives `403 Forbidden` with detail `"directive writes require an agent role"`.
 
-```
-DIRECTIVE_WRITERS=poseidon,trusted-orchestrator
-```
+This is deliberately *not* `can_curate_memory` — that predicate also governs editing and deleting entries the caller does not own, and writing a standing instruction is a different privilege from editing another agent's memory.
 
-Any agent not in this list that attempts to write `type="directive"` receives `403 Forbidden` with detail `"directive writes require elevated permission"`.
+The self-instruction loop the original design worried about is therefore live: the archivist can write a directive it will later read. Nothing currently prevents that.
 
 **Who can update directives:**
 
@@ -103,7 +106,7 @@ Only the original author (`agent_id` match) may `PATCH` a directive, same as exi
 
 Only the original author. The soft-delete endpoint checks `agent_id` ownership, which already blocks the archivist from deleting its own observations on directive entries (it cannot create them).
 
-**Tradeoff:** A second trusted agent (e.g., an orchestrator) may need to write directives programmatically. Rather than hardcoding archivist exclusion, the server checks membership in `DIRECTIVE_WRITERS`. The archivist is simply never added to this list. This keeps it a configuration choice rather than a code-level special-case proliferation.
+**Scope is not fully enforced.** A project-scoped directive is not filtered to its project by the server. The archivist fetches directives with no project filter and its role bypasses membership filtering entirely (`auth.py`), because it is meant to synthesize across projects. `_directives_in_play()` (`artel/archivist/synthesis.py`) narrows the preamble to directives whose project is represented in the current entry batch, but a batch spanning several projects still carries all of their directives into one prompt, distinguished only by a `(project: X)` label. Scope is advisory at that boundary, not enforced.
 
 ---
 
