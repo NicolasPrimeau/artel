@@ -1,7 +1,7 @@
 {
   "artel/archivist/control.py": "a7d1ba34dc806313edc52abfcca1dbb17a9036162042970b5d5fbbfa81b13334",
   "artel/server/app.py": "29c4397eb172d2fed7f8d6dbdd3e6c1585b31cb5482a97f3ec1a8bf0ae17dee1",
-  "artel/server/auth.py": "5b76e85f85bd56ee3024d4063393d4827b996f46f3556f10293dbeead3b5f9a8",
+  "artel/server/auth.py": "e788d8196a910a89498ea57eea19ea13fb205a8545300e51ff11607fcd1e28ea",
   "artel/server/auth.py::_memberships": "2ee1f9dc52968c873e16242fea7fd9bd714a0f480088a1c5a5d56dc36f584ad3",
   "artel/server/auth.py::role_of": "bff0e9b28efa8054ba396639b5255427bf47e82ebed8cfbb659ea1961ab24e67",
   "artel/server/models.py": "8ab4c9bb76cc03a9a6aab5a801d72ef93db6163496a586fa871c209d6958c644",

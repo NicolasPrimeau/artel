@@ -2,8 +2,8 @@
 
 These lock in the security model:
 - viewer  — read-only, no mutations
-- agent   — normal read/write, no agent-admin
-- archivist — cross-agent memory curation (incl. directives), no agent-admin
+- agent   — normal read/write (incl. directives), no agent-admin
+- archivist — cross-agent memory curation, no agent-admin
 - owner   — full admin, including delete/rename/list any agent
 - the registration key registers agents but no longer destroys them
 """
@@ -130,17 +130,22 @@ async def test_archivist_is_not_agent_admin(scenario):
     assert (await archivist._http.delete("/agents/untouchable")).status_code == 403
 
 
-async def test_directive_writes_require_curator(scenario):
+async def test_directive_writes_require_agent_role(scenario):
     agent = await scenario.agent("scribe")
     archivist = await scenario.archivist_agent()
     owner = await scenario.owner_agent()
 
     assert (
         await agent._http.post("/memory", json={"content": "d", "type": "directive"})
-    ).status_code == 403
+    ).status_code == 201
     assert (
         await archivist._http.post("/memory", json={"content": "d", "type": "directive"})
     ).status_code == 201
     assert (
         await owner._http.post("/memory", json={"content": "d", "type": "directive"})
     ).status_code == 201
+
+    viewer = await scenario.viewer_agent()
+    assert (
+        await viewer._http.post("/memory", json={"content": "d", "type": "directive"})
+    ).status_code == 403

@@ -86,6 +86,21 @@ def _cosine_similarity(a: list[float], b: list[float]) -> float:
     return dot / (mag_a * mag_b)
 
 
+def _directives_in_play(directives: list[dict], entries: list[dict]) -> list[dict]:
+    # The archivist reads across every project, so an unfiltered fetch puts one
+    # project's standing instructions into a pass that contains none of its
+    # entries. Scope is a label in the preamble, not a WHERE clause, so narrow it
+    # here: a project-scoped directive applies only when that project is actually
+    # represented in the batch. Global (project=None) and agent-scoped ones always
+    # apply.
+    in_play = {e.get("project") for e in entries}
+    return [
+        d
+        for d in directives
+        if d.get("scope") == "agent" or not d.get("project") or d.get("project") in in_play
+    ]
+
+
 def _build_directive_preamble(directives: list[dict]) -> str:
     if not directives:
         return ""
@@ -848,7 +863,7 @@ async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
             "or the task is a duplicate of another):\n" + "\n".join(open_lines)
         )
 
-    preamble = _build_directive_preamble(directives)
+    preamble = _build_directive_preamble(_directives_in_play(directives, entries))
     if conflict_warning:
         preamble = conflict_warning + "\n\n" + preamble if preamble else conflict_warning
 
@@ -1023,7 +1038,7 @@ async def run_deep_synthesis(client: ArtelClient) -> None:
             "or the task is a duplicate of another):\n" + "\n".join(open_lines)
         )
 
-    preamble = _build_directive_preamble(directives)
+    preamble = _build_directive_preamble(_directives_in_play(directives, entries))
 
     cleanup_system = "You are the Artel archivist running a cleanup pass. Your only job is to deduplicate and consolidate memory. Merge redundant entries, prune obsolete ones, split overloaded entries, extract misplaced segments. Do not promote, tag, or create tasks."
     # Feedback on the prune policy, delivered to the pass that actually decides

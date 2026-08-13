@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
@@ -1088,3 +1089,46 @@ async def test_task_op_keeps_its_project_when_the_list_is_unavailable():
     )
 
     assert c.create_task.await_args.kwargs["project"] == "nimbus"
+
+
+# ── directive scoping and truncation ──────────────────────────────────────────
+
+
+def test_directives_in_play_drops_absent_projects():
+    from artel.archivist.synthesis import _directives_in_play
+
+    directives = [
+        {"content": "a", "scope": "project", "project": "formulai"},
+        {"content": "b", "scope": "project", "project": "nimbus"},
+        {"content": "c", "scope": "project", "project": None},
+        {"content": "d", "scope": "agent", "project": "formulai"},
+    ]
+    entries = [{"project": "nimbus"}, {"project": "nimbus"}]
+
+    kept = [d["content"] for d in _directives_in_play(directives, entries)]
+    assert kept == ["b", "c", "d"]
+
+
+def test_directives_in_play_keeps_all_when_batch_spans_projects():
+    from artel.archivist.synthesis import _directives_in_play
+
+    directives = [
+        {"content": "a", "scope": "project", "project": "formulai"},
+        {"content": "b", "scope": "project", "project": "nimbus"},
+    ]
+    entries = [{"project": "formulai"}, {"project": "nimbus"}]
+
+    assert len(_directives_in_play(directives, entries)) == 2
+
+
+def test_directive_truncation_logs_loudly(caplog):
+    from artel.archivist.client import DIRECTIVE_LIMIT, _warn_if_truncated
+
+    with caplog.at_level(logging.ERROR):
+        _warn_if_truncated([{"id": str(i)} for i in range(DIRECTIVE_LIMIT)], "project")
+    assert "directive limit reached" in caplog.text
+
+    caplog.clear()
+    with caplog.at_level(logging.ERROR):
+        _warn_if_truncated([{"id": str(i)} for i in range(DIRECTIVE_LIMIT - 1)], "project")
+    assert caplog.text == ""

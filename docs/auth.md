@@ -93,6 +93,10 @@ ROLE_RANK = viewer(0) < agent(1) < archivist(2) < owner(3)
 - `is_owner(agent_id)` → role == owner.
 - `can_curate_memory(agent_id)` → role in {owner, archivist}. This is the gate
   for editing/curating memory entries the caller does not own.
+- `can_write_directive(agent_id)` → rank >= `agent`, so any normal agent may
+  write a `directive` entry; only `viewer` is refused. Kept separate from
+  `can_curate_memory` on purpose: writing a standing instruction is not the same
+  privilege as editing another agent's entries.
 - `require_role(minimum)` returns a FastAPI dependency that authenticates via
   `require_agent` then enforces `ROLE_RANK[role] >= ROLE_RANK[minimum]`,
   raising `403 insufficient role` otherwise.

@@ -112,6 +112,10 @@ def can_curate_memory(agent_id: str) -> bool:
     return role_of(agent_id) in ("owner", "archivist")
 
 
+def can_write_directive(agent_id: str) -> bool:
+    return ROLE_RANK.get(role_of(agent_id), 0) >= ROLE_RANK["agent"]
+
+
 def project_has_external_presence(project: str, archivist_id: str) -> bool:
     db = get_db()
     if db.execute(

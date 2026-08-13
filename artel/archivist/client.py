@@ -8,6 +8,23 @@ from .config import settings
 
 log = logging.getLogger(__name__)
 
+DIRECTIVE_LIMIT = 200
+
+
+def _warn_if_truncated(rows: list[dict], scope: str) -> list[dict]:
+    # Directives never decay and are never merged, so this population only grows.
+    # Silently dropping the overflow would retire a standing instruction with no
+    # signal at all, so say so loudly instead of raising the limit forever.
+    if len(rows) >= DIRECTIVE_LIMIT:
+        log.error(
+            "directive limit reached: %d %s-scoped directives fetched (limit %d);"
+            " the least-recently-updated ones are NOT being applied",
+            len(rows),
+            scope,
+            DIRECTIVE_LIMIT,
+        )
+    return rows
+
 
 class ArtelClient:
     def __init__(self):
@@ -124,14 +141,14 @@ class ArtelClient:
 
     async def get_directives(self, project: str | None = None) -> list[dict]:
         results: list[dict] = []
-        project_params: dict = {"type": "directive", "scope": "project", "limit": 200}
+        project_params: dict = {"type": "directive", "scope": "project", "limit": DIRECTIVE_LIMIT}
         if project:
             project_params["project"] = project
         r = await self._request("GET", "/memory", params=project_params)
-        results.extend(r.json())
-        agent_params: dict = {"type": "directive", "scope": "agent", "limit": 200}
+        results.extend(_warn_if_truncated(r.json(), "project"))
+        agent_params: dict = {"type": "directive", "scope": "agent", "limit": DIRECTIVE_LIMIT}
         r = await self._request("GET", "/memory", params=agent_params)
-        results.extend(r.json())
+        results.extend(_warn_if_truncated(r.json(), "agent"))
         return results
 
     async def get_delta(self, since: str) -> list[dict]:

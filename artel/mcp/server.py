@@ -551,7 +551,7 @@ async def memory_write(
     Types:
     - memory: default — use this for everything
     - doc: stable reference material; normally written by the archivist, not agents
-    - directive: a standing instruction that governs archivist behavior fleet-wide; requires elevated permission (the UI agent has it by default); confidence is always forced to 1.0
+    - directive: a standing instruction the archivist reads before synthesis; scoped like any entry, but the archivist loads directives from every project it can see, so write it to apply beyond this project too; confidence is always forced to 1.0 and it never decays
     - skill: procedural knowledge — how to do something; decays like memory, never promoted, never merged; superseded by directives on the same topic
 
     Scopes:

@@ -35,12 +35,23 @@ async def test_owner_role_visible_in_participants(scenario):
 # ── Group 2: directive write permissions ──────────────────────────────────────
 
 
-async def test_regular_agent_cannot_write_directive(scenario):
+async def test_regular_agent_can_write_directive(scenario):
     agent = await scenario.agent("nodir-agent")
     status, body = await agent.write_memory_raw(
-        {"content": "forbidden directive", "type": "directive"}
+        {"content": "agent-authored directive", "type": "directive"}
     )
-    assert status == 403
+    assert status == 201
+    assert body["type"] == "directive"
+    assert body["confidence"] == 1.0
+
+
+async def test_agent_directive_does_not_grant_curation(scenario):
+    author = await scenario.agent("dir-author")
+    other = await scenario.agent("dir-other")
+    written = await author.write_memory_raw({"content": "author entry", "type": "memory"})
+    entry_id = written[1]["id"]
+
+    assert await other.delete_memory_raw(entry_id) == 403
 
 
 async def test_owner_can_write_directive(scenario):

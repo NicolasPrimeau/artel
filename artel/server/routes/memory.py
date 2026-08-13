@@ -17,6 +17,7 @@ from ..auth import (
     ReaderDep,
     _memberships,
     can_curate_memory,
+    can_write_directive,
     default_project_for,
     enforce_no_phantom_project,
     feed_auth_dep,
@@ -242,8 +243,8 @@ async def write_memory(
     agent_id: str = ActorDep,
 ):
     db = get_db()
-    if body.type == "directive" and not can_curate_memory(agent_id):
-        raise HTTPException(status_code=403, detail="directive writes require elevated permission")
+    if body.type == "directive" and not can_write_directive(agent_id):
+        raise HTTPException(status_code=403, detail="directive writes require an agent role")
     project = body.project if body.project is not None else default_project_for(agent_id)
     enforce_no_phantom_project(agent_id, project)
     if project:
