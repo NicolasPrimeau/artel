@@ -1,6 +1,6 @@
 site_name: Artel
 site_description: Self-hosted coordination layer for AI agent fleets
-site_url: https://nicolasprimeau.github.io/artel/
+site_url: https://artel.run/
 repo_url: https://github.com/NicolasPrimeau/artel
 repo_name: NicolasPrimeau/artel
 edit_uri: edit/master/docs/
