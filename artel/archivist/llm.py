@@ -14,12 +14,16 @@ _openai_client = None
 _LLM_TIMEOUT = 180.0
 _CLEANUP_TIMEOUT = 10.0
 
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+
 
 def _api_key() -> str:
     if settings.archivist_api_key:
         return settings.archivist_api_key
     if settings.archivist_provider == "anthropic":
         return settings.anthropic_api_key
+    if settings.archivist_provider == "openrouter":
+        return settings.openrouter_api_key
     if settings.archivist_provider == "claude-sdk":
         return os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "")
     return ""
@@ -30,7 +34,19 @@ def _default_model() -> str:
         return "claude-sonnet-4-6"
     if settings.archivist_provider == "claude-sdk":
         return "haiku"
+    # OpenRouter needs a vendor-prefixed slug; a bare OpenAI model name 404s there,
+    # so this must not fall through to the openai default.
+    if settings.archivist_provider == "openrouter":
+        return "google/gemini-3.7-flash"
     return "gpt-4o"
+
+
+def _base_url() -> str:
+    if settings.archivist_base_url:
+        return settings.archivist_base_url
+    if settings.archivist_provider == "openrouter":
+        return OPENROUTER_BASE_URL
+    return ""
 
 
 def is_configured() -> bool:
@@ -87,8 +103,9 @@ async def _openai(system: str, user: str, model: str, max_tokens: int, key: str)
     global _openai_client
     if _openai_client is None:
         kwargs: dict = {"api_key": key}
-        if settings.archivist_base_url:
-            kwargs["base_url"] = settings.archivist_base_url
+        base_url = _base_url()
+        if base_url:
+            kwargs["base_url"] = base_url
         _openai_client = openai.AsyncOpenAI(**kwargs)
     resp = await _openai_client.chat.completions.create(
         model=model,

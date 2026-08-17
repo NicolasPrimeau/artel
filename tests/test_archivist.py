@@ -4,7 +4,14 @@ from unittest.mock import AsyncMock, MagicMock, call, patch
 import pytest
 
 from artel.archivist import conflict, synthesis
-from artel.archivist.llm import _api_key, _default_model, is_configured
+from artel.archivist.llm import (
+    OPENROUTER_BASE_URL,
+    _api_key,
+    _base_url,
+    _default_model,
+    complete,
+    is_configured,
+)
 from artel.archivist.synthesis import _execute_operations, _parse_operations
 
 
@@ -60,6 +67,42 @@ class TestLlmConfig:
         with patch("artel.archivist.llm.settings") as s:
             s.archivist_provider = "openai"
             assert _default_model() == "gpt-4o"
+
+    def test_openrouter_key_and_defaults(self):
+        with patch("artel.archivist.llm.settings") as s:
+            s.archivist_api_key = ""
+            s.archivist_base_url = ""
+            s.archivist_provider = "openrouter"
+            s.openrouter_api_key = ""
+            assert not is_configured()
+            s.openrouter_api_key = "sk-or-test"
+            assert is_configured()
+            assert _api_key() == "sk-or-test"
+            assert _default_model() == "google/gemini-3.7-flash"
+            assert _base_url() == OPENROUTER_BASE_URL
+
+    def test_openrouter_base_url_is_overridable(self):
+        with patch("artel.archivist.llm.settings") as s:
+            s.archivist_provider = "openrouter"
+            s.archivist_base_url = "http://proxy.local/v1"
+            assert _base_url() == "http://proxy.local/v1"
+
+    def test_openai_provider_keeps_empty_base_url(self):
+        with patch("artel.archivist.llm.settings") as s:
+            s.archivist_provider = "openai"
+            s.archivist_base_url = ""
+            assert _base_url() == ""
+
+    async def test_openrouter_routes_through_openai_client(self):
+        with patch("artel.archivist.llm.settings") as s:
+            s.archivist_provider = "openrouter"
+            s.archivist_model = ""
+            s.archivist_api_key = ""
+            s.openrouter_api_key = "sk-or-test"
+            with patch("artel.archivist.llm._openai", new=AsyncMock(return_value="ok")) as m:
+                assert await complete("sys", "usr") == "ok"
+            assert m.await_args.args[2] == "google/gemini-3.7-flash"
+            assert m.await_args.args[4] == "sk-or-test"
 
     def test_claude_sdk_configured_via_oauth_token(self, monkeypatch):
         with patch("artel.archivist.llm.settings") as s:

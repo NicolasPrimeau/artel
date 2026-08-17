@@ -4,12 +4,15 @@ services:
       - artel-data:/data
     environment:
       - DB_PATH=/data/artel.db
-      - ARCHIVIST_PROVIDER=claude-sdk
-      - ARCHIVIST_MODEL=haiku
+      # OpenRouter, so which model does the curating is a setting rather than a
+      # build. OPENROUTER_API_KEY comes from .env; the model is the provider default
+      # (google/gemini-3.7-flash) unless ARCHIVIST_MODEL says otherwise.
+      - ARCHIVIST_PROVIDER=openrouter
+      - ARCHIVIST_MODEL=
       # This service IS the archivist; the entrypoint must not also inline-spawn one.
       - RUN_INLINE_ARCHIVIST=0
-      # CLAUDE_CODE_OAUTH_TOKEN comes from .env; blank the API key so the CLI bills the
-      # subscription credit (OAuth token) instead of pay-as-you-go.
+      # Blank the Anthropic key so a stale value can't quietly bill pay-as-you-go if
+      # the provider is ever switched back.
       - ANTHROPIC_API_KEY=
 
   artel:
