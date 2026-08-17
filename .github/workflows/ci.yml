@@ -6,6 +6,12 @@ on:
     tags: ["v*"]
   pull_request:
     branches: [master]
+  workflow_dispatch:
+    inputs:
+      deploy_sandbox:
+        description: "Deploy the public demo at artel.run (costs money while it runs)"
+        type: boolean
+        default: false
 
 jobs:
   test:
@@ -217,9 +223,15 @@ jobs:
           done
           exit 1
 
+  # The demo at artel.run is brought up on purpose, not by every push. It used to
+  # deploy on any master commit, so it ran — and billed — whether or not anyone wanted
+  # it up, and taking it down lasted until the next merge. Run this workflow manually
+  # with deploy_sandbox=true, or use scripts/sandbox.sh from a laptop.
+  # No `needs:` on purpose. This deploys an image already published to ghcr, it does
+  # not build one — and the `docker` job only runs on push, so depending on it would
+  # make every manual dispatch skip this job silently and look like a no-op deploy.
   deploy-sandbox:
-    needs: docker
-    if: (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')) && github.actor != 'github-actions[bot]'
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy_sandbox
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
