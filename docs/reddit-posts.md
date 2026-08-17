@@ -1,7 +1,10 @@
 # Artel — Reddit launch post (r/ClaudeAI)
 
 Copy-paste ready. Attach the demo GIF (`docs/reddit.gif`) as the post image.
-Sandbox link: https://artel.run/ui (password: artel)
+
+> No sandbox link: there is no hosted instance any more. artel.run serves the docs.
+> If you want a live demo for a launch, bring one up first with `scripts/sandbox.sh up`
+> and link `https://artel-sandbox.fly.dev/ui`, then take it down after.
 
 ---
 
@@ -31,5 +34,5 @@ Two parts go further than a plain shared database. A background archivist keeps 
 
 Happy to answer questions, and curious whether others have approached this differently.
 
-Sandbox to look around (password: artel): https://artel.run/ui
+Docs: https://artel.run
 Repo: https://github.com/NicolasPrimeau/artel

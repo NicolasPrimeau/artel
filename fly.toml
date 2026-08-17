@@ -10,7 +10,10 @@ primary_region = "yyz"
   UI_DEFAULT_THEME = "cobalt"
   FASTEMBED_CACHE_PATH = "/data/fastembed_cache"
   HF_HUB_DISABLE_XET_DOWNLOAD = "1"
-  PUBLIC_URL = "https://artel.run"
+  # artel.run now serves the docs site on GitHub Pages, so the demo answers on its
+  # own Fly hostname. PUBLIC_URL is what the onboard script hands out, and pointing
+  # it at artel.run would generate configs aimed at a static site.
+  PUBLIC_URL = "https://artel-sandbox.fly.dev"
   UI_PASSWORD = "artel"
 
 [http_service]

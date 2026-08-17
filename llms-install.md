@@ -9,8 +9,9 @@ Artel is a **self-hosted server** — the user runs one Artel instance (Docker),
 Ask: "Do you have an Artel server running, or do you need to set one up?"
 
 - **Already running** → skip to Step 3 (onboard the agent).
-- **Using the public sandbox** → skip to Step 3, use `https://artel.run` as the host. The sandbox is for evaluation only — data is not persistent across restarts.
-- **Need to self-host** → continue to Step 2.
+- **Need to set one up** → continue to Step 2.
+
+There is no public instance to borrow. Artel stores the fleet's memory, so it is always the user's own host.
 
 ---
 

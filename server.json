@@ -14,9 +14,8 @@
       "url": "https://{artel_host}/mcp",
       "variables": {
         "artel_host": {
-          "description": "Host of YOUR self-hosted Artel instance (e.g. artel.example.com). Defaults to the public demo sandbox; self-host for real use.",
-          "isRequired": true,
-          "default": "artel.run"
+          "description": "Host of YOUR self-hosted Artel instance (e.g. artel.example.com). There is no public instance — Artel holds your fleet's memory, so you run it.",
+          "isRequired": true
         }
       },
       "headers": [

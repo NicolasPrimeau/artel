@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.md)
 [![Glama](https://glama.ai/mcp/servers/NicolasPrimeau/artel/badges/score.svg)](https://glama.ai/mcp/servers/NicolasPrimeau/artel)
 [![smithery badge](https://smithery.ai/badge/nicolas-primeau/artel)](https://smithery.ai/servers/nicolas-primeau/artel)
-[![Docs](https://img.shields.io/badge/docs-artel-teal)](https://nicolasprimeau.github.io/artel/)
+[![Docs](https://img.shields.io/badge/docs-artel-teal)](https://artel.run)
 
 Self-hosted coordination layer for AI agent fleets. A shared memory your agents read from and write to — with semantic search, tasks, async messaging, and session handoffs. The Claude Code plugin makes memory **ambient**: it pushes the right knowledge into a session at the right moment, and captures what happens back out — no agent has to remember to. Instances mesh together as CRDTs, compiled memory stays anchored to your code, and an autonomous archivist keeps the whole store clean and coherent. Any agent that speaks HTTP or MCP can join.
 
@@ -23,27 +23,20 @@ Self-hosted coordination layer for AI agent fleets. A shared memory your agents 
 
 ---
 
-## Try it
+## Quick start
 
-```bash
-export ARTEL_REG_KEY=artel && curl -fsSL https://artel.run/onboard | sh
-```
-
-UI: https://artel.run/ui (password: `artel`) — sandbox, data not persistent.
-
----
-
-## Self-hosting
+There is no public instance to point at — Artel holds your fleet's memory, so you run it. One container, one port:
 
 ```bash
 curl -O https://raw.githubusercontent.com/NicolasPrimeau/artel/master/docker-compose.yml
 curl -O https://raw.githubusercontent.com/NicolasPrimeau/artel/master/.env.example
 cp .env.example .env
-# edit .env: set UI_PASSWORD and ANTHROPIC_API_KEY at minimum
+# edit .env: set UI_PASSWORD, and a key for the archivist if you want one
+# (ANTHROPIC_API_KEY, or OPENROUTER_API_KEY with ARCHIVIST_PROVIDER=openrouter)
 docker compose up -d
 ```
 
-API + UI at `http://<host>:8000`, MCP at `http://<host>:8000/mcp`. Single container, single port. Images at `ghcr.io/nicolasprimeau/artel:edge`.
+API + UI at `http://<host>:8000`, MCP at `http://<host>:8000/mcp`. Images at `ghcr.io/nicolasprimeau/artel:edge`.
 
 Once running, register an agent:
 
@@ -96,8 +89,10 @@ By default Artel is **pull**: MCP tools an agent calls when it thinks to. Agents
 **Install — one line, no prompts:**
 
 ```bash
-curl -fsSL https://artel.run/plugin/install | sh
+curl -fsSL http://<host>:8000/plugin/install | sh
 ```
+
+Your own instance serves that script — point it at the Artel you started above.
 
 This registers an agent, writes `ARTEL_URL` / `ARTEL_AGENT_ID` / `ARTEL_API_KEY` to `~/.config/artel/env.sh` (sourced from your shell profile), and installs the plugin via the `claude` CLI. It's a plain shell script, so an agent can run it for you. Then start a new Claude Code session.
 
@@ -312,8 +307,10 @@ Artel also supports OAuth 2.1 (dynamic client registration, PKCE, client credent
 
 ### One-click install
 
-[![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=artel&config=eyJ1cmwiOiJodHRwczovL2FydGVsLnJ1bi9tY3AiLCJoZWFkZXJzIjp7IngtYWdlbnQtaWQiOiJZT1VSX0FHRU5UX0lEIiwieC1hcGkta2V5IjoiWU9VUl9BUElfS0VZIn19)
-[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_Artel-0098FF?logo=visualstudiocode&logoColor=white)](vscode:mcp/install?%7B%22name%22%3A%22artel%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A//artel.run/mcp%22%2C%22headers%22%3A%7B%22x-agent-id%22%3A%22YOUR_AGENT_ID%22%2C%22x-api-key%22%3A%22YOUR_API_KEY%22%7D%7D)
+Both buttons install a config with placeholders — replace `YOUR_ARTEL_HOST` with your instance, along with the agent id and key, once it lands in your editor.
+
+[![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=artel&config=eyJ1cmwiOiAiaHR0cHM6Ly9ZT1VSX0FSVEVMX0hPU1QvbWNwIiwgImhlYWRlcnMiOiB7IngtYWdlbnQtaWQiOiAiWU9VUl9BR0VOVF9JRCIsICJ4LWFwaS1rZXkiOiAiWU9VUl9BUElfS0VZIn19)
+[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_Artel-0098FF?logo=visualstudiocode&logoColor=white)](vscode:mcp/install?%7B%22name%22%3A%20%22artel%22%2C%20%22type%22%3A%20%22http%22%2C%20%22url%22%3A%20%22https%3A%2F%2FYOUR_ARTEL_HOST%2Fmcp%22%2C%20%22headers%22%3A%20%7B%22x-agent-id%22%3A%20%22YOUR_AGENT_ID%22%2C%20%22x-api-key%22%3A%20%22YOUR_API_KEY%22%7D%7D)
 
 ---
 
@@ -322,7 +319,7 @@ Artel also supports OAuth 2.1 (dynamic client registration, PKCE, client credent
 [OpenCode](https://opencode.ai) uses SSE MCP transport (not Streamable HTTP). The onboard script detects OpenCode automatically and prints the right config:
 
 ```bash
-curl -fsSL https://artel.run/onboard | sh
+curl -fsSL http://<host>:8000/onboard | sh
 ```
 
 Manual config for `opencode.json` or `~/.config/opencode/config.json`:
@@ -381,8 +378,8 @@ Artel exposes `artel://inbox/<agent-id>` as an MCP resource. Subscribe to it and
 
 All requests require `X-Agent-ID` and `X-API-Key` headers (except `/agents/self-register` and `/onboard`).
 
-**[Full REST reference →](https://nicolasprimeau.github.io/artel/reference/rest/)** — every endpoint, generated from the OpenAPI schema.
-**[MCP tool reference →](https://nicolasprimeau.github.io/artel/reference/mcp-tools/)** — all 47 tools an agent can call.
+**[Full REST reference →](https://artel.run/reference/rest/)** — every endpoint, generated from the OpenAPI schema.
+**[MCP tool reference →](https://artel.run/reference/mcp-tools/)** — all 47 tools an agent can call.
 
 A running server also serves interactive docs at `/docs` and the raw schema at [`openapi.json`](openapi.json).
 
@@ -400,7 +397,7 @@ Configured entirely through environment variables (or a `.env` file). The essent
 | `REGISTRATION_KEY` | Required by `/agents/self-register`. Unset disables open registration. |
 | `PUBLIC_URL` | Externally reachable base URL, used in OAuth metadata and onboarding. |
 
-**[Full configuration reference →](https://nicolasprimeau.github.io/artel/reference/configuration/)** — all 56 settings across the server, MCP adapter, and archivist, generated from the settings classes.
+**[Full configuration reference →](https://artel.run/reference/configuration/)** — all 56 settings across the server, MCP adapter, and archivist, generated from the settings classes.
 
 ---
 

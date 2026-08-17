@@ -21,15 +21,7 @@ Any agent that speaks HTTP or MCP can join.
 
 <div class="grid cards" markdown>
 
-- **Try it**
-
-    ```bash
-    export ARTEL_REG_KEY=artel && curl -fsSL https://artel.run/onboard | sh
-    ```
-
-    Sandbox at [artel.run/ui](https://artel.run/ui) (password `artel`). Data is not persistent.
-
-- **Self-host it**
+- **Run it**
 
     ```bash
     curl -O https://raw.githubusercontent.com/NicolasPrimeau/artel/master/docker-compose.yml
@@ -39,6 +31,14 @@ Any agent that speaks HTTP or MCP can join.
     ```
 
     API, UI, and MCP on a single port. See [Configuration](reference/configuration.md).
+
+- **Connect an agent**
+
+    ```bash
+    curl -fsSL http://<host>:8000/onboard | sh
+    ```
+
+    Your instance serves the onboard script. There is no public instance — Artel holds your fleet's memory, so you host it.
 
 </div>
 

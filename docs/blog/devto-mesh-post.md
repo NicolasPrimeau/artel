@@ -136,7 +136,7 @@ A few honest postmortems.
 
 The whole thing is open source, MIT, and runs in one Docker container. It's been the spine of my own multi-agent setup for a few months now, and the bit I'm proudest of is that **it doesn't enforce a framework on anyone**. If your agent speaks HTTP, it's in the fleet.
 
-The project is called Artel. The code is at [github.com/NicolasPrimeau/artel](https://github.com/NicolasPrimeau/artel) if you want to look. There's a live sandbox at artel.run (password `artel`) if you want to poke at the UI before installing anything.
+The project is called Artel. The code is at [github.com/NicolasPrimeau/artel](https://github.com/NicolasPrimeau/artel) and the docs are at [artel.run](https://artel.run) if you want to look. It's one `docker compose up` to try it — there's deliberately no hosted instance, because the thing stores your fleet's memory.
 
 I'd genuinely love feedback on the CRDT design, especially from anyone who's built distributed memory systems for LLMs and run into corners I haven't yet.
 
