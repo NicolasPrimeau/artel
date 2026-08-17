@@ -13,7 +13,11 @@ set -euo pipefail
 
 APP="artel-sandbox"
 VOLUME="artel_data"
-URL="https://artel.run"
+# The demo's own hostname, not artel.run. artel.run used to be a CNAME onto this app;
+# it is now a registrar redirect to the GitHub repo, so probing it would report the
+# repo's availability rather than the demo's — and a successful deploy would look
+# like a failed one. If artel.run is ever pointed back here, change this too.
+URL="https://artel-sandbox.fly.dev"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 die() { echo "error: $*" >&2; exit 1; }

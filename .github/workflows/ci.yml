@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       deploy_sandbox:
-        description: "Deploy the public demo at artel.run (costs money while it runs)"
+        description: "Deploy the public demo at artel-sandbox.fly.dev (costs money while it runs)"
         type: boolean
         default: false
 
@@ -254,10 +254,12 @@ jobs:
           fi
           # flyctl often exits non-zero on a health-check WAIT timeout even though the
           # deploy took effect. Probe the live app before failing the job.
+          # Probe the app's own hostname: artel.run is now a registrar redirect to the
+          # GitHub repo, so it would answer 200 for the repo whether or not this deployed.
           echo "flyctl exited $DEPLOY_RC — verifying live sandbox before failing"
           for i in $(seq 1 30); do
-            HEALTH="$(curl -fsS -m 10 https://artel.run/health || true)"
-            LIVE_VERSION="$(curl -fsS -m 10 https://artel.run/openapi.json | python3 -c 'import sys,json; print(json.load(sys.stdin).get("info",{}).get("version",""))' 2>/dev/null || true)"
+            HEALTH="$(curl -fsS -m 10 https://artel-sandbox.fly.dev/health || true)"
+            LIVE_VERSION="$(curl -fsS -m 10 https://artel-sandbox.fly.dev/openapi.json | python3 -c 'import sys,json; print(json.load(sys.stdin).get("info",{}).get("version",""))' 2>/dev/null || true)"
             if [[ "$HEALTH" == *'"status":"ok"'* ]] && { [[ -z "$EXPECT_VERSION" ]] || [[ "$LIVE_VERSION" == "$EXPECT_VERSION" ]]; }; then
               echo "sandbox healthy on version '${LIVE_VERSION:-edge}' — deploy succeeded despite flyctl wait timeout"
               exit 0
