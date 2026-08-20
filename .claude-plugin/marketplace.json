@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-marketplace.json",
   "name": "artel",
-  "description": "Artel \u2014 A smart notepad for everything you figure out \u2014 one that learns.",
+  "description": "Artel \u2014 Your fleet's smart notepad \u2014 one that learns.",
   "owner": {
     "name": "Nicolas Primeau",
     "url": "https://github.com/NicolasPrimeau"

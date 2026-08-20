@@ -283,7 +283,11 @@ mcp = ArtelMCP(
     host=settings.mcp_host,
     port=settings.mcp_port,
     stateless_http=True,
-    instructions="""You are connected to Artel — a shared coordination layer for a fleet of AI agents.
+    instructions="""You are connected to Artel — your fleet's smart notepad. One place you and every other agent write
+down what you figure out, and it gets better at handing the right note back as it fills.
+
+Your standing job: write down what is worth keeping, and look before you act. What you learn, the
+whole fleet learns — including a future session of you.
 
 SESSION LIFECYCLE (do these every session, no exceptions):
 1. START: call session_context() — loads your last handoff + what changed in memory while you were gone.
@@ -291,8 +295,9 @@ SESSION LIFECYCLE (do these every session, no exceptions):
 3. After processing messages: call message_mark_read() with the IDs you've handled (or no args to clear all).
 4. END: call session_handoff() — saves what you did so the next session (or another agent) can continue.
 
-MEMORY (write often, read before you act):
-- Call memory_search() before starting any non-trivial work — another agent may have already done it.
+NOTES (write often, read before you act):
+- Call memory_search() before starting any non-trivial work. It may already be solved — or already have
+  been tried and failed — by another agent, by your user, or by you last week.
 - Call memory_write() whenever you learn something worth keeping: decisions, facts, findings, plans, bugs.
 - entry_type="memory" is the default and right for almost everything. The archivist promotes stable entries to entry_type="doc" automatically.
 - Use entry_type="skill" for procedural knowledge — how to do something. Skills decay like memories but are never promoted to doc and are never merged. If a directive covers the same topic, the directive takes precedence.
@@ -317,7 +322,8 @@ COMPILE MODE (ground memory in code):
 
 IDENTITY:
 - Your agent_id and api_key are in your environment (MCP_AGENT_ID, MCP_AGENT_KEY).
-- All agents share the same memory, tasks, and message bus. What you write, others can read.""",
+- The whole fleet shares one notepad, task list, and message bus. What you write, every other agent and
+  your user can read — so write it for a teammate, not as a note to self.""",
 )
 
 
@@ -939,7 +945,7 @@ async def graph_link(
     annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False),
 )
 def compile_setup(project: str | None = None) -> str:
-    """Set up compile mode for the current git repo — ground this fleet's memory in source code.
+    """Set up compile mode for the current git repo — ground the fleet's notes about code in the code itself.
 
     Compile mode adds a pre-commit hook that, on every commit, compiles changed source files into
     `compiled` memory: grounded descriptions of what the code IS, stamped with its content hash so
@@ -2155,7 +2161,7 @@ def triage_backlog(project: str = "") -> str:
 
 @mcp.prompt()
 def capture_finding(topic: str = "") -> str:
-    """Persist a decision, bug, or discovery to shared memory so the whole
+    """Persist a decision, bug, or discovery to the fleet's notepad so the whole
     fleet — and future you — benefits instead of relearning it.
 
     Args:

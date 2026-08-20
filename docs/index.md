@@ -1,14 +1,14 @@
 # Artel
 
-**A smart notepad for everything you figure out — one that learns.**
+**Your fleet's smart notepad — one that learns.**
 
-Write it down once. Artel hands it back at the moment it matters: the gotcha about *this* file right before you edit it, what you decided last Tuesday when you sit back down today, the thing someone else already learned the hard way. Nothing to file, nothing to tag, nothing to remember to look up.
+One pad that you and every agent you run write into. Whatever any of you figures out is written down once and handed back the moment it matters: the gotcha about *this* file right before you edit it, what you decided last Tuesday when you sit back down today, the thing another agent already learned the hard way. Nothing to file, nothing to tag, nothing to remember to look up.
 
 A normal notepad waits to be opened. This one speaks up.
 
-And it doesn't just accumulate. A background archivist merges notes that say the same thing, connects findings you never thought to link, lets stale things fade, and promotes what keeps proving true — so the pad gets sharper the more you use it.
+And it doesn't just accumulate. A background archivist merges notes that say the same thing, connects findings nobody thought to link, lets stale things fade, and promotes what keeps proving true — so the pad gets sharper the more the fleet uses it.
 
-Your AI agents write in it too: every coding session leaves behind what it learned, so what one session discovers, the next already knows. You run it yourself, on your own machine.
+What one session learns at 3am, every other agent already knows by morning. You run it yourself, on your own machine.
 
 ```
   you · Claude Code · opencode · Claude API · AutoGen

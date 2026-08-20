@@ -6,28 +6,28 @@
 [![smithery badge](https://smithery.ai/badge/nicolas-primeau/artel)](https://smithery.ai/servers/nicolas-primeau/artel)
 [![Docs](https://img.shields.io/badge/docs-artel-teal)](https://artel.run)
 
-**A smart notepad for everything you figure out — one that learns.**
+**Your fleet's smart notepad — one that learns.**
 
-Write it down once. Artel hands it back at the moment it matters: the gotcha about *this* file right before you edit it, what you decided last Tuesday when you sit back down today, the thing someone else already learned the hard way. Nothing to file, nothing to tag, nothing to remember to go look up.
+One pad that you and every agent you run write into. Whatever any of you figures out gets written down once and handed back the moment it matters: the gotcha about *this* file right before you edit it, what you decided last Tuesday when you sit back down today, the thing another agent already learned the hard way at 3am. Nothing to file, nothing to tag, nothing to remember to look up.
 
 A normal notepad waits to be opened. This one speaks up.
 
-And it doesn't just sit there accumulating. A background archivist reads what piles up — merging notes that say the same thing, connecting findings you never thought to link, letting stale things fade, promoting what keeps proving true. The notepad gets sharper the more you use it.
+And it doesn't just accumulate. A background archivist reads what piles up — merging notes that say the same thing, connecting findings nobody thought to link, letting stale things fade, promoting what keeps proving true. The pad gets sharper the more the fleet uses it.
 
-Your AI agents write in it too. Every coding session leaves behind what it learned, so the pad fills itself while you work — and what one session discovers, the next one already knows.
+That's the compounding bit: what one session learns at 3am, every other agent already knows by morning. Nobody solves the same thing twice.
 
-**It's yours.** You run it, on your own machine. Your ideas don't go to anyone's cloud.
+**It's yours.** You run it, on your own machine. None of it goes to anyone's cloud.
 
 ## What that looks like
 
-| You're about to… | Artel says |
-|---|---|
-| edit `auth.py` | "last time: the token refresh silently no-ops when the clock skews" |
-| start work Monday | "Friday you were mid-way through the migration; here's where you stopped" |
-| debug a flaky test | "you hit this in March — it was the shared fixture, not the test" |
-| ask a question | the three notes that answer it, before you finish typing |
+| An agent is about to… | Artel says | who wrote it |
+|---|---|---|
+| edit `auth.py` | "the token refresh silently no-ops when the clock skews" | a different agent, last month |
+| start work Monday | "Friday you stopped mid-migration; here's where" | you, before the weekend |
+| debug a flaky test | "seen in March — it was the shared fixture, not the test" | an agent on another machine |
+| ask a question | the three notes that answer it, before it finishes typing | whoever hit it first |
 
-You never opened a file to find any of that.
+Nobody opened a file to find any of that, and nobody had to know who to ask.
 
 ---
 
@@ -96,7 +96,7 @@ A server, a database, and a librarian. Notes go in over HTTP or MCP; embeddings 
 
 ## Features
 
-Grouped by what they do for you, not by what they are.
+Grouped by what they do for the fleet, not by what they are.
 
 **Writing things down**
 
@@ -116,9 +116,9 @@ Grouped by what they do for you, not by what they are.
 - **Knowledge graph** — notes link to related notes, so one answer pulls its neighbours along.
 - **Feed subscriptions** — point it at an RSS or Atom feed and new items land in the pad on their own.
 
-**More than one of you**
+**One pad, many agents**
 
-- **Agents share the pad** — anything that speaks HTTP or MCP reads and writes the same notes, so what one session learns, the rest already know.
+- **Everything shares it** — anything that speaks HTTP or MCP reads and writes the same notes, whatever machine or LLM it runs on, so what one session learns the rest already know.
 - **Tasks and messages** — hand work between agents, leave each other notes, no central scheduler.
 - **Mesh** — run it on several machines and they converge as CRDTs, with LAN peers found over mDNS. No coordinator, no cloud.
 

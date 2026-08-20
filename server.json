@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.NicolasPrimeau/artel",
   "title": "Artel",
-  "description": "A smart notepad for everything you figure out \u2014 one that learns. Write a note once; it comes back when it's relevant. A background archivist merges, connects and retires notes so the pad improves on its own. Your agents read and write the same pad. Self-hosted.",
+  "description": "Your fleet's smart notepad \u2014 one that learns. You and every agent you run write into one pad; a note written once comes back when it's relevant. A background archivist merges, connects and retires notes so the pad improves on its own. What one agent learns, the rest already know. Self-hosted.",
   "repository": {
     "url": "https://github.com/NicolasPrimeau/artel",
     "source": "github"
