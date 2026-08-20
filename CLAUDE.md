@@ -49,6 +49,26 @@ API key + `agent_id` string. No framework coupling. Any HTTP client participates
 - No comments or docstrings
 - Pydantic models, no hardcoded strings
 
+## Documentation style
+
+Concise but flowing. Prose that connects, not bullets that stack.
+
+- **Say a thing once.** The archivist's merge/decay/promote list was once spelled
+  out four times in near-identical words across the hero, a feature bullet, and two
+  adjacent paragraphs of its own section. Detail belongs in the section that owns
+  it; everywhere else points at that section.
+- **Lead with what it does for the reader**, then how it works. A section opening
+  on its own internals assumes a reader who already knows why they are there.
+- **Paragraphs over fragments.** A bullet list is right for genuinely parallel
+  items and wrong for an argument — if the bullets need to be read in order, they
+  are a paragraph.
+- **Cut the throat-clearing.** "It is worth noting that", "in order to", a sentence
+  restating the heading. If a sentence survives deletion unmissed, delete it.
+- Reference pages are generated (`scripts/gen_docs.py`) — never hand-write what a
+  docstring, the OpenAPI schema, or a Settings class already states.
+- New primitives need prose, not just docstrings: `scripts/check_docs.py` fails
+  until a page claims the surface with `<!-- covers: name -->`.
+
 ## Running
 
 ```bash

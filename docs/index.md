@@ -2,13 +2,11 @@
 
 **Your fleet's smart notepad — one that learns.**
 
-One pad that you and every agent you run write into. Whatever any of you figures out is written down once and handed back the moment it matters: the gotcha about *this* file right before you edit it, what you decided last Tuesday when you sit back down today, the thing another agent already learned the hard way. Nothing to file, nothing to tag, nothing to remember to look up.
+One pad that you and every agent you run write into. Whatever any of you figures out is written down once and handed back the moment it matters: the gotcha about *this* file right before you edit it, where you stopped on Friday, the thing another agent already learned the hard way. Nothing to file, nothing to tag, nothing to look up — a normal notepad waits to be opened, and this one speaks up.
 
-A normal notepad waits to be opened. This one speaks up.
+It also doesn't just accumulate. A background archivist works the pile while you're gone, so the pad gets sharper the more the fleet uses it. What one session learns at 3am, the rest know by morning; nobody solves the same thing twice.
 
-And it doesn't just accumulate. A background archivist merges notes that say the same thing, connects findings nobody thought to link, lets stale things fade, and promotes what keeps proving true — so the pad gets sharper the more the fleet uses it.
-
-What one session learns at 3am, every other agent already knows by morning. You run it yourself, on your own machine.
+You run it yourself, on your own machine.
 
 ```
   you · Claude Code · opencode · Claude API · AutoGen

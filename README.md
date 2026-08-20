@@ -8,15 +8,11 @@
 
 **Your fleet's smart notepad — one that learns.**
 
-One pad that you and every agent you run write into. Whatever any of you figures out gets written down once and handed back the moment it matters: the gotcha about *this* file right before you edit it, what you decided last Tuesday when you sit back down today, the thing another agent already learned the hard way at 3am. Nothing to file, nothing to tag, nothing to remember to look up.
+One pad that you and every agent you run write into. Whatever any of you figures out is written down once and handed back the moment it matters: the gotcha about *this* file right before you edit it, where you stopped on Friday, the thing another agent already learned the hard way. Nothing to file, nothing to tag, nothing to look up — a normal notepad waits to be opened, and this one speaks up.
 
-A normal notepad waits to be opened. This one speaks up.
+It also doesn't just accumulate. A background archivist works the pile while you're gone, so the pad gets sharper the more the fleet uses it. What one session learns at 3am, the rest know by morning; nobody solves the same thing twice.
 
-And it doesn't just accumulate. A background archivist reads what piles up — merging notes that say the same thing, connecting findings nobody thought to link, letting stale things fade, promoting what keeps proving true. The pad gets sharper the more the fleet uses it.
-
-That's the compounding bit: what one session learns at 3am, every other agent already knows by morning. Nobody solves the same thing twice.
-
-**It's yours.** You run it, on your own machine. None of it goes to anyone's cloud.
+You run it on your own machine. None of it goes to anyone's cloud.
 
 ## What that looks like
 
@@ -114,7 +110,7 @@ Grouped by what they do for the fleet, not by what they are.
 
 **The part that learns**
 
-- **Archivist** — a background agent that merges duplicates, synthesizes higher-level findings out of scattered notes, resolves contradictions, lets unused knowledge decay, and promotes what proves stable. This is the difference between a pile of notes and something that gets better.
+- **Archivist** — the background agent that curates all of the above. It is the difference between a pile of notes and something that gets better; [what it actually does](#archivist).
 - **Knowledge graph** — notes link to related notes, so one answer pulls its neighbours along.
 - **Feed subscriptions** — point it at an RSS or Atom feed and new items land in the pad on their own.
 
@@ -329,11 +325,9 @@ Every property above — SHA freshness, `relies_on` invalidation, module-shape s
 <!-- covers: archivist -->
 ## Archivist
 
-This is the part that makes the pad learn. It reads what accumulates and works it into something better: merging notes that say the same thing, connecting findings across sessions, resolving contradictions, letting unused knowledge fade, and promoting what keeps proving true.
+This is the part that makes the pad learn, and the only writer allowed to turn raw captures into notes. It is optional: without it you get a pad that remembers rather than one that improves.
 
-It is optional — the server works fine without it, you just get a pad that remembers instead of one that improves. It is also the only writer allowed to turn raw captures into notes.
-
-**With LLM configured:** compacts the capture queue into clean, deduplicated, provenance-tagged memory (minor pass) and consolidates provisional entries over time — merging duplicates, corroborating across sessions, promoting stable knowledge (major pass). Detects semantic conflicts on write and merges them; periodically synthesizes cross-agent findings into shared doc entries.
+**With an LLM configured**, it drains the capture queue into clean, deduplicated, provenance-tagged notes (minor pass), then consolidates them over time — merging duplicates, raising confidence when independent sessions corroborate, resolving contradictions, and promoting what proves stable (major pass). It also detects semantic conflicts on write and synthesizes cross-agent findings into shared `doc` entries.
 
 **Without LLM (passive):** confidence decay and type promotion (memory → doc) based on age and read frequency. Captures are left on the queue for a later LLM-configured run rather than discarded.
 
