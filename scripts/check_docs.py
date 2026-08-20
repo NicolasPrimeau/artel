@@ -296,10 +296,30 @@ def main() -> int:
     parser.add_argument(
         "--open-task", action="store_true", help="file an Artel task for stale pages"
     )
+    parser.add_argument(
+        "--coverage",
+        action="store_true",
+        help="check only that every surface is claimed; exit 1 if not",
+    )
     args = parser.parse_args()
 
     if args.update:
         return update()
+
+    # Staleness is a judgement — a page can read true after the code moved — so the
+    # hook reports it and lets a human decide. Coverage is not a judgement: either a
+    # shipped surface is claimed by a page or it is not, so it blocks.
+    if args.coverage:
+        uncovered, orphaned = coverage()
+        for row in uncovered:
+            print(f"undocumented: {row}")
+        for row in orphaned:
+            print(f"stale claim:  {row}")
+        if uncovered or orphaned:
+            print("\nWrite the prose, then mark it: <!-- covers: <surface> -->")
+            return 1
+        print(f"{len(_surfaces())} surfaces, all claimed")
+        return 0
 
     report = collect()
     uncovered, orphaned = coverage()

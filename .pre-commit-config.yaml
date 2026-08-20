@@ -11,15 +11,38 @@ repos:
     hooks:
       - id: gitleaks
 
-  # Surfaces prose pages whose subject code changed in this commit. Never blocks:
-  # you are told, and you decide whether the page still reads true.
   - repo: local
     hooks:
+      # Surfaces prose pages whose subject code changed in this commit. Never blocks:
+      # whether a page still reads true after the code moved is a judgement, so you
+      # are told and you decide.
       - id: docs-freshness
         name: docs describe current code
-        entry: bash -c 'python3 scripts/check_docs.py || true'
+        entry: bash -c 'uv run python scripts/check_docs.py || true'
         language: system
         pass_filenames: false
         verbose: true
         always_run: true
         stages: [pre-commit]
+
+      # Whether a shipped surface is documented at all is not a judgement, so this
+      # one blocks. The advisory hook above ran with `|| true` for everything, which
+      # meant it could not fail — it reported "Passed" on a real coverage gap.
+      - id: docs-coverage
+        name: every shipped surface is documented
+        entry: uv run python scripts/check_docs.py --coverage
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+      # The suite is ~19s, too slow for every commit and the right weight before a
+      # push. This is where local runs and CI are meant to agree; they disagreed
+      # once already and the docs deploy broke.
+      - id: tests
+        name: test suite
+        entry: uv run pytest -q
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
