@@ -6,26 +6,34 @@
 [![smithery badge](https://smithery.ai/badge/nicolas-primeau/artel)](https://smithery.ai/servers/nicolas-primeau/artel)
 [![Docs](https://img.shields.io/badge/docs-artel-teal)](https://artel.run)
 
-Self-hosted coordination layer for AI agent fleets. A shared memory your agents read from and write to — with semantic search, tasks, async messaging, and session handoffs. The Claude Code plugin makes memory **ambient**: it pushes the right knowledge into a session at the right moment, and captures what happens back out — no agent has to remember to. Instances mesh together as CRDTs, compiled memory stays anchored to your code, and an autonomous archivist keeps the whole store clean and coherent. Any agent that speaks HTTP or MCP can join.
+**A smart notepad for everything you figure out — one that learns.**
 
-```
-  Claude Code · opencode · Claude API · AutoGen
-        │   push: memory/skills/gotchas in  ┄  capture: sessions out
-        ▼
-   REST / MCP ──► Artel Server ──► SQLite (WAL) + embeddings
-                     ├── memory — semantic search · confidence decay · knowledge graph
-                     ├── captures queue ──► archivist compaction ──► memory
-                     ├── tasks · messages · events · session handoffs
-                     └── archivist — capture · synthesis · merge · decay · promote
-        │
-   mesh (CRDT feeds + mDNS) ◄──► other Artel instances
-```
+Write it down once. Artel hands it back at the moment it matters: the gotcha about *this* file right before you edit it, what you decided last Tuesday when you sit back down today, the thing someone else already learned the hard way. Nothing to file, nothing to tag, nothing to remember to go look up.
+
+A normal notepad waits to be opened. This one speaks up.
+
+And it doesn't just sit there accumulating. A background archivist reads what piles up — merging notes that say the same thing, connecting findings you never thought to link, letting stale things fade, promoting what keeps proving true. The notepad gets sharper the more you use it.
+
+Your AI agents write in it too. Every coding session leaves behind what it learned, so the pad fills itself while you work — and what one session discovers, the next one already knows.
+
+**It's yours.** You run it, on your own machine. Your ideas don't go to anyone's cloud.
+
+## What that looks like
+
+| You're about to… | Artel says |
+|---|---|
+| edit `auth.py` | "last time: the token refresh silently no-ops when the clock skews" |
+| start work Monday | "Friday you were mid-way through the migration; here's where you stopped" |
+| debug a flaky test | "you hit this in March — it was the shared fixture, not the test" |
+| ask a question | the three notes that answer it, before you finish typing |
+
+You never opened a file to find any of that.
 
 ---
 
 ## Quick start
 
-There is no public instance to point at — Artel holds your fleet's memory, so you run it. One container, one port:
+There is no public instance to point at — this is your notepad, so you run it. One container, one port:
 
 ```bash
 curl -O https://raw.githubusercontent.com/NicolasPrimeau/artel/master/docker-compose.yml
@@ -48,10 +56,29 @@ curl -fsSL http://<host>:8000/onboard | sh
 
 ---
 
+## Under the hood
+
+A server, a database, and a librarian. Notes go in over HTTP or MCP; embeddings make them findable by meaning rather than keyword; the archivist works the pile while you're not looking.
+
+```
+  you · Claude Code · opencode · Claude API · AutoGen
+        │   push: notes/skills/gotchas in  ┄  capture: sessions out
+        ▼
+   REST / MCP ──► Artel Server ──► SQLite (WAL) + embeddings
+                     ├── notes — semantic search · confidence decay · knowledge graph
+                     ├── captures queue ──► archivist compaction ──► notes
+                     ├── tasks · messages · events · session handoffs
+                     └── archivist — capture · synthesis · merge · decay · promote
+        │
+   mesh (CRDT feeds + mDNS) ◄──► your other machines
+```
+
+---
+
 ## Table of contents
 
 - [Features](#features)
-- [The Claude Code plugin — ambient memory](#the-claude-code-plugin--ambient-memory)
+- [The Claude Code plugin — the part that speaks up](#the-claude-code-plugin--the-part-that-speaks-up)
 - [Capture](#capture)
 - [Mesh](#mesh)
 - [Compile mode](#compile-mode)
@@ -69,22 +96,39 @@ curl -fsSL http://<host>:8000/onboard | sh
 
 ## Features
 
-- **Shared memory** — semantic search across all agents. Five types with different time horizons: `memory` (default, decays), `doc` (stable reference, archivist-promoted), `directive` (permanent standing instruction), `skill` (procedural, decays, never promoted), `compiled` (anchored to source code, recompiles instead of decaying). Confidence scores decay based on age and read frequency.
-- **Ambient plugin** — the Claude Code plugin turns memory from *pull* (tools an agent must call) into *push*: it injects relevant memory, matching skills, and file-anchored gotchas at the exact moment they help, delivers inbox messages, and captures sessions — all automatically.
-- **Capture** — a durable ingest queue absorbs raw session slices off the agent's hot path; the archivist compacts them into clean memory. The write side is as reliable as the read side, and a firehose of raw writes can never degrade the store.
-- **Tasks** — create, claim, complete, with dependencies. Agents coordinate without a central scheduler.
-- **Messages** — async agent-to-agent inbox. Direct or broadcast.
-- **Session handoffs** — save state at session end, resume with full context on next start. Any agent can pick up where another left off across context resets and machine restarts.
-- **Feed subscriptions** — subscribe any RSS or Atom feed; new items land in memory automatically.
-- **Mesh** — link two instances and memory replicates as a CRDT. LAN peers discovered via mDNS.
-- **Compile mode** — anchor memory to source code. Compiled notes recompile when the code changes, not when they age.
-- **Archivist** — optional background agent that compacts captures, synthesizes cross-agent findings, detects conflicts, and decays stale knowledge.
+Grouped by what they do for you, not by what they are.
+
+**Writing things down**
+
+- **Just write** — no folders, no tags, no filing. Notes are found by meaning, not by remembering the words you used.
+- **Five kinds of note, different lifespans** — `memory` (the default; fades if it stops being true), `doc` (settled reference, promoted by the archivist), `directive` (a standing instruction that never fades), `skill` (how to do a thing), `compiled` (pinned to a piece of source code — it re-derives when the code changes instead of quietly going stale).
+- **Capture** — sessions are spooled to disk in ~10 ms and turned into clean notes later, so writing never slows you down and a burst of raw noise can't degrade the pad.
+
+**Getting it back without asking**
+
+- **It speaks up** — the Claude Code plugin surfaces the right note at the right moment: on session start, on each prompt, and — the good one — file-anchored notes right before you edit that file.
+- **Session handoffs** — stop mid-thought, pick up with full context tomorrow, on another machine, or in another agent entirely.
+- **Dashboard** — a UI for when you do want to browse, search, and read the pad directly.
+
+**The part that learns**
+
+- **Archivist** — a background agent that merges duplicates, synthesizes higher-level findings out of scattered notes, resolves contradictions, lets unused knowledge decay, and promotes what proves stable. This is the difference between a pile of notes and something that gets better.
+- **Knowledge graph** — notes link to related notes, so one answer pulls its neighbours along.
+- **Feed subscriptions** — point it at an RSS or Atom feed and new items land in the pad on their own.
+
+**More than one of you**
+
+- **Agents share the pad** — anything that speaks HTTP or MCP reads and writes the same notes, so what one session learns, the rest already know.
+- **Tasks and messages** — hand work between agents, leave each other notes, no central scheduler.
+- **Mesh** — run it on several machines and they converge as CRDTs, with LAN peers found over mDNS. No coordinator, no cloud.
 
 ---
 
-## The Claude Code plugin — ambient memory
+## The Claude Code plugin — the part that speaks up
 
-By default Artel is **pull**: MCP tools an agent calls when it thinks to. Agents forget. The plugin adds the **push** half — it volunteers the right knowledge at the right moment, and captures what happens, so the value of the shared store no longer depends on agent discipline.
+A notepad you have to remember to open is a notepad you stop opening. On its own, Artel is **pull**: tools you or an agent call when you think to — and you won't always think to.
+
+The plugin adds the **push** half. It volunteers the right note at the right moment and writes down what happens, so the pad's value stops depending on anyone's discipline.
 
 **Install — one line, no prompts:**
 
@@ -225,7 +269,7 @@ A single archivist holds a lease per deployment, so only one curates at a time. 
 
 ## Dashboard
 
-Browse memory, manage tasks, read inboxes, and inspect your fleet from a browser. Access at `http://<host>:8000/ui`.
+Browse your notes, manage tasks, read inboxes, and see what your agents are up to — from a browser. Access at `http://<host>:8000/ui`.
 
 ![Dashboard](docs/dash_dashboard.png)
 
@@ -345,7 +389,7 @@ The MCP port defaults to `8001` (separate from the REST API on `8000`). Start it
 
 [ACP](https://agentclientprotocol.com) — the Agent Client Protocol — is orthogonal to MCP, not a competitor. MCP points *downward*, from an agent to its tools and data. ACP points *upward*, from an editor or human to an agent. An ACP agent still uses MCP tools, so **anything reachable over ACP can already use Artel through the MCP server above** — no additional adapter, no extra process.
 
-If your editor speaks ACP and the agent behind it supports MCP, point that agent at Artel exactly as shown in the Claude Code or OpenCode sections and it joins the fleet like any other client.
+If your editor speaks ACP and the agent behind it supports MCP, point that agent at Artel exactly as shown in the Claude Code or OpenCode sections and it reads and writes the same pad as everything else.
 
 There is deliberately no `artel-acp` server. Artel is a coordination backend, not an agent — it has no LLM loop of its own — so acting *as* an ACP agent would be a category mismatch.
 

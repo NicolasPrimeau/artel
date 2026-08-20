@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.NicolasPrimeau/artel",
   "title": "Artel",
-  "description": "Self-hosted shared-memory & coordination mesh for AI agent fleets. You host it; agents connect.",
+  "description": "A smart notepad for everything you figure out \u2014 one that learns. Write a note once; it comes back when it's relevant. A background archivist merges, connects and retires notes so the pad improves on its own. Your agents read and write the same pad. Self-hosted.",
   "repository": {
     "url": "https://github.com/NicolasPrimeau/artel",
     "source": "github"
@@ -14,7 +14,7 @@
       "url": "https://{artel_host}/mcp",
       "variables": {
         "artel_host": {
-          "description": "Host of YOUR self-hosted Artel instance (e.g. artel.example.com). There is no public instance — Artel holds your fleet's memory, so you run it.",
+          "description": "Host of YOUR self-hosted Artel instance (e.g. artel.example.com). There is no public instance \u2014 Artel holds your fleet's memory, so you run it.",
           "isRequired": true
         }
       },

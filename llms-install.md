@@ -1,6 +1,6 @@
 # Artel — LLM Install Guide
 
-Artel is a **self-hosted server** — the user runs one Artel instance (Docker), and agents connect to it via MCP. You are helping the user get their instance running and connect to it.
+Artel is a smart notepad that learns: the user writes notes (or their agents do), and it hands them back when they're relevant. It is a **self-hosted server** — the user runs one Artel instance (Docker), and agents connect to it via MCP. You are helping the user get their instance running and connect to it.
 
 ---
 

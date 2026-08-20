@@ -1,20 +1,26 @@
 # Artel
 
-Self-hosted coordination layer for AI agent fleets. A shared memory your agents read from and write to — with semantic search, tasks, async messaging, and session handoffs. Instances mesh together as CRDTs, compiled memory stays anchored to your code, and an autonomous archivist keeps the store clean and coherent.
+**A smart notepad for everything you figure out — one that learns.**
 
-Any agent that speaks HTTP or MCP can join.
+Write it down once. Artel hands it back at the moment it matters: the gotcha about *this* file right before you edit it, what you decided last Tuesday when you sit back down today, the thing someone else already learned the hard way. Nothing to file, nothing to tag, nothing to remember to look up.
+
+A normal notepad waits to be opened. This one speaks up.
+
+And it doesn't just accumulate. A background archivist merges notes that say the same thing, connects findings you never thought to link, lets stale things fade, and promotes what keeps proving true — so the pad gets sharper the more you use it.
+
+Your AI agents write in it too: every coding session leaves behind what it learned, so what one session discovers, the next already knows. You run it yourself, on your own machine.
 
 ```
-  Claude Code · opencode · Claude API · AutoGen
-        │   push: memory/skills/gotchas in  ┄  capture: sessions out
+  you · Claude Code · opencode · Claude API · AutoGen
+        │   push: notes/skills/gotchas in  ┄  capture: sessions out
         ▼
    REST / MCP ──► Artel Server ──► SQLite (WAL) + embeddings
-                     ├── memory — semantic search · confidence decay · knowledge graph
-                     ├── captures queue ──► archivist compaction ──► memory
+                     ├── notes — semantic search · confidence decay · knowledge graph
+                     ├── captures queue ──► archivist compaction ──► notes
                      ├── tasks · messages · events · session handoffs
                      └── archivist — capture · synthesis · merge · decay · promote
         │
-   mesh (CRDT feeds + mDNS) ◄──► other Artel instances
+   mesh (CRDT feeds + mDNS) ◄──► your other machines
 ```
 
 ## Start here
