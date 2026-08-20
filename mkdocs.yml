@@ -57,6 +57,16 @@ plugins:
 
 nav:
   - Home: index.md
+  - Guides:
+      - The plugin: plugin.md
+      - Capture: capture.md
+      - Archivist: archivist.md
+      - Compile mode: compile-mode.md
+      - Blueprints: blueprints.md
+      - Decisions: decisions.md
+      - Mesh and feeds: mesh.md
+      - Dashboard: dashboard.md
+      - Connecting clients: clients.md
   - Concepts:
       - Architecture: architecture.md
       - Specification: spec.md
