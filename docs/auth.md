@@ -11,6 +11,7 @@ Reference for Artel's auth middleware (`artel/server/auth.py`). Every REST route
 depends on one of the dependency aliases at the bottom of that module; the MCP
 adapter authenticates once per session and reuses the resolved identity.
 
+<!-- covers: agents, participants -->
 ## Identity model
 
 An identity is an `agent_id` string paired with an `api_key`. There is no
@@ -39,6 +40,7 @@ Two sources of valid pairs:
 `_verify_agent(agent_id, api_key)` checks static keys first, then falls back to
 a `agents` table lookup. Either match authenticates.
 
+<!-- covers: oauth -->
 ## Credential transports
 
 `require_agent` accepts credentials three ways, checked in order:
@@ -110,6 +112,7 @@ ROLE_RANK = viewer(0) < agent(1) < archivist(2) < owner(3)
 | `ActorDep` | `require_role("agent")` | normal write operations |
 | `OwnerDep` | `require_role("owner")` | privileged/destructive operations |
 
+<!-- covers: projects -->
 ## Project scoping
 
 Authorization for *which rows* a caller sees is separate from role.

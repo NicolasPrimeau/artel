@@ -80,6 +80,8 @@ A server, a database, and a librarian. Notes go in over HTTP or MCP; embeddings 
 - [Features](#features)
 - [The Claude Code plugin — the part that speaks up](#the-claude-code-plugin--the-part-that-speaks-up)
 - [Capture](#capture)
+- [Blueprints — notes that run](#blueprints--notes-that-run)
+- [Decisions — the append-only log](#decisions--the-append-only-log)
 - [Mesh](#mesh)
 - [Compile mode](#compile-mode)
 - [Archivist](#archivist)
@@ -171,6 +173,7 @@ Not seeing anything? Run `scripts/artel-doctor.sh` to check config and connectiv
 
 ---
 
+<!-- covers: captures -->
 ## Capture
 
 The best notes are the ones you never got around to writing. Capture is the pad writing them for you: what happened in a session becomes durable notes, without slowing anything down and without dumping raw noise into the pad.
@@ -187,6 +190,55 @@ The net effect: memory quality is decoupled from write volume. Writing fast only
 
 ---
 
+<!-- covers: blueprints -->
+## Blueprints — notes that run
+
+A `skill` note says how to do something. A **blueprint** is that same procedure compiled into something the fleet can actually execute: template tasks plus the dependencies between them, instantiated as a task DAG that expands itself as it goes.
+
+```bash
+blueprint_list()                                   # what's available
+blueprint_instantiate("weekly-audit", {"repo": "artel"})   # start a run
+blueprint_run(run_id)                              # where it got to
+```
+
+Instantiating materializes only the root wave. As tasks complete, a **server-side reactor** expands what comes next — including `foreach` fan-out, where one node completing with a list of five items becomes five sibling tasks. The shape of the run isn't known in advance; it's discovered while running.
+
+**Completion contracts.** A node can require that finishing it produces something specific, checked server-side before the run advances. Three kinds:
+
+| Check | What it verifies |
+|---|---|
+| `payload` | The completion body has the declared shape — required fields, array minimums. |
+| `sqlite` | A query against the store returns what the node promised. |
+| `git` | The repository actually changed. The baseline is captured when the task is **created**, so "I changed it" is falsifiable rather than asserted. |
+
+The `git` check is the one that matters most: a perfectly-shaped payload with no corresponding commit does **not** advance the run.
+
+**Lowering.** Nodes that are purely mechanical can carry a `run` action the server executes itself — no model, no agent, no tokens. `lowered_fraction` reports how much of a blueprint runs that way; `register_action()` adds new kinds. The goal is that agents are spent on judgement, not on plumbing.
+
+**Where they come from.** You can write one, or the archivist can compile a prose `skill` note into a blueprint — with a validator-driven repair loop, so what it emits is runnable rather than plausible.
+
+---
+
+<!-- covers: decisions -->
+## Decisions — the append-only log
+
+Notes decay, merge, and get rewritten by the archivist. That is right for knowledge and wrong for the record of what you chose and why: a decision that quietly changes later is worse than no record at all.
+
+So decisions are a separate, **append-only** primitive. They are never merged, never decayed, never edited.
+
+```bash
+decision_write(decision="use SQLite, not Postgres",
+               rationale="single-file backup and WAL are worth more than concurrent writers here",
+               alternatives=["Postgres", "DuckDB"])
+decision_list()      # what has been decided, newest first
+decision_get(id)     # one decision in full
+```
+
+Each record carries the choice, the reasoning, the alternatives considered, who made it, and optionally the task it came out of. When someone asks six months later why the store is a single file, the answer is on the record with its alternatives — instead of being reconstructed, badly, from a merged note.
+
+---
+
+<!-- covers: mesh -->
 ## Mesh
 
 One notepad, several machines — laptop, desktop, the box under the stairs — with no cloud in the middle and no "main" copy. Write on either side, offline if you like; they reconcile when they can see each other.
@@ -204,8 +256,23 @@ Pinned by tests in `tests/test_feeds.py`.
 
 </details>
 
+### Subscribing to the outside world
+
+<!-- covers: feeds -->
+Confusingly, "feed" means two things here. Above, it is how instances replicate to each other. It is also how the pad reads things nobody on your fleet wrote:
+
+```bash
+feed_subscribe("https://example.com/blog/atom.xml")
+feed_list()
+feed_unsubscribe(feed_id)
+```
+
+Point it at any RSS or Atom source — a changelog, a security advisory list, a release feed — and new items are polled and land as notes, searchable next to everything else and subject to the same decay. A dependency's breaking-change post is in the pad before an agent trips over it.
+
+
 ---
 
+<!-- covers: compile, graph -->
 ## Compile mode
 
 Notes about code go stale the moment someone edits the code. A note that says "the retry lives in `client.py`" is worse than no note at all once the retry moves — it sends you confidently to the wrong place.
@@ -259,6 +326,7 @@ Every property above — SHA freshness, `relies_on` invalidation, module-shape s
 
 ---
 
+<!-- covers: archivist -->
 ## Archivist
 
 This is the part that makes the pad learn. It reads what accumulates and works it into something better: merging notes that say the same thing, connecting findings across sessions, resolving contradictions, letting unused knowledge fade, and promoting what keeps proving true.
@@ -275,9 +343,12 @@ A single archivist holds a lease per deployment, so only one curates at a time. 
 
 ---
 
+<!-- covers: pulse, logs -->
 ## Dashboard
 
 Browse your notes, manage tasks, read inboxes, and see what your agents are up to — from a browser. Access at `http://<host>:8000/ui`.
+
+Two tabs are purely operational: **logs**, where agents ship what they want kept for a human to read, and **pulse**, a live view of how much the fleet is actually doing. Both are read-mostly and exist so a quiet fleet is visibly quiet rather than ambiguously so.
 
 ![Dashboard](docs/dash_dashboard.png)
 

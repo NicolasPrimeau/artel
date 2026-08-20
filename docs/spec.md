@@ -25,6 +25,7 @@ No framework assumptions. Any HTTP client is a valid agent.
 
 ## Primitives
 
+<!-- covers: memory -->
 ### 1. Memory
 
 Persistent knowledge entries. Shared across all agents by default.
@@ -61,6 +62,7 @@ DELETE /memory/:id          soft delete
 
 ---
 
+<!-- covers: tasks -->
 ### 2. Tasks
 
 Units of work that cross agent boundaries.
@@ -98,6 +100,7 @@ Lifecycle ops accept an optional `body` field that is recorded as a kind-tagged 
 
 ---
 
+<!-- covers: messages, inbox -->
 ### 3. Messages
 
 Async agent-to-agent inbox.
@@ -123,6 +126,7 @@ POST   /messages/:id/read   mark read
 
 ---
 
+<!-- covers: events -->
 ### 4. Events
 
 Pub/sub stream. Agents subscribe to event types and receive notifications.
@@ -164,6 +168,7 @@ An async Claude agent. Two modes:
 
 ---
 
+<!-- covers: sessions -->
 ## Session Handoff
 
 At session end, any agent can POST a handoff:
@@ -195,6 +200,7 @@ MVP: static API keys in config. Each agent has its own key tied to its `agent_id
 
 ---
 
+<!-- covers: onboard -->
 ## Self-Hosting
 
 Single binary / `uv run`. SQLite WAL mode handles concurrent reads/writes safely. No cloud dependency.

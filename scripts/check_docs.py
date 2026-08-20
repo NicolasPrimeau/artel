@@ -15,7 +15,22 @@ goes stale on exactly the same signal a compiled memory does: the code it is
 anchored to moved. Editing a function body does not restale a page anchored to
 the module, because the module anchor hashes the file's shape, not its bytes.
 
-    check_docs.py             report status, exit 1 if anything is stale
+Anchors catch prose that ROTTED. They cannot catch prose that was never written:
+a primitive shipped with no page has no anchor, so there is nothing to compare and
+the gate stays green forever. Blueprints and decisions each shipped a full set of
+MCP tools and REST routes that way and went unmentioned for releases.
+
+So coverage is checked too. Every MCP tool group and every route module in the code
+must be claimed by a prose page with a marker placed next to the prose that covers it:
+
+    <!-- covers: blueprints -->
+
+Markers are read from README.md and docs/*.md. docs/reference/ is excluded — it is
+generated from the source, so it always "mentions" everything and would make the
+check vacuous. A marker naming a surface that no longer exists fails too, so claims
+cannot outlive the code.
+
+    check_docs.py             report status, exit 1 if anything is stale or uncovered
     check_docs.py --json      machine-readable report
     check_docs.py --update    re-bless every anchor at its current sha
     check_docs.py --open-task file an Artel task for the stale pages
@@ -26,7 +41,9 @@ and it only ever files work for a human or agent to do — it never edits a page
 """
 
 import argparse
+import ast
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -201,6 +218,77 @@ def open_task(stale: list[dict]) -> int:
     return 0
 
 
+MARKER = re.compile(r"<!--\s*covers:\s*([^>]+?)\s*-->", re.I)
+
+
+def _surfaces() -> dict[str, str]:
+    """Every surface the code exposes, as {name: what it is}.
+
+    Read from the source rather than a hand-kept list, because a list is exactly
+    the thing that stops being updated when someone ships a new primitive.
+
+    Route modules name the surface; MCP tool groups fold into the module that
+    serves them (task_* into tasks.py) so one claim covers a primitive rather than
+    demanding a separate one per transport.
+    """
+    routes: dict[str, str] = {}
+    for route in sorted((ROOT / "artel" / "server" / "routes").glob("*.py")):
+        if route.stem.startswith("_"):
+            continue
+        if re.search(r"@router\.(get|post|put|patch|delete)", route.read_text()):
+            routes[route.stem] = "REST routes"
+
+    found = dict(routes)
+    tree = ast.parse((ROOT / "artel" / "mcp" / "server.py").read_text())
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if not any("tool" in ast.dump(d) for d in node.decorator_list):
+            continue
+        prefix = node.name.split("_")[0]
+        for candidate in (prefix, prefix + "s", prefix + "es"):
+            if candidate in routes:
+                found[candidate] = "REST routes + MCP tools"
+                break
+        else:
+            found.setdefault(prefix, "MCP tools")
+    return found
+
+
+def _claims() -> dict[str, list[str]]:
+    """What each prose page says it covers. docs/reference/ is deliberately excluded."""
+    claimed: dict[str, list[str]] = {}
+    pages = [ROOT / "README.md"] + sorted(DOCS.glob("*.md"))
+    for page in pages:
+        if not page.exists():
+            continue
+        for match in MARKER.finditer(page.read_text()):
+            for name in match.group(1).split(","):
+                name = name.strip().lower()
+                if name:
+                    claimed.setdefault(name, []).append(str(page.relative_to(ROOT)))
+    return claimed
+
+
+def coverage() -> tuple[list[str], list[str]]:
+    """(surfaces with no prose, claims naming a surface that does not exist)."""
+    surfaces = _surfaces()
+    claimed = _claims()
+    # Route modules and tool groups often describe the same primitive (tasks.py and
+    # task_*), so a single claim satisfies both; they are keyed by the same name.
+    uncovered = [
+        f"{name} ({what}) — no page claims it"
+        for name, what in sorted(surfaces.items())
+        if name not in claimed
+    ]
+    orphaned = [
+        f"{name} — claimed by {', '.join(pages)} but no such surface in the code"
+        for name, pages in sorted(claimed.items())
+        if name not in surfaces
+    ]
+    return uncovered, orphaned
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--update", action="store_true", help="re-bless anchors at current shas")
@@ -214,8 +302,11 @@ def main() -> int:
         return update()
 
     report = collect()
+    uncovered, orphaned = coverage()
     if args.json:
-        print(json.dumps(report, indent=2))
+        print(
+            json.dumps({"anchors": report, "uncovered": uncovered, "orphaned": orphaned}, indent=2)
+        )
     stale = [r for r in report if r["status"] != FRESH]
     if args.open_task:
         if not stale:
@@ -236,12 +327,26 @@ def main() -> int:
             for row in bad:
                 print(f"          {row['status']}: {row['anchor']}")
         print(f"\n{len(report) - len(stale)}/{len(report)} anchors fresh")
+        surfaces = len(_surfaces())
+        print(f"{surfaces - len(uncovered)}/{surfaces} surfaces covered")
+        if uncovered:
+            print("\nShipped but undocumented — the code exposes these and no page claims them:")
+            for row in uncovered:
+                print(f"  {row}")
+            print(
+                "\nWrite the prose, then mark the section that covers it:\n"
+                "  <!-- covers: <surface> -->"
+            )
+        if orphaned:
+            print("\nClaims that outlived their code:")
+            for row in orphaned:
+                print(f"  {row}")
         if stale:
             print(
                 "\nThe code these pages describe has changed. Re-read the page, correct it,\n"
                 "then run: uv run python scripts/check_docs.py --update"
             )
-    return 1 if stale else 0
+    return 1 if (stale or uncovered or orphaned) else 0
 
 
 if __name__ == "__main__":

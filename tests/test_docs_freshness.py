@@ -130,3 +130,39 @@ def test_no_credentials_is_a_clean_failure(monkeypatch):
     for var in ("ARTEL_URL", "ARTEL_AGENT_ID", "ARTEL_API_KEY", "ARTEL_KEY"):
         monkeypatch.delenv(var, raising=False)
     assert check_docs.open_task([{"page": "p", "anchor": "a", "status": "stale"}]) == 1
+
+
+class TestCoverage:
+    def test_surfaces_are_read_from_the_code(self):
+        surfaces = check_docs._surfaces()
+        # Route modules name the surface; tool groups fold into them, so a primitive
+        # served over both transports is one entry rather than two.
+        assert surfaces["blueprints"] == "REST routes + MCP tools"
+        assert surfaces["graph"] == "MCP tools"
+        assert "memorys" not in surfaces
+
+    def test_every_shipped_surface_is_claimed_by_a_page(self):
+        uncovered, _ = check_docs.coverage()
+        assert uncovered == [], (
+            "these ship in the code with no prose describing them: " + "; ".join(uncovered)
+        )
+
+    def test_no_claim_outlives_its_code(self):
+        _, orphaned = check_docs.coverage()
+        assert orphaned == [], "; ".join(orphaned)
+
+    def test_an_unclaimed_surface_is_reported(self, monkeypatch):
+        # The gate this replaces could not fail on absence — anchors only compare
+        # prose that already exists. Prove this one does.
+        monkeypatch.setattr(
+            check_docs, "_surfaces", lambda: {"warpdrive": "REST routes + MCP tools"}
+        )
+        uncovered, _ = check_docs.coverage()
+        assert any("warpdrive" in row for row in uncovered)
+
+    def test_reference_pages_do_not_satisfy_coverage(self, monkeypatch):
+        # docs/reference/ is generated from the source and mentions everything, so
+        # counting it would make the check vacuously green.
+        claimed = check_docs._claims()
+        for pages in claimed.values():
+            assert not any("reference/" in page for page in pages)
