@@ -166,3 +166,30 @@ class TestCoverage:
         claimed = check_docs._claims()
         for pages in claimed.values():
             assert not any("reference/" in page for page in pages)
+
+
+class TestSiteBuilds:
+    def test_site_builds_in_strict_mode(self):
+        # CI builds with --strict, where a broken link or a missing image is an error
+        # rather than a warning. Building without it locally shipped a docs deploy
+        # that failed on image paths left pointing at the README's directory.
+        #
+        # No -q. Strict mode counts warnings as they are EMITTED, so quieting them
+        # makes the count zero and the build exits 0 while still printing "Aborted
+        # with 1 warnings in strict mode!". A quiet strict build is a false green.
+        import shutil
+        import subprocess
+        import tempfile
+
+        if shutil.which("mkdocs") is None:
+            import pytest
+
+            pytest.skip("mkdocs not installed")
+        with tempfile.TemporaryDirectory() as out:
+            proc = subprocess.run(
+                ["mkdocs", "build", "--strict", "-d", out],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+            )
+        assert proc.returncode == 0, proc.stderr[-2000:]

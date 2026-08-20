@@ -77,7 +77,7 @@ Manual config for `opencode.json` or `~/.config/opencode/config.json`:
 }
 ```
 
-The MCP port defaults to `8001` (separate from the REST API on `8000`). Start it with `MCP_TRANSPORT=sse artel-mcp`. A matching push-layer plugin for opencode lives in [`integrations/opencode/`](integrations/opencode/).
+The MCP port defaults to `8001` (separate from the REST API on `8000`). Start it with `MCP_TRANSPORT=sse artel-mcp`. A matching push-layer plugin for opencode lives in [`integrations/opencode/`](https://github.com/NicolasPrimeau/artel/tree/master/integrations/opencode).
 
 ### ACP editors (Zed and friends)
 
