@@ -1106,7 +1106,7 @@ pre{
   <div class="drawer-scroll">
     <div class="drawer-nav">
       <button class="drawer-item on" onclick="drawerTab('dashboard')">dashboard</button>
-      <button class="drawer-item" onclick="drawerTab('memory')">memory</button>
+      <button class="drawer-item" onclick="drawerTab('memory')">notes</button>
       <button class="drawer-item" onclick="drawerTab('tasks')">tasks</button>
       <button class="drawer-item" id="drawer-btn-messages" onclick="drawerTab('messages')">messages</button>
       <button class="drawer-item" onclick="drawerTab('events')">events</button>
@@ -1147,7 +1147,7 @@ pre{
   <div class="nav-scroll">
     <div class="nav-items">
       <button class="nav-btn on" onclick="tab('dashboard',this)">dashboard</button>
-      <button class="nav-btn" onclick="tab('memory',this)">memory</button>
+      <button class="nav-btn" onclick="tab('memory',this)">notes</button>
       <button class="nav-btn" onclick="tab('tasks',this)">tasks</button>
       <button class="nav-btn" onclick="tab('messages',this)" id="btn-messages">messages</button>
       <button class="nav-btn" onclick="tab('events',this)">events</button>
@@ -1197,7 +1197,7 @@ pre{
     </div>
     <div class="dash-section">
       <div class="dash-section-hdr">
-        <span class="dash-section-hdr-lbl">recent memory</span>
+        <span class="dash-section-hdr-lbl">recent notes</span>
         <button class="dash-link" onclick="navToProjectMem()">view all →</button>
       </div>
       <div id="dash-proj-mem"></div>
@@ -1221,7 +1221,7 @@ pre{
 
 <div id="panel-memory" class="panel">
   <div class="toolbar">
-    <input id="q" class="toolbar-search" placeholder="semantic search…" onkeydown="if(event.key==='Enter')search()">
+    <input id="q" class="toolbar-search" placeholder="search by meaning…" onkeydown="if(event.key==='Enter')search()">
     <select id="q-type" style="width:110px" onchange="search()">
       <option value="">all types</option>
       <option>memory</option>
@@ -1234,7 +1234,7 @@ pre{
     <button onclick="$('q').value='';$('q-type').value='';loadMem()">all</button>
   </div>
   <div class="write-box">
-    <textarea id="mc" placeholder="write a memory entry… (ctrl+enter to save)" rows="3"></textarea>
+    <textarea id="mc" placeholder="write a note… (ctrl+enter to save)" rows="3"></textarea>
     <div class="write-row">
       <input id="mtags" placeholder="tags (comma-separated)" style="flex:1">
       <select id="mtype"><option>memory</option><option>doc</option><option>skill</option></select>
@@ -2299,7 +2299,7 @@ async function loadSession(){
     }
     if(d.memory_delta?.length){
       html+=`<div class="section-header" style="margin:16px 0 8px">
-        <span class="section-label" style="margin-bottom:0">memory since last session</span>
+        <span class="section-label" style="margin-bottom:0">notes since last session</span>
         <span class="section-count">${d.memory_delta.length}</span>
       </div>`;
       html+=d.memory_delta.map(e=>`<div class="card accent">
@@ -2385,7 +2385,7 @@ async function loadMesh(){
     }
     if(!tokens.length){
       $('mesh-token-section').innerHTML=`
-        <div style="color:var(--t4);font-size:12px;margin-bottom:8px">No tokens yet. Generate one to let another Artel pull your memory.</div>
+        <div style="color:var(--t4);font-size:12px;margin-bottom:8px">No tokens yet. Generate one to let another Artel pull your notes.</div>
         <button class="p sm" onclick="createMeshToken()">generate token</button>`;
     } else {
       $('mesh-token-section').innerHTML=tokens.map(t=>{

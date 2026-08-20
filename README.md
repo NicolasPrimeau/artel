@@ -84,7 +84,7 @@ A server, a database, and a librarian. Notes go in over HTTP or MCP; embeddings 
 - [Compile mode](#compile-mode)
 - [Archivist](#archivist)
 - [Dashboard](#dashboard)
-- [Memory](#memory)
+- [Notes over HTTP](#notes-over-http)
 - [Claude Code (MCP)](#claude-code-mcp)
 - [OpenCode (MCP)](#opencode-mcp)
 - [ACP editors (Zed and friends)](#acp-editors-zed-and-friends)
@@ -173,7 +173,9 @@ Not seeing anything? Run `scripts/artel-doctor.sh` to check config and connectiv
 
 ## Capture
 
-The plugin surfaces memory *in*. Capture is the other direction — turning what happens in a session into durable memory *out* — without slowing the agent and without letting raw noise pollute the store.
+The best notes are the ones you never got around to writing. Capture is the pad writing them for you: what happened in a session becomes durable notes, without slowing anything down and without dumping raw noise into the pad.
+
+The rest of this section is how that's kept honest.
 
 **A two-tier write.** Agents don't reliably write memories back, and pouring a high-pace firehose straight into `memory` would cost an embedding per raw slice and pollute both search and the mesh. So capture lands in a separate **ingest queue** (`captures`) that is deliberately *not* embedded, *not* full-text indexed, *not* replicated over the mesh, and *not* returned by search. Memory is protected structurally: **the archivist is the only path from the queue into memory.**
 
@@ -187,7 +189,9 @@ The net effect: memory quality is decoupled from write volume. Writing fast only
 
 ## Mesh
 
-Each instance publishes memory as Atom and JSON Feed. Link two instances and memory replicates as a CRDT — keyed by immutable id, idempotent on ingest, no central coordinator. LAN peers discover each other via mDNS (`_artel._tcp.local.`) and link with one click. Each instance's archivist only synthesizes entries it originally wrote. (Captures never cross the mesh — they are local ingest, not shared memory.)
+One notepad, several machines — laptop, desktop, the box under the stairs — with no cloud in the middle and no "main" copy. Write on either side, offline if you like; they reconcile when they can see each other.
+
+Each instance publishes its notes as Atom and JSON Feed. Link two and they replicate as a CRDT — keyed by immutable id, idempotent on ingest, no central coordinator. LAN peers discover each other via mDNS (`_artel._tcp.local.`) and link with one click. Each instance's archivist only synthesizes entries it originally wrote. (Captures never cross the mesh — they are local ingest, not shared memory.)
 
 <details>
 <summary>Convergence guarantees</summary>
@@ -204,9 +208,11 @@ Pinned by tests in `tests/test_feeds.py`.
 
 ## Compile mode
 
-Mesh is one half of the symmetry: many agents converging on one shared truth. Compile mode is the other half — one shared truth converging on the code it describes. Where the mesh keeps instances consistent with each other, compile mode keeps memory consistent with the repo.
+Notes about code go stale the moment someone edits the code. A note that says "the retry lives in `client.py`" is worse than no note at all once the retry moves — it sends you confidently to the wrong place.
 
-Most agent memory is **authored**: a human or agent writes a note, and it slowly decays as it ages and goes unread. That's right for judgement, incidents, and intent — knowledge with no ground truth to check against. But a lot of what agents "remember" about a codebase is really a *description of code that already exists* — and that has a ground truth. **Compiled** memory is anchored to it.
+So pin those notes to the code itself. A **compiled** note is anchored to a symbol; when that symbol changes, the note re-derives instead of quietly rotting. It doesn't decay with age, because age was never what made it wrong.
+
+Most notes are **authored** — judgement, incidents, intent — and those have no ground truth to check against, so they decay if they go unread. Compiled notes do have one, so they get held to it. (Mesh is the mirror image: many machines converging on one set of notes, where this is one set of notes converging on the code it describes.)
 
 A pre-commit hook walks changed files with a deterministic AST compiler (no LLM), emits one **anchor** per symbol — module, function, class — and hashes each symbol's span. Each anchor mints or refreshes a `compiled` memory stamped with that hash and the commit SHA. When the code changes, the hash changes, and the note doesn't decay — it **recompiles**. Memory that's wrong about the code is rebuilt, not slowly forgotten.
 
@@ -255,7 +261,9 @@ Every property above — SHA freshness, `relies_on` invalidation, module-shape s
 
 ## Archivist
 
-Optional background process — the server works without it. It is the curator of the shared store and the only writer that turns raw captures into memory.
+This is the part that makes the pad learn. It reads what accumulates and works it into something better: merging notes that say the same thing, connecting findings across sessions, resolving contradictions, letting unused knowledge fade, and promoting what keeps proving true.
+
+It is optional — the server works fine without it, you just get a pad that remembers instead of one that improves. It is also the only writer allowed to turn raw captures into notes.
 
 **With LLM configured:** compacts the capture queue into clean, deduplicated, provenance-tagged memory (minor pass) and consolidates provisional entries over time — merging duplicates, corroborating across sessions, promoting stable knowledge (major pass). Detects semantic conflicts on write and merges them; periodically synthesizes cross-agent findings into shared doc entries.
 
@@ -302,7 +310,9 @@ Browse your notes, manage tasks, read inboxes, and see what your agents are up t
 
 ---
 
-## Memory
+## Notes over HTTP
+
+Anything that speaks HTTP can read and write the pad. No SDK, no framework:
 
 ```python
 import httpx

@@ -5,6 +5,8 @@ anchors:
 
 # Artel — Architecture
 
+How the notepad is built. If you just want to use it, start at the [home page](index.md); this page is for when you want to know what is actually running.
+
 ## System Overview
 
 ```
