@@ -24,7 +24,12 @@ class Settings(BaseSettings):
     gossip_enabled: bool = True
     recall_bandit_enabled: bool = False
     recall_reinforce_gain: float = 0.2
-    regret_threshold: float = 0.7
+    # Regret is "someone read an entry decay had already written down". At 0.7 the
+    # sensor was blind: ranking plus the recall floor mean sub-0.7 entries are
+    # essentially never surfaced, so it logged one event in three weeks and the
+    # controller had nothing to act on. 0.85 sits inside the band recall actually
+    # returns (~296 surfacings per fortnight against 8 below 0.7).
+    regret_threshold: float = 0.85
     # Repo that git done-checks read. Never supplied by a blueprint.
     blueprint_repo_root: str = ""
 

@@ -28,7 +28,13 @@ class ArchivistSettings(BaseSettings):
     control_decay_enabled: bool = True
     control_decay_kp: float = 0.01
     control_decay_ki: float = 0.02
-    control_decay_regret_setpoint: float = 0.0
+    # Not zero. The measurement is regret events per cycle, and the observed
+    # baseline at regret_threshold=0.85 is ~0.9/cycle, so a setpoint of 0 is a
+    # target that was never achievable: the error stays positive, the integral
+    # winds up, and decay_rate pins at control_decay_max — the exact failure this
+    # loop had before. At the baseline the loop sits in its deadband and responds
+    # to deviation instead.
+    control_decay_regret_setpoint: float = 1.0
     control_decay_min: float = 0.6
     control_decay_max: float = 0.99
     control_decay_deadband: float = 0.5

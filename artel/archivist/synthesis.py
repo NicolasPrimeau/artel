@@ -1888,10 +1888,15 @@ async def capture_metrics(project: str | None = None) -> None:
         proj_params,
     ).fetchone()[0]
 
+    # Counted from the merge itself, not from a tag. This used to look for an
+    # 'archivist-conflict' tag that nothing has ever written — conflict resolution
+    # merges the two entries rather than labelling them — so the metric read zero
+    # for the life of the deployment and looked like "no contradictions found".
+    # A conflict merge is the entry it produces: content from two parents.
     contradiction_filter = "deleted_at IS NULL" + (" AND project = ?" if project else "")
     contradictions = db.execute(
         f"""SELECT COUNT(*) FROM memory WHERE {contradiction_filter}
-            AND EXISTS (SELECT 1 FROM json_each(tags) WHERE value = 'archivist-conflict')""",
+            AND parents IS NOT NULL AND json_array_length(parents) >= 2""",
         proj_params,
     ).fetchone()[0]
 

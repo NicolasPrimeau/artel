@@ -83,7 +83,15 @@ async def test_decay_confidence_applies_controlled_rate(client):
 
 
 @pytest.mark.asyncio
-async def test_zero_regret_holds_rate_at_bias(client):
+async def test_regret_below_setpoint_decays_faster_than_bias(client):
+    """Zero regret is now BELOW target, not at it.
+
+    The setpoint is the observed baseline rate rather than zero, because zero was
+    unreachable: the error stayed positive forever, the integral wound up, and the
+    rate pinned at control_decay_max. With a real setpoint, no regret means decay is
+    costing nobody anything and the loop is free to prune harder — so the rate moves
+    below bias rather than resting on it.
+    """
     from artel.store.db import get_db
 
     db = get_db()
@@ -94,7 +102,8 @@ async def test_zero_regret_holds_rate_at_bias(client):
 
     row = db.execute("SELECT * FROM archivist_metrics ORDER BY captured_at DESC LIMIT 1").fetchone()
     assert row["decay_regret_count"] == 0
-    assert abs(synthesis.controlled_decay_rate() - arch_settings.decay_rate) < 1e-9
+    assert synthesis.controlled_decay_rate() < arch_settings.decay_rate
+    assert synthesis.controlled_decay_rate() >= arch_settings.control_decay_min
 
 
 @pytest.mark.asyncio

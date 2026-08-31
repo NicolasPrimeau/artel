@@ -545,10 +545,17 @@ async def test_comprehensive_metrics_snapshot_reflects_known_state(arch):
     writer = await scenario.agent("metrics-writer")
     reader = await scenario.agent("metrics-reader")
 
-    active_entries = [await writer.write_memory(f"active memory #{i + 1}") for i in range(8)]
-
-    await writer.update_memory(active_entries[0]["id"], tags=["archivist-conflict"])
-    await writer.update_memory(active_entries[1]["id"], tags=["archivist-conflict"])
+    # The first two stand in for conflict merges. The archivist resolves a conflict by
+    # writing ONE entry carrying both originals as parents — it never labels anything,
+    # which is why the old tag-based metric read zero in production while this test
+    # passed on a tag only the test wrote.
+    active_entries = [
+        await writer.write_memory(
+            f"active memory #{i + 1}",
+            parents=["original-a", "original-b"] if i < 2 else [],
+        )
+        for i in range(8)
+    ]
 
     await writer.update_memory(active_entries[2]["id"], confidence=0.4, tags=["archivist-flagged"])
     await writer.update_memory(active_entries[3]["id"], confidence=0.3, tags=["archivist-flagged"])

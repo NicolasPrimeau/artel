@@ -40,6 +40,7 @@ def _insert_memory(
     created_at=None,
     deleted_at=None,
     origin=None,
+    parents=None,
 ):
     eid = entry_id or secrets.token_hex(8)
     now = _ts()
@@ -47,8 +48,8 @@ def _insert_memory(
     db.execute(
         """INSERT INTO memory
            (id, type, agent_id, content, confidence, tags, read_count, last_read_at,
-            created_at, updated_at, deleted_at, origin)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+            created_at, updated_at, deleted_at, origin, parents)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         (
             eid,
             type_,
@@ -62,6 +63,7 @@ def _insert_memory(
             now,
             _ts() if deleted else deleted_at,
             origin,
+            json.dumps(parents or []),
         ),
     )
     db.commit()
@@ -674,10 +676,15 @@ class TestCaptureMetrics:
         assert row[1] == 1, "flagged, low-confidence and still read"
         assert row[0] == 0, "no read events this cycle, so the controller sees nothing"
 
-    async def test_contradiction_count_counts_conflict_tagged_entries(self, raw_db):
-        _insert_memory(raw_db, tags=["archivist-conflict"])
-        _insert_memory(raw_db, tags=["archivist-conflict", "other"])
-        _insert_memory(raw_db, tags=["other"])
+    async def test_contradiction_count_counts_merged_entries(self, raw_db):
+        # Counted from the merge, not from a tag: conflict resolution produces an
+        # entry with both originals as parents and never labels anything. The old
+        # tag-based test passed for months while the metric read zero in production,
+        # because nothing outside the test ever wrote that tag.
+        _insert_memory(raw_db, parents=["a", "b"])
+        _insert_memory(raw_db, parents=["c", "d"])
+        _insert_memory(raw_db, parents=["single-parent"])
+        _insert_memory(raw_db)
 
         with patch("artel.archivist.synthesis.settings") as s:
             s.synthesis_interval = 3600
@@ -691,8 +698,8 @@ class TestCaptureMetrics:
         assert row[0] == 2
 
     async def test_contradiction_count_excludes_deleted(self, raw_db):
-        _insert_memory(raw_db, tags=["archivist-conflict"])
-        _insert_memory(raw_db, deleted=True, tags=["archivist-conflict"])
+        _insert_memory(raw_db, parents=["a", "b"])
+        _insert_memory(raw_db, deleted=True, parents=["c", "d"])
 
         with patch("artel.archivist.synthesis.settings") as s:
             s.synthesis_interval = 3600
