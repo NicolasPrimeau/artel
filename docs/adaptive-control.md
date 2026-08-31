@@ -53,14 +53,21 @@ The first closed loop, live in the archivist scheduler:
 
 - **Sensor:** `decay_regret_count` (entries decayed then needed again), already computed in
   `capture_metrics`.
-- **Controller:** PI, `setpoint = 0` regret, `bias = settings.decay_rate` (0.9),
-  clamped to `[control_decay_min, control_decay_max]`.
+- **Controller:** PI, `setpoint = 1.0` regret events per cycle, `bias = settings.decay_rate`
+  (0.9), clamped to `[control_decay_min, control_decay_max]`.
 - **Actuator:** `decay_rate`, persisted in the `kv` store, read by `decay_confidence`.
-- **Behavior:** while regret is zero, hold at bias. When regret appears, back off decay
-  (raise `decay_rate` toward `max`, i.e. decay more gently). As regret clears, the leak
-  returns it to bias. Safe by construction — it only ever *loosens* decay in response to
-  regret; raising `control_decay_regret_setpoint` above 0 later enables the system to seek
-  the most aggressive decay that keeps regret near a tolerance.
+- **Behavior:** at the setpoint the loop sits in its deadband. Above it, back off decay
+  (raise `decay_rate` toward `max`, i.e. decay more gently); below it, prune harder. As
+  regret returns to target, the leak brings the rate back to bias.
+- **Why the setpoint is not zero.** It was, and that made the target unreachable: the
+  baseline rate is around 0.9 events per cycle, so the error never went negative, the
+  integral wound up, and the rate pinned at `control_decay_max`. That is the same
+  failure this loop had when its sensor was a standing stock rather than a flow —
+  a setpoint no measurement can reach is indistinguishable from a broken sensor.
+- **Why the threshold is 0.85.** Regret is gated on `regret_threshold`. At 0.7 the
+  sensor was blind: ranking and the recall floor mean sub-0.7 entries are almost never
+  surfaced (8 of 7192 surfacings in a fortnight; lowest returned 0.6816), so it logged
+  one event in three weeks. 0.85 sits inside the band recall actually returns.
 - **Ordering:** `capture_metrics` runs first each cycle (steps the controller), then
   `decay_confidence` applies the new rate — a one-cycle closed loop.
 - **Reversible:** `control_decay_enabled` (default on) falls back to the static rate.
