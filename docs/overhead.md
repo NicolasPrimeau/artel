@@ -32,6 +32,12 @@ For a session of 20 prompts and 60 tool calls: **≈ 17.6 s of added wall-clock 
 Two things worth reading off that table:
 
 - **The dominant cost is `PreToolUse`**, because it fires on every tool call. At 189 ms it is most of the added wall-clock, and it is not the hook anyone would have guessed.
+- **The drainer does more since these numbers were taken.** It now also extracts a
+  token rollup from the same transcript slice and posts it to `/usage`. That work is
+  in the detached drainer, not the hook, so the 16 ms hot-path figure above still
+  stands — but the measurement predates the change and the drainer's own cost has not
+  been re-measured.
+
 - **`Stop` · capture is genuinely cheap** — 16 ms, injects nothing. The original claim holds for the hook it was made about; it just never covered recall, inbox or gotcha.
 
 Numbers to treat with care: this is `localhost`, so a remote instance is strictly worse; tokens are counted as characters/4; the inbox figure depends entirely on whether that agent has unread messages, and was 547 tokens for an identity that did.

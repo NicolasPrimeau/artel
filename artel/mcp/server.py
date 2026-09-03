@@ -1245,7 +1245,9 @@ async def agent_rename(new_id: str) -> str:
     ),
 )
 async def message_inbox() -> str:
-    """Read your unread messages. Call this at session start.
+    """DEPRECATED: the harness owns this now — Claude Code discovers peers and manages its own task list. Still works; not where new work should go.
+
+    Read your unread messages. Call this at session start.
 
     Messages stay unread until you call message_mark_read(). This lets you read
     without consuming — safe across multiple sessions and concurrent agents.
@@ -1301,7 +1303,9 @@ async def message_mark_read(msg_ids: list[str] | None = None) -> str:
     structured_output=True, annotations=ToolAnnotations(destructiveHint=False, openWorldHint=False)
 )
 async def message_send(to: str, body: str, subject: str = "") -> str:
-    """Send a message to another agent's inbox.
+    """DEPRECATED: the harness owns this now — Claude Code discovers peers and manages its own task list. Still works; not where new work should go.
+
+    Send a message to another agent's inbox.
 
     Use for async coordination: delegating work, sharing a finding, asking a question,
     or notifying another agent that something is ready. The recipient will see it when
@@ -1329,7 +1333,9 @@ async def message_send(to: str, body: str, subject: str = "") -> str:
     annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False),
 )
 async def message_list(read: bool | None = None, limit: int = 50) -> str:
-    """List all messages sent to or from you (full history, not just unread).
+    """DEPRECATED: the harness owns this now — Claude Code discovers peers and manages its own task list. Still works; not where new work should go.
+
+    List all messages sent to or from you (full history, not just unread).
 
     Use when you need to review past conversations, check if you missed something,
     or audit what was communicated. For unread-only, use message_inbox() instead.
@@ -1373,7 +1379,9 @@ async def task_list(
     tag: str | None = None,
     unblocked: bool = False,
 ) -> str:
-    """List tasks. Call with status="open" to find work that needs doing.
+    """DEPRECATED: the harness owns this now — Claude Code discovers peers and manages its own task list. Still works; not where new work should go.
+
+    List tasks. Call with status="open" to find work that needs doing.
 
     Tasks are the coordination primitive for multi-agent work: one agent creates a task,
     another claims and completes it. Check for open tasks before creating new ones.
@@ -1425,7 +1433,9 @@ async def task_create(
     depends_on: list[str] | None = None,
     completion_contract: dict | None = None,
 ) -> str:
-    """Create a task for yourself or another agent to pick up.
+    """DEPRECATED: the harness owns this now — Claude Code discovers peers and manages its own task list. Still works; not where new work should go.
+
+    Create a task for yourself or another agent to pick up.
 
     Use when there's a discrete unit of work that should be tracked, may be done by
     a different agent, or needs to survive across sessions. Check task_list() for
@@ -1476,7 +1486,9 @@ async def task_create(
     structured_output=True, annotations=ToolAnnotations(destructiveHint=False, openWorldHint=False)
 )
 async def task_claim(task_id: str, body: str = "") -> str:
-    """Claim an open task — marks it as yours and sets status to 'claimed'.
+    """DEPRECATED: the harness owns this now — Claude Code discovers peers and manages its own task list. Still works; not where new work should go.
+
+    Claim an open task — marks it as yours and sets status to 'claimed'.
 
     Always claim a task before working on it. This prevents two agents from doing
     the same work. Call task_complete(), task_fail(), or task_unclaim() when done.
@@ -1524,7 +1536,9 @@ async def task_unclaim(task_id: str, body: str = "") -> str:
     structured_output=True, annotations=ToolAnnotations(destructiveHint=False, openWorldHint=False)
 )
 async def task_complete(task_id: str, body: str = "", output: dict | None = None) -> str:
-    """Mark your claimed task as completed. Only the claiming agent can complete it.
+    """DEPRECATED: the harness owns this now — Claude Code discovers peers and manages its own task list. Still works; not where new work should go.
+
+    Mark your claimed task as completed. Only the claiming agent can complete it.
 
     Call when the task's expected_outcome has been fully achieved. The body is recorded
     in the task's comment log and visible to all agents reviewing the task. If you cannot
@@ -1554,7 +1568,9 @@ async def task_complete(task_id: str, body: str = "", output: dict | None = None
     structured_output=True, annotations=ToolAnnotations(destructiveHint=False, openWorldHint=False)
 )
 async def task_fail(task_id: str, body: str = "") -> str:
-    """Mark your claimed task as failed. Use when you cannot complete it.
+    """DEPRECATED: the harness owns this now — Claude Code discovers peers and manages its own task list. Still works; not where new work should go.
+
+    Mark your claimed task as failed. Use when you cannot complete it.
 
     Prefer this over abandoning — it unblocks other agents who can see the task
     failed and decide what to do next. If you're stepping away but the task isn't

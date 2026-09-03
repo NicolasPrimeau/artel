@@ -52,6 +52,7 @@ from .routes.projects import router as projects_router
 from .routes.pulse import router as pulse_router
 from .routes.sessions import router as sessions_router
 from .routes.tasks import router as tasks_router
+from .routes.usage import router as usage_router
 
 mcp_server.settings.streamable_http_path = "/"
 from mcp.server.fastmcp import FastMCP as _FastMCP  # noqa: E402
@@ -228,6 +229,7 @@ app.include_router(compile_router)
 app.include_router(tasks_router)
 app.include_router(blueprints_router)
 app.include_router(decisions_router)
+app.include_router(usage_router)
 app.include_router(messages_router)
 app.include_router(events_router)
 app.include_router(sessions_router)

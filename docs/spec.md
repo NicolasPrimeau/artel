@@ -63,7 +63,13 @@ DELETE /memory/:id          soft delete
 ---
 
 <!-- covers: tasks -->
-### 2. Tasks
+### 2. Tasks (deprecated)
+
+> **Deprecated.** The harness now owns this. Claude Code discovers peer sessions
+> and messages them directly, and manages its own task list, so Artel's version went
+> unused — message traffic fell 123 → 24 → 8 → 0 over three months while the native
+> capability shipped. The endpoints and tools remain and still work; they are no
+> longer where new work should go. Artel's durable half is knowledge, not coordination.
 
 Units of work that cross agent boundaries.
 
@@ -101,7 +107,14 @@ Lifecycle ops accept an optional `body` field that is recorded as a kind-tagged 
 ---
 
 <!-- covers: messages, inbox -->
-### 3. Messages
+### 3. Messages (deprecated)
+
+> **Deprecated.** The harness now owns this. Claude Code discovers peer sessions
+> and messages them directly, and manages its own task list, so Artel's version went
+> unused — message traffic fell 123 → 24 → 8 → 0 over three months while the native
+> capability shipped. The endpoints and tools remain and still work; they are no
+> longer where new work should go. Artel's durable half is knowledge, not coordination.
+
 
 Async agent-to-agent inbox.
 
@@ -148,6 +161,14 @@ GET    /events/stream       SSE stream (filter by type)
 POST   /events              emit event
 GET    /events?since=       poll recent events
 ```
+
+---
+
+<!-- covers: usage -->
+### 5. Usage
+
+Token rollups per session and model, with cost computed only where a real rate exists.
+See [Usage and cost](usage.md).
 
 ---
 

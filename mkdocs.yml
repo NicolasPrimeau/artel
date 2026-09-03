@@ -66,6 +66,7 @@ nav:
       - Decisions: decisions.md
       - Mesh and feeds: mesh.md
       - Dashboard: dashboard.md
+      - Usage and cost: usage.md
       - Connecting clients: clients.md
   - Concepts:
       - Architecture: architecture.md

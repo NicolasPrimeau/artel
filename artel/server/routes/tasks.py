@@ -117,7 +117,7 @@ def _add_comment(db: sqlite3.Connection, task_id: str, agent_id: str, kind: str,
 @router.get(
     "/recommended",
     response_model=list[TaskEntry],
-    summary="Open unblocked tasks ranked by the caller's earned tag affinity",
+    summary="[deprecated] Open unblocked tasks ranked by the caller's earned tag affinity",
 )
 async def recommended_tasks(
     project: str | None = Query(default=None),
@@ -160,7 +160,7 @@ async def recommended_tasks(
     return [_row_to_task(r, deps_map.get(r["id"])) for r in ranked]
 
 
-@router.get("/{task_id}", response_model=TaskEntry, summary="Get a task by ID")
+@router.get("/{task_id}", response_model=TaskEntry, summary="[deprecated] Get a task by ID")
 async def get_task(task_id: str, agent_id: str = ReaderDep):
     task_id = _resolve_task(task_id)
     db = get_db()
@@ -175,7 +175,7 @@ async def get_task(task_id: str, agent_id: str = ReaderDep):
     return _row_to_task(row, deps.get(task_id))
 
 
-@router.post("", response_model=TaskEntry, status_code=201, summary="Create a task")
+@router.post("", response_model=TaskEntry, status_code=201, summary="[deprecated] Create a task")
 async def create_task(body: TaskCreate, agent_id: str = ActorDep):
     db = get_db()
     project = body.project if body.project is not None else default_project_for(agent_id)
@@ -219,7 +219,9 @@ async def create_task(body: TaskCreate, agent_id: str = ActorDep):
     return _row_to_task(row, deps.get(task_id))
 
 
-@router.get("", response_model=list[TaskEntry], summary="List tasks with optional filters")
+@router.get(
+    "", response_model=list[TaskEntry], summary="[deprecated] List tasks with optional filters"
+)
 async def list_tasks(
     status: str | None = Query(default=None),
     agent: str | None = Query(default=None),
@@ -265,7 +267,9 @@ async def list_tasks(
     return [_row_to_task(r, deps_map.get(r["id"])) for r in rows]
 
 
-@router.post("/{task_id}/claim", response_model=TaskEntry, summary="Claim an open task")
+@router.post(
+    "/{task_id}/claim", response_model=TaskEntry, summary="[deprecated] Claim an open task"
+)
 async def claim_task(
     task_id: str,
     body: TaskAction = Body(default_factory=TaskAction),
@@ -297,7 +301,7 @@ async def claim_task(
 @router.post(
     "/{task_id}/unclaim",
     response_model=TaskEntry,
-    summary="Release your claim on a task (assignee only)",
+    summary="[deprecated] Release your claim on a task (assignee only)",
 )
 async def unclaim_task(
     task_id: str,
@@ -329,7 +333,7 @@ async def unclaim_task(
 @router.post(
     "/{task_id}/complete",
     response_model=TaskEntry,
-    summary="Complete a claimed task (assignee only)",
+    summary="[deprecated] Complete a claimed task (assignee only)",
 )
 async def complete_task(
     task_id: str,
@@ -382,7 +386,9 @@ async def complete_task(
 
 
 @router.patch(
-    "/{task_id}", response_model=TaskEntry, summary="Update task title, description, or priority"
+    "/{task_id}",
+    response_model=TaskEntry,
+    summary="[deprecated] Update task title, description, or priority",
 )
 async def update_task(task_id: str, body: TaskUpdate, agent_id: str = ActorDep):
     task_id = _resolve_task(task_id)
@@ -457,7 +463,9 @@ async def update_task(task_id: str, body: TaskUpdate, agent_id: str = ActorDep):
 
 
 @router.post(
-    "/{task_id}/fail", response_model=TaskEntry, summary="Fail a claimed task (assignee only)"
+    "/{task_id}/fail",
+    response_model=TaskEntry,
+    summary="[deprecated] Fail a claimed task (assignee only)",
 )
 async def fail_task(
     task_id: str,
@@ -491,7 +499,7 @@ async def fail_task(
     "/{task_id}/comments",
     response_model=TaskComment,
     status_code=201,
-    summary="Add a free-form comment to a task",
+    summary="[deprecated] Add a free-form comment to a task",
 )
 async def add_comment(task_id: str, body: TaskCommentCreate, agent_id: str = ActorDep):
     task_id = _resolve_task(task_id)
@@ -517,7 +525,7 @@ async def add_comment(task_id: str, body: TaskCommentCreate, agent_id: str = Act
 @router.get(
     "/{task_id}/comments",
     response_model=list[TaskComment],
-    summary="List comments and status events for a task",
+    summary="[deprecated] List comments and status events for a task",
 )
 async def list_comments(task_id: str, agent_id: str = ReaderDep):
     task_id = _resolve_task(task_id)
@@ -540,7 +548,7 @@ async def list_comments(task_id: str, agent_id: str = ReaderDep):
     "/{task_id}/dependencies",
     response_model=TaskEntry,
     status_code=201,
-    summary="Add a dependency to a task (task will be blocked until the dependency is completed)",
+    summary="[deprecated] Add a dependency to a task (task will be blocked until the dependency is completed)",
 )
 async def add_dependency(
     task_id: str, depends_on: str = Body(..., embed=True), agent_id: str = ActorDep
@@ -567,7 +575,7 @@ async def add_dependency(
 @router.delete(
     "/{task_id}/dependencies/{dep_id}",
     response_model=TaskEntry,
-    summary="Remove a dependency from a task",
+    summary="[deprecated] Remove a dependency from a task",
 )
 async def remove_dependency(task_id: str, dep_id: str, agent_id: str = ActorDep):
     task_id = _resolve_task(task_id)

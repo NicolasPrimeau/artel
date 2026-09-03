@@ -406,6 +406,93 @@ def compress_transcript(lines):
     return "\n".join(out)[:_CAPTURE_CAP]
 
 
+def usage_rollup(lines):
+    """Token totals per model from the same transcript slice the capture came from.
+
+    Separate from compress_transcript on purpose: that produces prose for a model to
+    digest, this produces arithmetic that must never touch one. Cost is the number a
+    budget owner argues about in a meeting, so it is summed here and stored exactly.
+    """
+    per = {}
+    first = last = None
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            ev = json.loads(line)
+        except Exception:
+            continue
+        msg = ev.get("message") if isinstance(ev.get("message"), dict) else {}
+        u = msg.get("usage")
+        if not isinstance(u, dict):
+            continue
+        model = msg.get("model") or "unknown"
+        if model == "<synthetic>":
+            continue
+        row = per.setdefault(
+            model,
+            {"turns": 0, "input_tokens": 0, "output_tokens": 0, "cache_read": 0, "cache_write": 0},
+        )
+        row["turns"] += 1
+        row["input_tokens"] += u.get("input_tokens", 0) or 0
+        row["output_tokens"] += u.get("output_tokens", 0) or 0
+        row["cache_read"] += u.get("cache_read_input_tokens", 0) or 0
+        row["cache_write"] += u.get("cache_creation_input_tokens", 0) or 0
+        ts = ev.get("timestamp")
+        if ts:
+            first = first or ts
+            last = ts
+    for row in per.values():
+        row["window_start"], row["window_end"] = first, last
+    return per
+
+
+def _billing_mode():
+    """Metered only when an API key is actually what pays.
+
+    A Max/Pro session authenticates by OAuth and is billed per seat; reporting dollars
+    for it would invent spend. Anything unproven stays 'unknown', which the server
+    renders as "not priced" rather than as zero.
+    """
+    explicit = _cfg("CLAUDE_PLUGIN_OPTION_BILLING_MODE", "ARTEL_BILLING_MODE")
+    if explicit in ("metered", "subscription"):
+        return explicit
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return "metered"
+    if os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
+        return "subscription"
+    # Guessing wrong in either direction is worse than declining: "metered" invents an
+    # invoice, "subscription" hides a real one. The server prices neither.
+    return "unknown"
+
+
+def _post_usage(rollups, session_id, project="", agent_id="", api_key=""):
+    base = _cfg("CLAUDE_PLUGIN_OPTION_ARTEL_URL", "ARTEL_URL").rstrip("/")
+    mode = _billing_mode()
+    for model, row in rollups.items():
+        body = dict(row, model=model, session_id=session_id, billing_mode=mode)
+        if project:
+            body["project"] = project
+        req = urllib.request.Request(
+            base + "/usage",
+            method="POST",
+            data=json.dumps(body).encode(),
+            headers={
+                "content-type": "application/json",
+                "x-agent-id": agent_id or _cfg("CLAUDE_PLUGIN_OPTION_AGENT_ID", "ARTEL_AGENT_ID"),
+                "x-api-key": api_key or _cfg("CLAUDE_PLUGIN_OPTION_API_KEY", "ARTEL_API_KEY"),
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=10):
+                pass
+        except Exception:
+            # Never let accounting break capture: the prose slice is the thing the
+            # fleet cannot reconstruct later, the numbers can be re-read from disk.
+            pass
+
+
 def _post_capture(content, session_id, project="", agent_id="", api_key=""):
     base = _cfg("CLAUDE_PLUGIN_OPTION_ARTEL_URL", "ARTEL_URL").rstrip("/")
     body = {"content": content, "session_id": session_id}
@@ -442,13 +529,18 @@ def _drain_session(session_id, transcript_path, force, spool, project="", agent_
         fh.seek(offset)
         data = fh.read()
         new_offset = fh.tell()
-    content = compress_transcript(data.decode("utf-8", "replace").splitlines())
+    _lines = data.decode("utf-8", "replace").splitlines()
+    content = compress_transcript(_lines)
+    # Same slice, two payloads: prose for the archivist, arithmetic for the ledger.
+    _rollups = usage_rollup(_lines)
     if not content:
         _write_text(cursor_path, str(new_offset))  # advance past dropped content
         return
     if len(content) < _CAPTURE_MIN_CHARS and not force:
         return  # accumulate: leave the cursor so it grows until floor or a forced flush
     try:
+        if _rollups:
+            _post_usage(_rollups, session_id, project, agent_id, api_key)
         if _post_capture(content, session_id, project, agent_id, api_key):
             _write_text(cursor_path, str(new_offset))
     except Exception:

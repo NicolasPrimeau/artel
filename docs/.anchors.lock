@@ -4,9 +4,9 @@
   "artel/server/auth.py": "e788d8196a910a89498ea57eea19ea13fb205a8545300e51ff11607fcd1e28ea",
   "artel/server/auth.py::_memberships": "2ee1f9dc52968c873e16242fea7fd9bd714a0f480088a1c5a5d56dc36f584ad3",
   "artel/server/auth.py::role_of": "bff0e9b28efa8054ba396639b5255427bf47e82ebed8cfbb659ea1961ab24e67",
-  "artel/server/models.py": "8ab4c9bb76cc03a9a6aab5a801d72ef93db6163496a586fa871c209d6958c644",
+  "artel/server/models.py": "ea53c4cb726219c84466dfdd60b854c3156d6afd7798024376758fddc6360054",
   "artel/server/routes/memory.py": "0a853599ddc0d39b255dd7760022780872908eaaa41fe5a00d440848417ed7a2",
   "artel/server/routes/tasks.py": "087f872c71089068c70b62776c86579d1d885276bff5efe05d031706067ef230",
   "artel/store/decay.py": "53d36fe8cf389b018ff65c1ef74d40f1736f40b513a76613834a316fa2a28bb9",
-  "scripts/_artel_hooks.py": "f430a643960d233760188db599e86ca33d38901abf5b521c84e8db0ca4ca1d85"
+  "scripts/_artel_hooks.py": "94e4591616ede0a1d60c4d11fa91e0643df527a10abb369935821b216c5209ed"
 }

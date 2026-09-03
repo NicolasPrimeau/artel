@@ -109,6 +109,34 @@ CREATE TABLE IF NOT EXISTS decay_regret_events (
 
 CREATE INDEX IF NOT EXISTS idx_regret_events_time ON decay_regret_events(created_at);
 
+CREATE TABLE IF NOT EXISTS usage_events (
+    id            TEXT PRIMARY KEY,
+    agent_id      TEXT NOT NULL,
+    project       TEXT,
+    session_id    TEXT,
+    model         TEXT NOT NULL,
+    billing_mode  TEXT NOT NULL DEFAULT 'unknown',
+    turns         INTEGER NOT NULL DEFAULT 0,
+    input_tokens  INTEGER NOT NULL DEFAULT 0,
+    output_tokens INTEGER NOT NULL DEFAULT 0,
+    cache_read    INTEGER NOT NULL DEFAULT 0,
+    cache_write   INTEGER NOT NULL DEFAULT 0,
+    window_start  TEXT,
+    window_end    TEXT,
+    created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_usage_time ON usage_events(created_at);
+CREATE INDEX IF NOT EXISTS idx_usage_project ON usage_events(project, created_at);
+-- One rollup per (session, model) per drain. The drainer re-reads a transcript from a
+-- cursor, so without this a re-drain double-counts spend, which is the one error an
+-- observability tool must never make.
+-- COALESCE, not the bare column: SQLite treats NULLs as distinct in a unique index,
+-- so a rollup with no timestamps would insert twice and bill twice — which is the
+-- single error this table exists to prevent.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_usage_dedup
+    ON usage_events(session_id, model, COALESCE(window_end, ''));
+
 CREATE TABLE IF NOT EXISTS agent_performance (
     agent_id      TEXT NOT NULL,
     tag           TEXT NOT NULL,

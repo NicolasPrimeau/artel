@@ -179,6 +179,20 @@ class TaskEntry(BaseModel):
     updated_at: str
 
 
+class UsageRollup(BaseModel):
+    model: str
+    session_id: str | None = None
+    project: ProjectName = None
+    billing_mode: str = "unknown"
+    turns: int = 0
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cache_read: int = 0
+    cache_write: int = 0
+    window_start: str | None = None
+    window_end: str | None = None
+
+
 class DecisionCreate(BaseModel):
     decision: str
     rationale: str

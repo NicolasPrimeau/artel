@@ -79,7 +79,7 @@ def _shared_inbox_predicate(agent_id: str, targets: list[str]) -> tuple[str, lis
     "",
     response_model=MessageEntry,
     status_code=201,
-    summary="Send a message to an agent, project, or broadcast",
+    summary="[deprecated] Send a message to an agent, project, or broadcast",
 )
 async def send_message(body: MessageSend, agent_id: str = ActorDep):
     from ..config import settings
@@ -136,7 +136,11 @@ def _subject(agent: str | None, agent_id: str) -> str:
     return agent_id
 
 
-@router.get("", response_model=list[MessageEntry], summary="List all sent and received messages")
+@router.get(
+    "",
+    response_model=list[MessageEntry],
+    summary="[deprecated] List all sent and received messages",
+)
 async def list_messages(
     read: bool | None = Query(default=None),
     agent: str | None = Query(default=None),
@@ -164,7 +168,9 @@ async def list_messages(
     return [_row_to_msg(r) for r in rows]
 
 
-@router.get("/inbox", response_model=list[MessageEntry], summary="Fetch unread messages")
+@router.get(
+    "/inbox", response_model=list[MessageEntry], summary="[deprecated] Fetch unread messages"
+)
 async def inbox(agent_id: str = ReaderDep):
     db = get_db()
     shared_sql, shared_params = _shared_inbox_predicate(agent_id, _project_inbox_targets(agent_id))
@@ -180,7 +186,7 @@ async def inbox(agent_id: str = ReaderDep):
 @router.post(
     "/inbox/consume",
     response_model=list[MessageEntry],
-    summary="Atomically fetch and mark unread messages as read",
+    summary="[deprecated] Atomically fetch and mark unread messages as read",
 )
 async def consume_inbox(agent_id: str = ActorDep):
     db = get_db()
@@ -210,7 +216,7 @@ async def consume_inbox(agent_id: str = ActorDep):
     return [_row_to_msg(r) for r in rows]
 
 
-@router.post("/inbox/read-all", summary="Mark all unread inbox messages as read")
+@router.post("/inbox/read-all", summary="[deprecated] Mark all unread inbox messages as read")
 async def mark_inbox_read(agent_id: str = ActorDep):
     db = get_db()
     project_targets = _project_inbox_targets(agent_id)
@@ -239,7 +245,9 @@ def _can_read_message(row: sqlite3.Row, agent_id: str) -> bool:
     return False
 
 
-@router.get("/{msg_id}", response_model=MessageEntry, summary="Fetch a single message by ID")
+@router.get(
+    "/{msg_id}", response_model=MessageEntry, summary="[deprecated] Fetch a single message by ID"
+)
 async def get_message(msg_id: str, agent_id: str = ReaderDep):
     db = get_db()
     row = db.execute("SELECT * FROM messages WHERE id=?", (msg_id,)).fetchone()
@@ -250,7 +258,9 @@ async def get_message(msg_id: str, agent_id: str = ReaderDep):
     return _row_to_msg(row)
 
 
-@router.post("/{msg_id}/read", response_model=MessageEntry, summary="Mark a message as read")
+@router.post(
+    "/{msg_id}/read", response_model=MessageEntry, summary="[deprecated] Mark a message as read"
+)
 async def mark_read(msg_id: str, agent_id: str = ActorDep):
     db = get_db()
     row = db.execute("SELECT * FROM messages WHERE id=?", (msg_id,)).fetchone()
