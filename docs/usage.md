@@ -17,30 +17,33 @@ GET  /usage?days=30            # grouped by project and model, with cost where i
 
 ## Cost is computed, never estimated
 
-A spend report that guesses is worse than no report, so `cost_usd` returns **no
-number** rather than a plausible one. Three outcomes:
+Cost is always computed where a rate exists — the tokens are identical whether you
+are on a seat or metered, and on a seat the list-price figure is the more interesting
+one: it is what the work would have cost per-token, i.e. what the seat is worth.
 
-| Situation | Result |
-|---|---|
-| Metered model with a known rate | An amount, plus the `derivation` string that produced it |
-| `billing_mode: subscription` | `null` — the tokens were spent but nobody is billed per token, so a dollar figure would be fiction |
-| Model with no published rate | `null`, naming the model — `$0` would read as "this was free" |
+`billing_mode` labels the number rather than withholding it:
 
-Rates come from `MODEL_RATES` (a JSON map you supply) or live from OpenRouter's model
-list when `OPENROUTER_API_KEY` is set, cached for six hours. There are no rates
-compiled into the source, because prices change and a stale constant is a wrong
-invoice.
+| Mode | `billed` | `basis` |
+|---|---|---|
+| `metered` | `true` | actual spend |
+| anything else | `false` | list-price equivalent |
 
-`GET /usage` reports `billable_usd` and a separate `not_priced` list. It never adds
-them together: mixing metered dollars with subscription volume produces a total
-nobody is billed for.
+`GET /usage` returns `billed_usd` and `list_equivalent_usd` separately. They are never
+added: one is an invoice, the other is a valuation.
+
+There is still no number when there is no rate. `$0` reads as "this was free", the
+most expensive way for a spend report to be wrong.
+
+Rates come from `MODEL_RATES` or live from OpenRouter, cached six hours, with none
+compiled in — prices move and a stale constant is a wrong invoice. Model ids are
+normalised on lookup: a session records `claude-opus-4-8` while rate tables name it
+`anthropic/claude-opus-4.8`, and without that every Anthropic model reads as unpriced.
 
 ## Declaring how you are billed
 
-`ARTEL_BILLING_MODE` (`metered` or `subscription`) tells the drainer which it is. The
-hook falls back to looking for an API key or an OAuth token, but a Claude Code session
-reads its credentials from `~/.claude` rather than the environment, so detection
-usually lands on `unknown` — and `unknown` is never priced. Set it once per host.
+`ARTEL_BILLING_MODE` (`metered` or `subscription`) tells the drainer which it is. It
+only changes the label — an unset host still gets figures, reported as list-price
+equivalents rather than as an invoice.
 
 ## Why cache counters matter more than they look
 

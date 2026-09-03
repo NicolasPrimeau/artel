@@ -6,9 +6,26 @@ from artel.store import pricing
 
 
 class TestPricingRefusals:
-    def test_subscription_is_never_priced(self):
-        r = pricing.cost_usd("claude-opus-5", "subscription", {"output_tokens": 10**6})
-        assert r["amount"] is None and "subscription" in r["reason"]
+    def test_subscription_is_priced_as_an_equivalent_not_an_invoice(self, monkeypatch):
+        # The tokens are identical either way, and on a seat the list-price number is
+        # what the seat is worth — useful rather than fiction, so long as it is labelled.
+        monkeypatch.setenv("MODEL_RATES", '{"m":{"input":1e-6,"output":2e-6}}')
+        r = pricing.cost_usd("m", "subscription", {"output_tokens": 10**6})
+        assert r["amount"] == pytest.approx(2.0)
+        assert r["billed"] is False and r["basis"] == "list-price equivalent"
+
+    def test_metered_is_labelled_as_actual_spend(self, monkeypatch):
+        monkeypatch.setenv("MODEL_RATES", '{"m":{"input":1e-6,"output":2e-6}}')
+        r = pricing.cost_usd("m", "metered", {"output_tokens": 10**6})
+        assert r["billed"] is True and r["basis"] == "actual spend"
+
+    def test_claude_code_model_ids_resolve(self, monkeypatch):
+        # A session records claude-opus-4-8; rate tables name it anthropic/claude-opus-4.8.
+        monkeypatch.setenv(
+            "MODEL_RATES", '{"anthropic/claude-opus-4.8":{"input":1e-6,"output":2e-6}}'
+        )
+        assert pricing.rate_for("claude-opus-4-8") is not None
+        assert pricing.rate_for("claude-opus-4-8-20260101") is not None
 
     def test_unknown_model_is_not_zero(self):
         # $0 reads as "this was free", the most expensive way for a spend report to be wrong.
@@ -64,13 +81,15 @@ class TestUsageIngest:
         rows = client.get("/usage?days=7", headers=H).json()["rows"]
         assert rows[0]["output_tokens"] == 1000
 
-    def test_total_excludes_what_cannot_be_priced(self, client):
+    def test_invoice_and_equivalent_are_reported_separately(self, client):
+        # Same model and rate, different billing. One is an invoice, one is what the
+        # seat is worth; both are useful and adding them together is not.
         client.post("/usage", json=BODY, headers=H)
         client.post(
             "/usage",
-            json=dict(BODY, session_id="s2", model="opus", billing_mode="subscription"),
+            json=dict(BODY, session_id="s2", billing_mode="subscription"),
             headers=H,
         )
         d = client.get("/usage?days=7", headers=H).json()
-        assert d["billable_usd"] == pytest.approx(0.002)
-        assert any("subscription" in n for n in d["not_priced"])
+        assert d["billed_usd"] == pytest.approx(0.002)
+        assert d["list_equivalent_usd"] == pytest.approx(0.002)

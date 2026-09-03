@@ -66,13 +66,17 @@ async def read_usage(
               FROM usage_events WHERE {" AND ".join(clauses)}
               GROUP BY p, model, billing_mode ORDER BY output_tokens DESC"""
     rows = []
-    billable = 0.0
+    billed_total = 0.0
+    equivalent_total = 0.0
     unpriced: list[str] = []
     for r in db.execute(sql, params):
         usage = {k: r[k] for k in ("input_tokens", "output_tokens", "cache_read", "cache_write")}
         cost = pricing.cost_usd(r["model"], r["billing_mode"], usage)
         if cost["amount"] is not None:
-            billable += cost["amount"]
+            if cost.get("billed"):
+                billed_total += cost["amount"]
+            else:
+                equivalent_total += cost["amount"]
         elif cost["reason"]:
             unpriced.append(f"{r['p']}/{r['model']}: {cost['reason']}")
         rows.append(
@@ -88,8 +92,9 @@ async def read_usage(
     return {
         "days": days,
         "rows": rows,
-        # Deliberately not a grand total. Mixing metered dollars with subscription
-        # volume into one number invents spend that nobody is billed for.
-        "billable_usd": round(billable, 4),
+        # Two totals, not one. Metered work is an invoice; seat-billed work priced at
+        # list is what the seat is worth. Both are useful, adding them is not.
+        "billed_usd": round(billed_total, 4),
+        "list_equivalent_usd": round(equivalent_total, 4),
         "not_priced": unpriced,
     }

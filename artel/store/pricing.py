@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 
 _CACHE: dict[str, dict] = {}
@@ -56,23 +57,45 @@ def _openrouter_rates() -> dict[str, dict]:
     return _CACHE
 
 
+def _candidates(model: str) -> list[str]:
+    """Model ids as Claude Code reports them, mapped to how a rate table names them.
+
+    A session records `claude-opus-4-8`; OpenRouter lists `anthropic/claude-opus-4.8`.
+    Without this every Anthropic model is unpriced, which looked like a billing-mode
+    problem and was really a string problem.
+    """
+    out = [model]
+    base = re.sub(r"-\d{8}$", "", model)  # drop a trailing date stamp
+    dotted = re.sub(r"-(\d+)-(\d+)$", r"-\1.\2", base)
+    for m in (base, dotted):
+        if m not in out:
+            out.append(m)
+        if not m.startswith("anthropic/"):
+            out.append(f"anthropic/{m}")
+    return out
+
+
 def rate_for(model: str) -> dict | None:
-    return _rates_from_env().get(model) or _openrouter_rates().get(model)
+    env, live = _rates_from_env(), _openrouter_rates()
+    for candidate in _candidates(model):
+        hit = env.get(candidate) or live.get(candidate)
+        if hit:
+            return hit
+    return None
 
 
 def cost_usd(model: str, billing_mode: str, usage: dict) -> dict:
-    """Dollars for a usage rollup, or an explicit refusal to guess.
+    """List-price value of a usage rollup.
 
-    Returns `amount=None` with a reason rather than 0.0 when a figure cannot be
-    honestly produced. Two cases matter and they are different:
+    Always computed when a rate exists, whatever the billing mode. The tokens are the
+    same either way, and on a seat the number is arguably more interesting: it is what
+    the work would have cost metered, i.e. what the seat is worth. `billed` says
+    whether it is an invoice or an equivalent — the caller labels it, rather than the
+    figure being withheld.
 
-    - subscription: the tokens were really spent but nobody is billed per token, so a
-      dollar figure would be fiction. Volume is the honest unit.
-    - unknown model: no rate, so no number. Saying "$0" here reads as "this was free",
-      which is the most expensive kind of wrong an spend report can be.
+    Still no number when there is no rate: "$0" reads as "this was free", which is the
+    most expensive way for a spend report to be wrong.
     """
-    if billing_mode == SUBSCRIPTION:
-        return {"amount": None, "reason": "subscription — billed per seat, not per token"}
     rate = rate_for(model)
     if not rate:
         return {"amount": None, "reason": f"no published rate for {model!r}"}
@@ -85,6 +108,8 @@ def cost_usd(model: str, billing_mode: str, usage: dict) -> dict:
     return {
         "amount": round(amount, 6),
         "reason": None,
+        "billed": billing_mode == METERED,
+        "basis": "actual spend" if billing_mode == METERED else "list-price equivalent",
         "rate": rate,
         "derivation": (
             f"{usage.get('input_tokens', 0)}*{rate['input']} + "
