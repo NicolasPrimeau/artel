@@ -28,6 +28,37 @@ def _proj_from_dir(name: str) -> str:
     return name
 
 
+def token_usage_from_ledger(db_path: str, days: int = 7) -> dict[str, dict]:
+    """Artel's own usage ledger — the authoritative source once the drainer is shipping.
+
+    Preferred over reading transcripts: the ledger is what a customer's server holds,
+    so the demo exercises the real path rather than a local shortcut only this machine
+    can take.
+    """
+    db = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    db.row_factory = sqlite3.Row
+    out: dict[str, dict] = {}
+    try:
+        rows = db.execute(
+            f"""SELECT COALESCE(project,'(unscoped)') p, SUM(turns) turns,
+                       SUM(input_tokens) input, SUM(output_tokens) output,
+                       SUM(cache_read) cache_read, SUM(cache_write) cache_write,
+                       COUNT(DISTINCT session_id) sessions
+                FROM usage_events
+                WHERE COALESCE(window_end, created_at) > datetime('now','-{int(days)} days')
+                GROUP BY p"""
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return {}
+    finally:
+        db.close()
+    for r in rows:
+        out[r["p"]] = {
+            k: r[k] for k in ("turns", "input", "output", "cache_read", "cache_write", "sessions")
+        }
+    return out
+
+
 def token_usage(days: int = 7) -> dict[str, dict]:
     """Token volume per project, read from the transcripts on disk.
 
@@ -145,14 +176,25 @@ ALIAS = {
 
 
 def fleet_table(db_path: str, days: int = 7) -> list[dict]:
-    tok, com, cnt = token_usage(days), commits(days), artel_counts(db_path, days)
+    # Ledger first; fall back to transcripts only where it has nothing yet, so the
+    # table is never silently empty on a fleet that has not shipped usage.
+    ledger = token_usage_from_ledger(db_path, days)
+    tok = ledger or token_usage(days)
+    source = "artel ledger" if ledger else "local transcripts"
+    com, cnt = commits(days), artel_counts(db_path, days)
     rows = []
+    # The ledger keys by Artel project ("nimbus"); commits key by repo directory
+    # ("Nimbus"). Joining on the raw string silently drops every row whose two names
+    # differ in case — which is all of them except the one that happens to match.
+    to_repo = {v: k for k, v in ALIAS.items()}
     for proj, t in sorted(tok.items(), key=lambda kv: -kv[1].get("output", 0)):
-        c = com.get(proj, {})
-        a = cnt.get(ALIAS.get(proj, proj.lower()), {})
+        repo = to_repo.get(proj, proj)
+        c = com.get(repo, com.get(proj, {}))
+        a = cnt.get(ALIAS.get(proj, proj), cnt.get(proj, {}))
         n_commits = c.get("commits", 0)
         rows.append(
             {
+                "source": source,
                 "project": proj,
                 "sessions": t.get("sessions", 0),
                 "turns": t.get("turns", 0),

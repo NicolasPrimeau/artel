@@ -48,7 +48,12 @@ async def read_usage(
 ):
     db = get_db()
     where, params = project_filter(agent_id)
-    clauses = [f"created_at > datetime('now','-{int(days)} days')"]
+    # Filter on when the tokens were SPENT, not when the row was written. A backfill
+    # writes months of history in one pass; keyed on created_at it would all appear as
+    # today's spend, which is a plausible wrong number of exactly the kind this
+    # endpoint exists to avoid. window_end is absent on rollups from transcripts with
+    # no timestamps, so fall back to created_at there.
+    clauses = [f"COALESCE(window_end, created_at) > datetime('now','-{int(days)} days')"]
     if where:
         clauses.append(where)
     if project:

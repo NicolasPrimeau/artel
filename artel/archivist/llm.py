@@ -6,6 +6,35 @@ from .config import settings
 _anthropic_client = None
 _openai_client = None
 
+# The archivist is the only part of the fleet on a metered plan, so it is the only
+# place real dollars exist — and it never passes through a Claude Code transcript,
+# which is where every other usage rollup comes from. Accumulated here and flushed
+# once per cycle rather than posted per call: a synthesis pass makes several calls
+# and an HTTP round trip inside each would put accounting on the critical path.
+_pending_usage: list[dict] = []
+
+
+def take_pending_usage() -> list[dict]:
+    global _pending_usage
+    rows, _pending_usage = _pending_usage, []
+    return rows
+
+
+def _record(model: str, usage: dict) -> None:
+    if not usage:
+        return
+    _pending_usage.append(
+        {
+            "model": model,
+            "billing_mode": "metered" if settings.archivist_provider == "openrouter" else "unknown",
+            "turns": 1,
+            "input_tokens": usage.get("prompt_tokens", 0) or 0,
+            "output_tokens": usage.get("completion_tokens", 0) or 0,
+            "cache_read": (usage.get("prompt_tokens_details") or {}).get("cached_tokens", 0) or 0,
+        }
+    )
+
+
 # Hard ceiling on any single LLM call. The claude-sdk provider spawns a `claude`
 # subprocess that can hang (e.g. when the Max plan is rate-limited); a plain
 # asyncio.wait_for around a caller can't kill it, so we bound the call here and
@@ -112,6 +141,11 @@ async def _openai(system: str, user: str, model: str, max_tokens: int, key: str)
         max_tokens=max_tokens,
         messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
     )
+    try:
+        _record(model, resp.usage.model_dump() if resp.usage else {})
+    except Exception:
+        # Accounting must never break curation.
+        pass
     return resp.choices[0].message.content or ""
 
 

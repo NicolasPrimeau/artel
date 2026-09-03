@@ -10,7 +10,7 @@ from .compaction import run_capture_compaction, run_capture_refinement
 from .config import settings
 from .conflict import check_and_merge
 from .conflicts import run_conflict_resolution
-from .llm import is_configured
+from .llm import is_configured, take_pending_usage
 from .synthesis import (
     capture_metrics,
     decay_confidence,
@@ -117,6 +117,15 @@ async def _scheduler(client: ArtelClient) -> None:
             await asyncio.wait_for(capture_metrics(), timeout=30.0)
         except Exception as e:
             log.error("capture_metrics failed: %s", e)
+        # Flush what the archivist itself spent. It runs on a metered plan while the
+        # coding agents run on seats, so this is the only genuinely billable line in
+        # the ledger — and it is invisible to the transcript drainer that feeds
+        # everything else.
+        for row in take_pending_usage():
+            try:
+                await client._request("POST", "/usage", json=row)
+            except Exception as e:
+                log.warning("usage flush failed: %s", e)
         # LLM-heavy passes chain several model calls plus their op execution; a flat 300s
         # was below what one pass costs, so they were cancelled mid-work every cycle. Each
         # now self-limits internally and gets a ceiling that its internal budget fits under.
