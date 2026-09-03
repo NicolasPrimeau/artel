@@ -239,6 +239,18 @@ def _surfaces() -> dict[str, str]:
             routes[route.stem] = "REST routes"
 
     found = dict(routes)
+
+    # Whole served apps, not just route modules. artel/ledger is a second FastAPI app
+    # on its own port; without this the gate cannot tell it exists and a new surface
+    # could ship undocumented, which is the failure this check was written for.
+    for pkg in sorted((ROOT / "artel").iterdir()):
+        if not pkg.is_dir() or pkg.name.startswith("_"):
+            continue
+        for mod in pkg.glob("*.py"):
+            if re.search(r"=\s*FastAPI\(", mod.read_text()):
+                found.setdefault(pkg.name, "served app")
+                break
+
     tree = ast.parse((ROOT / "artel" / "mcp" / "server.py").read_text())
     for node in ast.walk(tree):
         if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):

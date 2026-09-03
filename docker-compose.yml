@@ -41,6 +41,33 @@ services:
       retries: 3
       start_period: 60s
 
+  # The money view, separate from /ui on purpose: different audience (whoever owns the
+  # budget, not whoever operates the fleet) and read-only, so it stays free of agent
+  # controls. Same image and same volume — it reads the store directly.
+  ledger:
+    image: ghcr.io/nicolasprimeau/artel:edge
+    restart: unless-stopped
+    command: ["python", "-m", "artel.ledger"]
+    ports:
+      - "8090:8090"
+    volumes:
+      - artel-data:/data
+    env_file: .env
+    environment:
+      - DB_PATH=/data/artel.db
+      - RUN_INLINE_ARCHIVIST=0
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    depends_on:
+      artel:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8090/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
   # mDNS broadcasts artel.local on the network so agents can onboard without knowing the IP.
   # Requires network_mode: host — Linux only. Remove this service on Mac/Windows Docker Desktop.
   mdns:

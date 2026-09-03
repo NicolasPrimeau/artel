@@ -96,8 +96,8 @@ async def read_usage(
         "rows": rows,
         # Two totals, not one. Metered work is an invoice; seat-billed work priced at
         # list is what the seat is worth. Both are useful, adding them is not.
-        "billed_usd": round(billed_total, 4),
-        "list_equivalent_usd": round(equivalent_total, 4),
+        "billed_usd": round(billed_total, 6),
+        "list_equivalent_usd": round(equivalent_total, 6),
         "not_priced": unpriced,
     }
 
@@ -201,7 +201,7 @@ async def usage_by_decision(
                 "session_id": d["session_id"],
                 "created_at": d["created_at"],
                 "session_usage": totals,
-                "session_cost": round(amount, 2) if priced else None,
+                "session_cost": round(amount, 6) if priced else None,
             }
         )
     return {"days": days, "rows": out, "basis": "session containing the decision"}

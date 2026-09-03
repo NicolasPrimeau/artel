@@ -1,6 +1,6 @@
 <!doctype html><meta charset=utf-8>
 <meta name=viewport content="width=device-width,initial-scale=1">
-<title>Artel — fleet ledger</title>
+<title>Artel — ledger</title>
 <style>
 /* Editorial ledger. Warm paper, warm-rotated ink (cool grey on warm paper reads as
    two stacked sheets). 1.25 modular scale, 4px grid, tabular figures everywhere a
@@ -82,16 +82,6 @@ footer{margin-top:var(--s12);padding-top:var(--s3);border-top:1px solid var(--ha
   <p class=dek>What the agents did · what it was worth · what was decided</p>
 </header>
 
-<form onsubmit="ask(event)">
-  <input id=q type=text placeholder="Ask the record a question" autofocus>
-  <button>Ask</button>
-</form>
-<p class=hints>
-  <b onclick=fill(this)>Which project is least efficient?</b>
-  <b onclick=fill(this)>What was decided recently?</b>
-  <b onclick=fill(this)>What did the fleet work on?</b>
-</p>
-<div id=answer></div>
 
 <h2>Accounts <span class=win id=win></span></h2>
 <div id=ledger><p class=wait>reading…</p></div>
@@ -108,7 +98,6 @@ footer{margin-top:var(--s12);padding-top:var(--s3);border-top:1px solid var(--ha
 let DAYS = 30, PROJECT = null;
 const esc = t => (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
 const num = n => (n||0).toLocaleString('en-US');
-const fill = b => { document.getElementById('q').value = b.textContent; };
 
 function windows(){
   document.getElementById('win').innerHTML = [7,30,90]
@@ -117,7 +106,7 @@ function windows(){
 function setDays(d){ DAYS=d; function refresh(){ loadLedger(); loadSessions(); loadDecisions(); }
 
 async function loadSessions(){
-  const d = await fetch(`/api/cost/sessions?days=${DAYS}`).then(r=>r.json());
+  const d = await fetch(`/api/sessions?days=${DAYS}`).then(r=>r.json());
   if(!d.rows?.length){ document.getElementById('sessions').innerHTML =
     `<p class=dim>No sessions in this window.</p>`; return; }
   let h = `<table><thead><tr><th>Session</th><th>Project</th><th>Model</th>
@@ -134,7 +123,7 @@ async function loadSessions(){
 }
 
 async function loadDecisions(){
-  const d = await fetch(`/api/cost/decisions?days=${DAYS}`).then(r=>r.json());
+  const d = await fetch(`/api/decisions?days=${DAYS}`).then(r=>r.json());
   const rows = (d.rows||[]).filter(r=>!PROJECT || r.project===PROJECT);
   if(!rows.length){ document.getElementById('decisions').innerHTML =
     `<p class=dim>Nothing on record yet, or no session attached. The archivist mines these from captures as they arrive.</p>`;
@@ -158,21 +147,19 @@ windows(); refresh();
 setInterval(refresh, 30000); }
 
 async function loadLedger(){
-  const [fleet, cost] = await Promise.all([
-    fetch(`/api/fleet?days=${DAYS}`).then(r=>r.json()),
-    fetch(`/api/cost?days=${DAYS}`).then(r=>r.json())
-  ]);
-  const t = cost.totals;
+  const fleet = await fetch(`/api/projects?days=${DAYS}`).then(r=>r.json());
+  const t = fleet.totals;
   let h = `<table><thead><tr>
-    <th>Project</th><th class=n>Sessions</th><th class=n>Output tokens</th>
-    <th class=n>Commits</th><th class=n>Tokens / commit</th><th class=n>Decisions</th></tr></thead><tbody>`;
+    <th>Project</th><th class=n>Sessions</th><th class=n>Turns</th><th class=n>Output tokens</th>
+    <th class=n>Cache read</th><th class=n>Decisions</th><th class=n>Value</th></tr></thead><tbody>`;
   for(const r of fleet.rows){
     h += `<tr><td class=proj onclick="drill('${r.project}')">${esc(r.project)}</td>
       <td class="n mono">${num(r.sessions)}</td>
+      <td class="n mono">${num(r.turns)}</td>
       <td class="n mono">${num(r.output_tokens)}</td>
-      <td class="n mono">${num(r.commits)}</td>
-      <td class="n mono">${r.tokens_per_commit===null?'<span class=dim>—</span>':num(r.tokens_per_commit)}</td>
-      <td class="n mono">${r.decisions?num(r.decisions):'<span class=dim>0</span>'}</td></tr>`;
+      <td class="n mono dim">${num(r.cache_read)}</td>
+      <td class="n mono">${r.decisions?num(r.decisions):'<span class=dim>0</span>'}</td>
+      <td class="n mono money">$${num(Math.round(r.equivalent||r.billed))}</td></tr>`;
   }
   h += `</tbody></table>
     <p class=hints style="margin-top:12px">
@@ -180,8 +167,7 @@ async function loadLedger(){
       work would have cost per-token, i.e. what the seats are worth.
       ${t.billed?`<br><span class=money>$${num(t.billed)}</span> actually billed (metered).`:''}
       ${t.unpriced.length?`<br><span class=dim>No published rate, so no figure: ${t.unpriced.map(esc).join(', ')}</span>`:''}
-      <br><span class=dim>${cost.live?'Live from the server':'Snapshot (server unreachable)'} ·
-      accounts from ${esc(fleet.rows[0]?.source||'—')} · refreshed every 30s · figures computed, never generated.</span>
+      <br><span class=dim>Read live from the store · refreshed every 30s · every figure computed, never generated.</span>
     </p>`;
   document.getElementById('ledger').innerHTML = h;
 }
@@ -205,26 +191,7 @@ async function loadDecisions(){
 function drill(p){ PROJECT = (PROJECT===p? null : p); loadDecisions();
   document.getElementById('foot').textContent = PROJECT? `filtered to ${PROJECT} — click again to clear` : ''; }
 
-async function ask(e){
-  e.preventDefault();
-  const q = document.getElementById('q').value.trim(); if(!q) return;
-  const out = document.getElementById('answer');
-  out.innerHTML = '<p class=wait>consulting the record…</p>';
-  const d = await fetch('/api/ask',{method:'POST',headers:{'content-type':'application/json'},
-    body:JSON.stringify({question:q,days:DAYS})}).then(r=>r.json());
-  const a = d.answer||{};
-  let h = '';
-  if(a.dry_run) h += `<div class=dry>Dry run — no model was called. Start with ASK_DRY_RUN=0 to answer for real.</div>`;
-  if(a.text) h += `<div class=answer>${esc(a.text).replace(/\n/g,'<br>')}</div>`;
-  h += `<h2>Figures given to the model</h2><pre>${esc(d.facts)}</pre>`;
-  h += `<h2>Records retrieved (${d.passages.length})</h2>`;
-  h += d.passages.map(p=>`<div class=rec><div class=meta>[${esc(p.id.slice(0,8))}] ${esc(p.project||'unscoped')} · ${esc(p.type)} · ${esc(p.agent)}</div>${esc(p.content.slice(0,340))}…</div>`).join('');
-  out.innerHTML = h;
-}
 
 windows(); loadLedger(); loadDecisions();
-fetch('/health').then(r=>r.json()).then(h=>{
-  document.getElementById('foot').textContent =
-    `${h.dry_run?'dry run · ':''}${h.model} · snapshot refreshed every 10 min`;
-});
+
 </script>
