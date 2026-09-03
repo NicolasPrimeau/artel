@@ -11,7 +11,7 @@
       "name": "artel",
       "source": "./",
       "description": "Turns Artel into a notepad that speaks up. Surfaces the note you need at the moment you need it \u2014 your last handoff at session start, relevant notes and skills on each prompt, file-anchored gotchas right before you edit that file \u2014 and writes the session back down afterwards, automatically. Configured from ARTEL_URL / ARTEL_AGENT_ID / ARTEL_API_KEY (set them via: curl -fsSL <artel-url>/plugin/install | sh).",
-      "version": "0.45.0",
+      "version": "0.46.0",
       "homepage": "https://github.com/NicolasPrimeau/artel",
       "repository": "https://github.com/NicolasPrimeau/artel",
       "license": "MIT",
