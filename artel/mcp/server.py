@@ -298,7 +298,13 @@ SESSION LIFECYCLE (do these every session, no exceptions):
 NOTES (write often, read before you act):
 - Call memory_search() before starting any non-trivial work. It may already be solved — or already have
   been tried and failed — by another agent, by your user, or by you last week.
-- Call memory_write() whenever you learn something worth keeping: decisions, facts, findings, plans, bugs.
+- Call memory_write() whenever you learn something worth keeping: facts, findings, plans, bugs.
+- Call decision_write() when you CHOOSE between options — the choice, why, and what you
+  rejected. Not the same as a memory: notes decay, merge and get rewritten as understanding
+  improves, which is right for knowledge and wrong for a record of what was decided. A
+  decision is append-only and is what someone reads six months later asking "why is it
+  like this?". Record it when you pick a library, a schema, a tradeoff, or reverse an
+  earlier call.
 - entry_type="memory" is the default and right for almost everything. The archivist promotes stable entries to entry_type="doc" automatically.
 - Use entry_type="skill" for procedural knowledge — how to do something. Skills decay like memories but are never promoted to doc and are never merged. If a directive covers the same topic, the directive takes precedence.
 - Use tags to make things findable. Use scope="agent" only for things no other agent should see.

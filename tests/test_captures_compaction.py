@@ -14,6 +14,7 @@ def _client(pending):
     c.patch_memory = AsyncMock()
     c.digest_captures = AsyncMock()
     c.log = AsyncMock()
+    c._request = AsyncMock()
     return c
 
 
@@ -229,3 +230,49 @@ async def test_budget_keeps_the_work_done_before_it_expired(monkeypatch):
     digested = [call.args[0][0] for call in c.digest_captures.await_args_list]
     assert digested == ["c0", "c1"], "work done before the budget expired must stay digested"
     c.log.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_extracted_decisions_are_recorded_as_decisions(monkeypatch):
+    """Decisions arrive from the pass, not from asking an agent to call decision_write.
+
+    The instruction route was tried and measured: the preamble told agents to put
+    decisions in memory_write and the decisions table held one row across the whole
+    database. Hooks and passes run whether or not anyone remembered; instructions do
+    not, so this is where the record has to come from.
+    """
+    monkeypatch.setattr(compaction, "is_configured", lambda: True)
+    c = _client(
+        [{"id": "c1", "content": "postgres vs sqlite", "session_id": "s1", "project": "artel"}]
+    )
+    extract = AsyncMock(
+        return_value=ExtractResult(
+            facts=[],
+            decisions=[
+                {
+                    "decision": "use SQLite",
+                    "rationale": "single-file backup beats concurrency here",
+                    "alternatives": ["Postgres", "DuckDB"],
+                }
+            ],
+        )
+    )
+    await compaction.run_capture_compaction(c, extract=extract)
+
+    c._request.assert_awaited_once()
+    method, path = c._request.call_args.args[:2]
+    body = c._request.call_args.kwargs["json"]
+    assert (method, path) == ("POST", "/decisions")
+    assert body["decision"] == "use SQLite"
+    assert body["alternatives"] == ["Postgres", "DuckDB"]
+    assert body["project"] == "artel"
+
+
+@pytest.mark.asyncio
+async def test_a_capture_with_no_decision_records_none(monkeypatch):
+    monkeypatch.setattr(compaction, "is_configured", lambda: True)
+    c = _client([{"id": "c1", "content": "renamed a variable", "session_id": "s1", "project": "p"}])
+    await compaction.run_capture_compaction(
+        c, extract=AsyncMock(return_value=ExtractResult(facts=["x"]))
+    )
+    c._request.assert_not_awaited()

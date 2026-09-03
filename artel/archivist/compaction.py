@@ -23,12 +23,19 @@ _REFINE_MAX = 15
 
 _SYSTEM = (
     "You are the Artel archivist compacting a raw agent session slice into project memory. "
-    "Extract only durable, generalizable facts, decisions, or gotchas that will still be true "
+    "Extract only durable, generalizable facts or gotchas that will still be true "
     "in a week — never transient chatter, raw tool output, or one-off state. Prefer updating an "
-    "existing related memory over creating a near-duplicate. Output a JSON object: "
+    "existing related memory over creating a near-duplicate.\n"
+    "Separately, extract DECISIONS: points where a choice was made between real options. "
+    "A decision is not a fact — it is a commitment someone may need to justify or reverse "
+    "later, so record what was chosen, why, and what was rejected. Only include one if an "
+    "alternative was genuinely on the table; routine work is not a decision.\n"
+    "Output a JSON object: "
     '{"facts": ["<new standalone memory>", ...], '
-    '"updates": [{"id": "<existing memory id>", "content": "<merged content>"}, ...]}. '
-    'If nothing is worth keeping, output {"facts": [], "updates": []}.'
+    '"updates": [{"id": "<existing memory id>", "content": "<merged content>"}, ...], '
+    '"decisions": [{"decision": "<what was chosen>", "rationale": "<why>", '
+    '"alternatives": ["<what was rejected>", ...]}, ...]}. '
+    'If nothing is worth keeping, output {"facts": [], "updates": [], "decisions": []}.'
 )
 
 
@@ -36,6 +43,7 @@ _SYSTEM = (
 class ExtractResult:
     facts: list[str] = field(default_factory=list)
     updates: list[dict] = field(default_factory=list)
+    decisions: list[dict] = field(default_factory=list)
 
 
 # The extraction step is the only judgment in the pass; injecting it keeps the pass
@@ -75,7 +83,12 @@ async def _extract_with_llm(content: str, related: list[dict]) -> ExtractResult:
         for u in data.get("updates", [])
         if isinstance(u, dict) and u.get("id") and str(u.get("content", "")).strip()
     ]
-    return ExtractResult(facts=facts, updates=updates)
+    decisions = [
+        d
+        for d in data.get("decisions", [])
+        if isinstance(d, dict) and str(d.get("decision", "")).strip()
+    ]
+    return ExtractResult(facts=facts, updates=updates, decisions=decisions)
 
 
 async def _integrate(cap: dict, result: ExtractResult, valid_ids: set[str], client: ArtelClient):
@@ -103,6 +116,24 @@ async def _integrate(cap: dict, result: ExtractResult, valid_ids: set[str], clie
             updated += 1
         except Exception as e:
             log.warning("could not update memory %s: %s", upd["id"], e)
+    # Decisions come out of the same pass rather than from asking agents to call
+    # decision_write. Instructions are advisory and agents forget; this pass runs on
+    # every capture whether or not anyone remembered. It is the same push-not-pull
+    # reasoning the plugin exists for.
+    for d in result.decisions:
+        try:
+            await client._request(
+                "POST",
+                "/decisions",
+                json={
+                    "decision": str(d.get("decision", ""))[:2000],
+                    "rationale": str(d.get("rationale", ""))[:2000],
+                    "alternatives": [str(a)[:400] for a in (d.get("alternatives") or [])][:8],
+                    "project": cap.get("project"),
+                },
+            )
+        except Exception as e:
+            log.warning("could not record extracted decision: %s", e)
     return written, updated
 
 
