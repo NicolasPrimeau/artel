@@ -163,6 +163,94 @@ def artel_counts(db_path: str, days: int = 7) -> dict[str, dict]:
 
 
 # Repo directory names and Artel project names are not the same string.
+def decisions(db_path: str, limit: int = 40, project: str | None = None) -> list[dict]:
+    """The record of what was chosen — mined by the archivist from captures, not filed
+    by agents, because instructions are advisory and this has to be there whether or
+    not anyone remembered."""
+    db = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    db.row_factory = sqlite3.Row
+    sql = "SELECT * FROM decisions"
+    args: list = []
+    if project:
+        sql += " WHERE project = ?"
+        args.append(project)
+    sql += " ORDER BY created_at DESC LIMIT ?"
+    args.append(limit)
+    try:
+        rows = db.execute(sql, args).fetchall()
+    except sqlite3.OperationalError:
+        return []
+    finally:
+        db.close()
+    out = []
+    for r in rows:
+        try:
+            alts = json.loads(r["alternatives"] or "[]")
+        except Exception:
+            alts = []
+        out.append(
+            {
+                "id": r["id"],
+                "project": r["project"],
+                "agent": r["agent_id"],
+                "decision": r["decision"],
+                "rationale": r["rationale"],
+                "alternatives": alts,
+                "created_at": r["created_at"],
+            }
+        )
+    return out
+
+
+def usage_by_model(db_path: str, days: int = 7, project: str | None = None) -> list[dict]:
+    db = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    db.row_factory = sqlite3.Row
+    where = [f"COALESCE(window_end, created_at) > datetime('now','-{int(days)} days')"]
+    args: list = []
+    if project:
+        where.append("project = ?")
+        args.append(project)
+    try:
+        rows = db.execute(
+            f"""SELECT COALESCE(project,'(unscoped)') project, model, billing_mode,
+                       SUM(input_tokens) input_tokens, SUM(output_tokens) output_tokens,
+                       SUM(cache_read) cache_read, SUM(cache_write) cache_write,
+                       SUM(turns) turns
+                FROM usage_events WHERE {" AND ".join(where)}
+                GROUP BY project, model, billing_mode ORDER BY output_tokens DESC""",
+            args,
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return []
+    finally:
+        db.close()
+    return [dict(r) for r in rows]
+
+
+def cost_for(model_rows: list[dict]) -> dict:
+    """List-price value of usage rows, via Artel's own pricing module."""
+    import sys as _sys
+
+    _sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
+    from artel.store import pricing
+
+    billed = equivalent = 0.0
+    unpriced: list[str] = []
+    for r in model_rows:
+        c = pricing.cost_usd(r["model"], r.get("billing_mode", "unknown"), r)
+        if c["amount"] is None:
+            unpriced.append(r["model"])
+        elif c.get("billed"):
+            billed += c["amount"]
+        else:
+            equivalent += c["amount"]
+    return {
+        "billed": round(billed, 2),
+        "equivalent": round(equivalent, 2),
+        "unpriced": sorted(set(unpriced)),
+    }
+
+
 ALIAS = {
     "Nimbus": "nimbus",
     "formulai": "formulai",

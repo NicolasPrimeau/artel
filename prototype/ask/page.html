@@ -1,0 +1,185 @@
+<!doctype html><meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1">
+<title>Artel — fleet ledger</title>
+<style>
+/* Editorial ledger. Warm paper, warm-rotated ink (cool grey on warm paper reads as
+   two stacked sheets). 1.25 modular scale, 4px grid, tabular figures everywhere a
+   number appears. Hairline rules instead of cards: this is a printed account, not a
+   dashboard of floating panels. */
+:root{
+  --paper:#f7f3ec; --ink:#1a1410; --muted:#6b5f52;
+  --hair:#e2dbcf; --edge:#8d7f6c; --accent:#8c3d17; --pos:#3f5d34;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s6:24px; --s8:32px; --s12:48px;
+  --t-1:12.8px; --t0:16px; --t1:20px; --t2:25px; --t3:31px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font:var(--t0)/1.5 "Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  font-feature-settings:"onum" 1;}
+.sheet{max-width:76ch;margin:0 auto;padding:var(--s12) var(--s6) var(--s12)}
+mono,.mono,td.n,th.n,.fig{font-family:"SF Mono",ui-monospace,"Roboto Mono",Menlo,monospace;
+  font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1}
+
+header{border-bottom:2px solid var(--ink);padding-bottom:var(--s3);margin-bottom:var(--s6)}
+h1{font-size:var(--t3);margin:0;letter-spacing:-.01em;font-weight:600}
+.dek{color:var(--muted);font-size:var(--t-1);margin:var(--s1) 0 0;
+  font-family:"SF Mono",ui-monospace,monospace;text-transform:uppercase;letter-spacing:.08em}
+
+form{display:flex;gap:var(--s2);margin:var(--s6) 0 var(--s2);align-items:stretch}
+input[type=text]{flex:1;padding:var(--s3);border:1px solid var(--edge);background:transparent;
+  color:var(--ink);font:var(--t0)/1.4 inherit;border-radius:0}
+input[type=text]:focus{outline:2px solid var(--accent);outline-offset:-1px}
+button{padding:var(--s3) var(--s6);border:1px solid var(--ink);background:var(--ink);
+  color:var(--paper);font:600 var(--t-1)/1 "SF Mono",ui-monospace,monospace;
+  letter-spacing:.08em;text-transform:uppercase;cursor:pointer;border-radius:0}
+button:hover{background:var(--accent);border-color:var(--accent)}
+.hints{font-size:var(--t-1);color:var(--muted);margin-bottom:var(--s8)}
+.hints b{font-weight:400;color:var(--accent);cursor:pointer;border-bottom:1px solid var(--hair);
+  margin-right:var(--s3);display:inline-block}
+.hints b:hover{border-color:var(--accent)}
+
+h2{font-size:var(--t-1);text-transform:uppercase;letter-spacing:.1em;color:var(--muted);
+  font-family:"SF Mono",ui-monospace,monospace;font-weight:400;
+  margin:var(--s8) 0 var(--s3);padding-bottom:var(--s1);border-bottom:1px solid var(--hair)}
+table{width:100%;border-collapse:collapse;font-size:var(--t-1)}
+th{text-align:left;font-weight:400;color:var(--muted);padding:var(--s1) var(--s2);
+  border-bottom:1px solid var(--edge);font-family:"SF Mono",ui-monospace,monospace;
+  text-transform:uppercase;letter-spacing:.06em;font-size:11px}
+td{padding:var(--s2);border-bottom:1px solid var(--hair);vertical-align:baseline}
+td.n,th.n{text-align:right}
+tr:hover td{background:rgba(140,61,23,.045)}
+td.proj{font-weight:600;cursor:pointer}
+td.proj:hover{color:var(--accent)}
+.dim{color:var(--muted)}
+.money{color:var(--accent);font-weight:600}
+
+.answer{font-size:var(--t1);line-height:1.45;margin:var(--s4) 0 var(--s6);
+  border-left:3px solid var(--accent);padding-left:var(--s4)}
+.dry{font-family:"SF Mono",ui-monospace,monospace;font-size:var(--t-1);color:var(--accent);
+  border:1px dashed var(--edge);padding:var(--s3);margin-bottom:var(--s4)}
+pre{font-family:"SF Mono",ui-monospace,monospace;font-size:var(--t-1);line-height:1.5;
+  white-space:pre;overflow-x:auto;margin:0;color:var(--ink)}
+.rec{border-top:1px solid var(--hair);padding:var(--s3) 0}
+.rec .meta{font-family:"SF Mono",ui-monospace,monospace;font-size:11px;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.05em;margin-bottom:var(--s1)}
+.dec{border-top:1px solid var(--hair);padding:var(--s3) 0}
+.dec .what{font-size:var(--t1);line-height:1.35}
+.dec .why{color:var(--muted);font-size:var(--t-1);margin-top:var(--s1)}
+.dec .alt{font-family:"SF Mono",ui-monospace,monospace;font-size:11px;color:var(--muted);
+  margin-top:var(--s2)}
+.dec .alt s{text-decoration-color:var(--edge)}
+.win{float:right;font-family:"SF Mono",ui-monospace,monospace;font-size:var(--t-1)}
+.win a{color:var(--muted);text-decoration:none;margin-left:var(--s3);cursor:pointer}
+.win a.on{color:var(--accent);border-bottom:2px solid var(--accent)}
+footer{margin-top:var(--s12);padding-top:var(--s3);border-top:1px solid var(--hair);
+  font-family:"SF Mono",ui-monospace,monospace;font-size:11px;color:var(--muted)}
+.wait{color:var(--muted);font-style:italic}
+</style>
+<div class=sheet>
+<header>
+  <h1>Fleet ledger</h1>
+  <p class=dek>What the agents did · what it was worth · what was decided</p>
+</header>
+
+<form onsubmit="ask(event)">
+  <input id=q type=text placeholder="Ask the record a question" autofocus>
+  <button>Ask</button>
+</form>
+<p class=hints>
+  <b onclick=fill(this)>Which project is least efficient?</b>
+  <b onclick=fill(this)>What was decided recently?</b>
+  <b onclick=fill(this)>What did the fleet work on?</b>
+</p>
+<div id=answer></div>
+
+<h2>Accounts <span class=win id=win></span></h2>
+<div id=ledger><p class=wait>reading…</p></div>
+
+<h2>Decisions on record</h2>
+<div id=decisions><p class=wait>reading…</p></div>
+
+<footer id=foot></footer>
+</div>
+<script>
+let DAYS = 30, PROJECT = null;
+const esc = t => (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const num = n => (n||0).toLocaleString('en-US');
+const fill = b => { document.getElementById('q').value = b.textContent; };
+
+function windows(){
+  document.getElementById('win').innerHTML = [7,30,90]
+    .map(d=>`<a class="${d===DAYS?'on':''}" onclick="setDays(${d})">${d}d</a>`).join('');
+}
+function setDays(d){ DAYS=d; windows(); loadLedger(); loadDecisions(); }
+
+async function loadLedger(){
+  const [fleet, cost] = await Promise.all([
+    fetch(`/api/fleet?days=${DAYS}`).then(r=>r.json()),
+    fetch(`/api/cost?days=${DAYS}`).then(r=>r.json())
+  ]);
+  const t = cost.totals;
+  let h = `<table><thead><tr>
+    <th>Project</th><th class=n>Sessions</th><th class=n>Output tokens</th>
+    <th class=n>Commits</th><th class=n>Tokens / commit</th><th class=n>Decisions</th></tr></thead><tbody>`;
+  for(const r of fleet.rows){
+    h += `<tr><td class=proj onclick="drill('${r.project}')">${esc(r.project)}</td>
+      <td class="n mono">${num(r.sessions)}</td>
+      <td class="n mono">${num(r.output_tokens)}</td>
+      <td class="n mono">${num(r.commits)}</td>
+      <td class="n mono">${r.tokens_per_commit===null?'<span class=dim>—</span>':num(r.tokens_per_commit)}</td>
+      <td class="n mono">${r.decisions?num(r.decisions):'<span class=dim>0</span>'}</td></tr>`;
+  }
+  h += `</tbody></table>
+    <p class=hints style="margin-top:12px">
+      <span class=money>$${num(t.equivalent)}</span> list-price equivalent — what this
+      work would have cost per-token, i.e. what the seats are worth.
+      ${t.billed?`<br><span class=money>$${num(t.billed)}</span> actually billed (metered).`:''}
+      ${t.unpriced.length?`<br><span class=dim>No published rate, so no figure: ${t.unpriced.map(esc).join(', ')}</span>`:''}
+      <br><span class=dim>Source: ${esc(fleet.rows[0]?.source||'—')}. Figures computed, never generated.</span>
+    </p>`;
+  document.getElementById('ledger').innerHTML = h;
+}
+
+async function loadDecisions(){
+  const d = await fetch(`/api/decisions?days=${DAYS}${PROJECT?`&project=${PROJECT}`:''}`).then(r=>r.json());
+  if(!d.rows.length){
+    document.getElementById('decisions').innerHTML =
+      `<p class=dim>Nothing on record yet. The archivist mines these from sessions as they are captured.</p>`;
+    return;
+  }
+  document.getElementById('decisions').innerHTML = d.rows.map(r=>`
+    <div class=dec>
+      <div class=what>${esc(r.decision)}</div>
+      ${r.rationale?`<div class=why>${esc(r.rationale)}</div>`:''}
+      ${r.alternatives?.length?`<div class=alt>rejected: ${r.alternatives.map(a=>`<s>${esc(a)}</s>`).join(' · ')}</div>`:''}
+      <div class=alt>${esc(r.project||'unscoped')} · ${esc((r.created_at||'').slice(0,10))}</div>
+    </div>`).join('');
+}
+
+function drill(p){ PROJECT = (PROJECT===p? null : p); loadDecisions();
+  document.getElementById('foot').textContent = PROJECT? `filtered to ${PROJECT} — click again to clear` : ''; }
+
+async function ask(e){
+  e.preventDefault();
+  const q = document.getElementById('q').value.trim(); if(!q) return;
+  const out = document.getElementById('answer');
+  out.innerHTML = '<p class=wait>consulting the record…</p>';
+  const d = await fetch('/api/ask',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({question:q,days:DAYS})}).then(r=>r.json());
+  const a = d.answer||{};
+  let h = '';
+  if(a.dry_run) h += `<div class=dry>Dry run — no model was called. Start with ASK_DRY_RUN=0 to answer for real.</div>`;
+  if(a.text) h += `<div class=answer>${esc(a.text).replace(/\n/g,'<br>')}</div>`;
+  h += `<h2>Figures given to the model</h2><pre>${esc(d.facts)}</pre>`;
+  h += `<h2>Records retrieved (${d.passages.length})</h2>`;
+  h += d.passages.map(p=>`<div class=rec><div class=meta>[${esc(p.id.slice(0,8))}] ${esc(p.project||'unscoped')} · ${esc(p.type)} · ${esc(p.agent)}</div>${esc(p.content.slice(0,340))}…</div>`).join('');
+  out.innerHTML = h;
+}
+
+windows(); loadLedger(); loadDecisions();
+fetch('/health').then(r=>r.json()).then(h=>{
+  document.getElementById('foot').textContent =
+    `${h.dry_run?'dry run · ':''}${h.model} · snapshot refreshed every 10 min`;
+});
+</script>
