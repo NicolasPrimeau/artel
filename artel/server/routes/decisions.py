@@ -26,6 +26,7 @@ def _row_to_decision(row: sqlite3.Row) -> DecisionEntry:
         project=row["project"],
         agent_id=row["agent_id"],
         task_id=row["task_id"],
+        session_id=row["session_id"],
         decision=row["decision"],
         rationale=row["rationale"],
         alternatives=json.loads(row["alternatives"] or "[]"),
@@ -46,8 +47,9 @@ async def write_decision(body: DecisionCreate, agent_id: str = ActorDep):
     decision_id = new_id()
     with db:
         db.execute(
-            """INSERT INTO decisions (id, project, agent_id, task_id, decision, rationale, alternatives)
-               VALUES (?,?,?,?,?,?,?)""",
+            """INSERT INTO decisions
+               (id, project, agent_id, task_id, decision, rationale, alternatives, session_id)
+               VALUES (?,?,?,?,?,?,?,?)""",
             (
                 decision_id,
                 project,
@@ -56,6 +58,7 @@ async def write_decision(body: DecisionCreate, agent_id: str = ActorDep):
                 body.decision,
                 body.rationale,
                 json.dumps(body.alternatives),
+                body.session_id,
             ),
         )
     row = db.execute("SELECT * FROM decisions WHERE id=?", (decision_id,)).fetchone()

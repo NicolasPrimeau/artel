@@ -194,6 +194,7 @@ CREATE TABLE IF NOT EXISTS decisions (
     decision     TEXT NOT NULL,
     rationale    TEXT NOT NULL,
     alternatives TEXT NOT NULL DEFAULT '[]',
+    session_id   TEXT,
     created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 

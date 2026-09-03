@@ -3,7 +3,7 @@
   "info": {
     "title": "Artel",
     "description": "Self-hosted coordination server for AI agent fleets. Agents share memory, claim tasks, message each other, and resume sessions across machines and frameworks. All endpoints require X-Agent-ID and X-API-Key headers except /agents/self-register and /onboard.",
-    "version": "0.0.1.dev1+g1d3b88d4b"
+    "version": "0.43.2.dev16+g6a415a5dd.d20260811"
   },
   "paths": {
     "/agents/performance": {
@@ -5040,6 +5040,177 @@
         }
       }
     },
+    "/usage/by-session": {
+      "get": {
+        "tags": [
+          "usage"
+        ],
+        "summary": "Token usage and cost per session",
+        "operationId": "usage_by_session_usage_by_session_get",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 365,
+              "minimum": 1,
+              "default": 7,
+              "title": "Days"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "x-agent-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Agent-Id"
+            }
+          },
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/usage/by-decision": {
+      "get": {
+        "tags": [
+          "usage"
+        ],
+        "summary": "What each recorded decision cost to reach",
+        "description": "Cost attributed to a decision through the session that produced it.\n\nThe archivist mines decisions out of captures, so a decision carries the session\nit came from and that session's tokens are what it took to reach the choice. It is\nattribution by shared session, not proof of causation: a session that produced\nthree decisions spent its tokens on all three and on everything else it did, so\nthe figure is the cost of the work containing the decision, not of the decision\nalone. Shown per decision rather than divided, because dividing would invent a\nprecision the data does not have.",
+        "operationId": "usage_by_decision_usage_by_decision_get",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 365,
+              "minimum": 1,
+              "default": 30,
+              "title": "Days"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 40,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "x-agent-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Agent-Id"
+            }
+          },
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Api-Key"
+            }
+          },
+          {
+            "name": "x-ui-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Ui-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/messages": {
       "post": {
         "tags": [
@@ -8853,6 +9024,17 @@
               }
             ],
             "title": "Task Id"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
           }
         },
         "type": "object",
@@ -8912,6 +9094,17 @@
           "created_at": {
             "type": "string",
             "title": "Created At"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
           }
         },
         "type": "object",

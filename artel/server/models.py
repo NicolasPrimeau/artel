@@ -199,6 +199,7 @@ class DecisionCreate(BaseModel):
     alternatives: list[str] = []
     project: ProjectName = None
     task_id: str | None = None
+    session_id: str | None = None
 
 
 class DecisionEntry(BaseModel):
@@ -210,6 +211,7 @@ class DecisionEntry(BaseModel):
     rationale: str
     alternatives: list[str]
     created_at: str
+    session_id: str | None = None
 
 
 class TaskUpdate(BaseModel):

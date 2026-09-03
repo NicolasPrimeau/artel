@@ -51,3 +51,16 @@ async def decisions(limit: int = 20) -> list[dict]:
         data = r.json()
     items = data if isinstance(data, list) else data.get("items", [])
     return items
+
+
+async def usage(path: str, **params) -> dict:
+    """Live figures from the running server, not the periodic snapshot.
+
+    Cost is the number someone refreshes while watching a run, so it reads through
+    the API. The snapshot stays for the heavier joins that walk git and the
+    transcripts, where a few minutes of lag costs nothing.
+    """
+    async with httpx.AsyncClient(timeout=30) as c:
+        r = await c.get(f"{ARTEL_URL}{path}", params=params, headers=_headers())
+        r.raise_for_status()
+        return r.json()

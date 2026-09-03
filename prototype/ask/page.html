@@ -96,7 +96,10 @@ footer{margin-top:var(--s12);padding-top:var(--s3);border-top:1px solid var(--ha
 <h2>Accounts <span class=win id=win></span></h2>
 <div id=ledger><p class=wait>reading…</p></div>
 
-<h2>Decisions on record</h2>
+<h2>Cost by session</h2>
+<div id=sessions><p class=wait>reading…</p></div>
+
+<h2>What each decision cost to reach</h2>
 <div id=decisions><p class=wait>reading…</p></div>
 
 <footer id=foot></footer>
@@ -111,7 +114,48 @@ function windows(){
   document.getElementById('win').innerHTML = [7,30,90]
     .map(d=>`<a class="${d===DAYS?'on':''}" onclick="setDays(${d})">${d}d</a>`).join('');
 }
-function setDays(d){ DAYS=d; windows(); loadLedger(); loadDecisions(); }
+function setDays(d){ DAYS=d; function refresh(){ loadLedger(); loadSessions(); loadDecisions(); }
+
+async function loadSessions(){
+  const d = await fetch(`/api/cost/sessions?days=${DAYS}`).then(r=>r.json());
+  if(!d.rows?.length){ document.getElementById('sessions').innerHTML =
+    `<p class=dim>No sessions in this window.</p>`; return; }
+  let h = `<table><thead><tr><th>Session</th><th>Project</th><th>Model</th>
+    <th class=n>Turns</th><th class=n>Output</th><th class=n>Cost</th></tr></thead><tbody>`;
+  for(const r of d.rows.slice(0,15)){
+    const c = r.cost?.amount;
+    h += `<tr><td class=mono>${esc((r.session_id||'').slice(0,8))}</td>
+      <td>${esc(r.project)}</td><td class="mono dim">${esc(r.model)}</td>
+      <td class="n mono">${num(r.turns)}</td>
+      <td class="n mono">${num(r.output_tokens)}</td>
+      <td class="n mono ${c!==null?'money':'dim'}">${c!==null?'$'+num(Math.round(c)):'—'}</td></tr>`;
+  }
+  document.getElementById('sessions').innerHTML = h + '</tbody></table>';
+}
+
+async function loadDecisions(){
+  const d = await fetch(`/api/cost/decisions?days=${DAYS}`).then(r=>r.json());
+  const rows = (d.rows||[]).filter(r=>!PROJECT || r.project===PROJECT);
+  if(!rows.length){ document.getElementById('decisions').innerHTML =
+    `<p class=dim>Nothing on record yet, or no session attached. The archivist mines these from captures as they arrive.</p>`;
+    return; }
+  document.getElementById('decisions').innerHTML = rows.map(r=>`
+    <div class=dec>
+      <div class=what>${esc(r.decision)}</div>
+      ${r.rationale?`<div class=why>${esc(r.rationale)}</div>`:''}
+      ${r.alternatives?.length?`<div class=alt>rejected: ${r.alternatives.map(a=>`<s>${esc(a)}</s>`).join(' · ')}</div>`:''}
+      <div class=alt>${esc(r.project||'unscoped')} · ${esc((r.created_at||'').slice(0,10))}
+        · session ${esc((r.session_id||'').slice(0,8))}
+        · <span class="${r.session_cost!==null?'money':'dim'}">${r.session_cost!==null?'$'+num(Math.round(r.session_cost)):'not priced'}</span>
+        <span class=dim>to reach</span></div>
+    </div>`).join('') +
+    `<p class=hints style="margin-top:12px"><span class=dim>Cost is the whole session that
+     produced the decision — the work containing the choice, not the choice alone. Not divided
+     between decisions, because dividing would invent precision the data has not got.</span></p>`;
+}
+
+windows(); refresh();
+setInterval(refresh, 30000); }
 
 async function loadLedger(){
   const [fleet, cost] = await Promise.all([
@@ -136,7 +180,8 @@ async function loadLedger(){
       work would have cost per-token, i.e. what the seats are worth.
       ${t.billed?`<br><span class=money>$${num(t.billed)}</span> actually billed (metered).`:''}
       ${t.unpriced.length?`<br><span class=dim>No published rate, so no figure: ${t.unpriced.map(esc).join(', ')}</span>`:''}
-      <br><span class=dim>Source: ${esc(fleet.rows[0]?.source||'—')}. Figures computed, never generated.</span>
+      <br><span class=dim>${cost.live?'Live from the server':'Snapshot (server unreachable)'} ·
+      accounts from ${esc(fleet.rows[0]?.source||'—')} · refreshed every 30s · figures computed, never generated.</span>
     </p>`;
   document.getElementById('ledger').innerHTML = h;
 }

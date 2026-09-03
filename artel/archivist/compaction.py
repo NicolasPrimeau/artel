@@ -130,6 +130,7 @@ async def _integrate(cap: dict, result: ExtractResult, valid_ids: set[str], clie
                     "rationale": str(d.get("rationale", ""))[:2000],
                     "alternatives": [str(a)[:400] for a in (d.get("alternatives") or [])][:8],
                     "project": cap.get("project"),
+                    "session_id": cap.get("session_id"),
                 },
             )
         except Exception as e:

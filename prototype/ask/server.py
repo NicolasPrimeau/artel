@@ -87,8 +87,42 @@ async def decisions(days: int = 30, project: str | None = None, limit: int = 40)
 
 @app.get("/api/cost")
 async def cost(days: int = 7, project: str | None = None):
-    rows = facts.usage_by_model(DB, days, project)
-    return {"days": days, "rows": rows, "totals": facts.cost_for(rows)}
+    try:
+        live = await retrieve.usage(
+            "/usage", days=days, **({"project": project} if project else {})
+        )
+        rows = live["rows"]
+        return {
+            "days": days,
+            "rows": rows,
+            "live": True,
+            "totals": {
+                "billed": live.get("billed_usd", 0.0),
+                "equivalent": live.get("list_equivalent_usd", 0.0),
+                "unpriced": [n.split(": ")[0] for n in live.get("not_priced", [])],
+            },
+        }
+    except Exception:
+        # The snapshot is a fallback, never the primary: a stale cost figure that
+        # looks live is worse than an obviously old one.
+        rows = facts.usage_by_model(DB, days, project)
+        return {"days": days, "rows": rows, "live": False, "totals": facts.cost_for(rows)}
+
+
+@app.get("/api/cost/sessions")
+async def cost_sessions(days: int = 7):
+    try:
+        return await retrieve.usage("/usage/by-session", days=days, limit=40)
+    except Exception as e:
+        return {"rows": [], "error": str(e)}
+
+
+@app.get("/api/cost/decisions")
+async def cost_decisions(days: int = 30):
+    try:
+        return await retrieve.usage("/usage/by-decision", days=days, limit=30)
+    except Exception as e:
+        return {"rows": [], "error": str(e)}
 
 
 @app.get("/health")

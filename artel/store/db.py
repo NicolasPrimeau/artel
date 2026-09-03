@@ -99,6 +99,15 @@ def _migrate(conn: sqlite3.Connection) -> None:
     if "last_seen_at" not in agent_cols:
         conn.execute("ALTER TABLE agents ADD COLUMN last_seen_at TEXT")
         conn.commit()
+    dec_cols = {r[1] for r in conn.execute("PRAGMA table_info(decisions)").fetchall()}
+    if "session_id" in dec_cols:
+        pass
+    else:
+        # Without this a decision cannot be joined to what it cost: the archivist mines
+        # decisions out of captures, and the capture's session is the only key linking
+        # a choice to the tokens spent reaching it.
+        conn.execute("ALTER TABLE decisions ADD COLUMN session_id TEXT")
+
     task_cols = {r[1] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()}
     if "expected_outcome" not in task_cols:
         conn.execute("ALTER TABLE tasks ADD COLUMN expected_outcome TEXT NOT NULL DEFAULT ''")
