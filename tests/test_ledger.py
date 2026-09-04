@@ -61,3 +61,47 @@ class TestLedgerFacts:
         facts, _ = ledger
         t = facts.totals(30)
         assert t["billed"] == 0.0 and t["equivalent"] == pytest.approx(0.002)
+
+
+class TestToil:
+    def test_finds_hand_run_work_and_cites_the_note(self, ledger):
+        facts, db = ledger
+        with db:
+            db.execute(
+                """INSERT INTO memory (id, type, agent_id, project, content, confidence)
+                   VALUES ('m1','memory','a','p1',
+                   'The sample views were created manually and are not managed by sync.',1.0)"""
+            )
+        rows = facts.toil(30, "p1")
+        assert rows and rows[0]["entry_id"] == "m1"
+        assert "manually" in rows[0]["evidence"]
+
+    def test_does_not_fire_on_must_be_resolved(self, ledger):
+        # "must be re-\\w+" matched "must be resolved", which is not repeated work.
+        # A false candidate is worse than a missed one: it sends someone to automate
+        # something that was never manual.
+        facts, db = ledger
+        with db:
+            db.execute(
+                """INSERT INTO memory (id, type, agent_id, project, content, confidence)
+                   VALUES ('m2','memory','a','p1',
+                   'The cursor must be resolved before the sort branch executes.',1.0)"""
+            )
+        assert not [r for r in facts.toil(30, "p1") if r["entry_id"] == "m2"]
+
+    def test_unclassified_sorts_last(self, ledger):
+        facts, db = ledger
+        with db:
+            db.execute(
+                """INSERT INTO memory (id, type, agent_id, project, content, confidence)
+                   VALUES ('m3','memory','a','p1',
+                   'Deployments must be re-run manually after every migration.',1.0)"""
+            )
+            db.execute(
+                """INSERT INTO memory (id, type, agent_id, project, content, confidence)
+                   VALUES ('m4','memory','a','p1',
+                   'Somebody has to re-do the widget by hand each time regardless.',1.0)"""
+            )
+        themes = [t["theme"] for t in facts.toil_themes(30, "p1")]
+        if "other" in themes:
+            assert themes[-1] == "other"

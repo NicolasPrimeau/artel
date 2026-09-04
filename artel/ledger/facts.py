@@ -12,6 +12,7 @@ happened to hold the repos — which is not a product.
 from __future__ import annotations
 
 import json
+import re
 
 from ..store import pricing
 from ..store.db import get_db
@@ -181,3 +182,90 @@ def totals(days: int = 7) -> dict:
         "sessions": sum(r["sessions"] for r in rows),
         "decisions": sum(r["decisions"] for r in rows),
     }
+
+
+# Sentences the fleet wrote about work it repeated or did by hand. Deterministic on
+# purpose: a model asked "what should we automate?" will produce plausible suggestions
+# whether or not the evidence exists, and an unfalsifiable answer is worth nothing to
+# someone deciding where to spend a week. Every candidate here quotes the note it came
+# from and links to it.
+_REDO = r"(?:run|apply|applied|generate[d]?|create[d]?|sync(?:ed)?|deploy(?:ed)?|build|built|fresh(?:ed)?|do|done|import(?:ed)?)"
+_TOIL = re.compile(
+    r"[^.\n]*\b("
+    r"manually|by hand|every time|each time|forget to|"
+    rf"(?:have to|need to|must be|has to) re-?{_REDO}|"
+    rf"re-?{_REDO} (?:it|them|this|each|every|by hand|manually)|"
+    r"keeps? in sync|kept in sync|must be kept"
+    r")\b[^.\n]*",
+    re.I,
+)
+
+# What the sentence is about, so twelve one-off quotes become a handful of themes.
+_THEMES = (
+    ("deploy / migrate", r"\b(deploy|migration|alembic|upgrade head|release)\b"),
+    ("data refresh", r"\b(refresh|backfill|reprocess|regenerate|rebuild|ingest)\b"),
+    ("credentials / login", r"\b(2fa|login|oauth|sso|token|verification|consent)\b"),
+    ("cross-copy in sync", r"\b(sync|copy|mirror|duplicate|keep.{0,12}in sync)\b"),
+    ("provisioning", r"\b(share|view|grant|schedule|eventbridge|api|endpoint)\b"),
+    ("content / i18n", r"\b(copy|email|translation|html|wording|page|nav)\b"),
+    ("scripts / tooling", r"\b(script|command|cli|makefile|hook|pipeline)\b"),
+)
+
+
+def toil(days: int = 90, project: str | None = None, limit: int = 25) -> list[dict]:
+    """Repeated or hand-run work, mined from what the fleet wrote about itself."""
+    db = get_db()
+    sql = (
+        "SELECT id, project, content, created_at FROM memory "
+        f"WHERE deleted_at IS NULL AND created_at > datetime('now','-{int(days)} days')"
+    )
+    args: list = []
+    if project:
+        sql += " AND project = ?"
+        args.append(project)
+    out: list[dict] = []
+    seen: set[str] = set()
+    for r in db.execute(sql, args):
+        for m in _TOIL.finditer(r["content"] or ""):
+            snippet = " ".join(m.group(0).split())
+            if len(snippet) < 40:
+                continue
+            key = snippet.lower()[:60]
+            if key in seen:
+                continue
+            seen.add(key)
+            theme = "other"
+            for name, pat in _THEMES:
+                if re.search(pat, snippet, re.I):
+                    theme = name
+                    break
+            out.append(
+                {
+                    "entry_id": r["id"],
+                    "project": r["project"],
+                    "theme": theme,
+                    "evidence": snippet[:220],
+                    "created_at": r["created_at"],
+                }
+            )
+    counts: dict[str, int] = {}
+    for c in out:
+        counts[c["theme"]] = counts.get(c["theme"], 0) + 1
+    # "other" last: an unclassified bucket at the top buries the themes that are
+    # actually actionable.
+    out.sort(key=lambda c: (c["theme"] == "other", -counts[c["theme"]], c["theme"]))
+    return out[:limit]
+
+
+def toil_themes(days: int = 90, project: str | None = None) -> list[dict]:
+    rows = toil(days, project, limit=500)
+    agg: dict[str, dict] = {}
+    for r in rows:
+        a = agg.setdefault(r["theme"], {"theme": r["theme"], "count": 0, "projects": set()})
+        a["count"] += 1
+        if r["project"]:
+            a["projects"].add(r["project"])
+    return sorted(
+        ({**a, "projects": sorted(a["projects"])} for a in agg.values()),
+        key=lambda a: (a["theme"] == "other", -a["count"]),
+    )

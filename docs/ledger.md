@@ -24,6 +24,22 @@ Every figure is computed from `usage_events`, `decisions` and `memory`. Nothing 
 generated, and the page says so, because a spend report that guesses is worse than no
 report.
 
+## Repeated by hand
+
+The panel that answers "what should we automate?" — mined from what the fleet wrote
+about its own work, not from a model's opinion. Sentences matching `manually`,
+`by hand`, `every time`, `must be re-run` and similar, grouped into themes and each
+quoting the note it came from.
+
+Deterministic on purpose. Ask a model what to automate and it will produce plausible
+suggestions whether or not the evidence exists, and an unfalsifiable answer is worth
+nothing to someone deciding where to spend a week. Every candidate here is a sentence
+somebody actually wrote, with the entry id beside it.
+
+The pattern is deliberately narrow. `must be re-\w+` once matched "must be resolved",
+which is not repeated work — a false candidate is worse than a missed one, because it
+sends someone to automate something that was never manual.
+
 ## Cost per decision is attribution, not causation
 
 A decision carries the session it was mined from, and that session's tokens are what

@@ -39,6 +39,16 @@ async def decisions(days: int = 30, limit: int = 30) -> dict:
     return {"days": days, "rows": facts.by_decision(days, limit)}
 
 
+@app.get("/api/toil")
+async def toil(days: int = 90, project: str | None = None, limit: int = 25) -> dict:
+    """Repeated and hand-run work, with the note each candidate came from."""
+    return {
+        "days": days,
+        "themes": facts.toil_themes(days, project),
+        "rows": facts.toil(days, project, limit),
+    }
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index() -> str:
     return _PAGE

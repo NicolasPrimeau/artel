@@ -80,6 +80,16 @@ tr.sel td{background:#2b2620;box-shadow:inset 2px 0 0 var(--money)}
 .dec .cost{text-align:right;color:var(--money);font-size:13px}
 .dec .cost small{display:block;color:var(--dim);font-size:10px;letter-spacing:.05em}
 .empty{padding:16px;color:var(--dim);font-size:11px}
+.themes{display:flex;flex-wrap:wrap;gap:6px;padding:10px 16px;border-bottom:1px solid var(--rule)}
+.chip{border:1px solid var(--edge);padding:3px 8px;font-size:10px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--dim)}
+.chip b{color:var(--money);font-weight:600}
+.toil{display:grid;grid-template-columns:150px 1fr 150px;gap:12px;padding:8px 16px;
+  border-bottom:1px solid var(--rule);align-items:start}
+.toil:nth-child(even){background:var(--row)}
+.toil .tag{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--money)}
+.toil .ev{overflow-wrap:anywhere;font-size:12px}
+.toil .src{text-align:right;font-size:10px;color:var(--edge)}
 footer{padding:10px 16px;color:var(--edge);font-size:10px;letter-spacing:.05em}
 </style>
 
@@ -96,6 +106,9 @@ footer{padding:10px 16px;color:var(--edge);font-size:10px;letter-spacing:.05em}
   <section><h2>Projects <span class=count id=pc></span>
     <span class=clear id=clr hidden onclick="pick(null)">clear filter ×</span></h2>
     <div class=scroll id=projects></div></section>
+  <section><h2>Repeated by hand <span class=count id=tc></span>
+    <span class=clear style="margin-left:auto;color:var(--dim);text-transform:none;letter-spacing:0">automation candidates, from the fleet's own notes</span></h2>
+    <div id=toil></div></section>
   <section><h2>Sessions <span class=count id=sc></span></h2>
     <div class=scroll id=sessions></div></section>
   <section><h2>Decisions <span class=count id=dc></span></h2>
@@ -115,10 +128,12 @@ function setDays(d){DAYS=d;seg();load()}
 function pick(p){SEL=(SEL===p?null:p);document.getElementById('clr').hidden=!SEL;load()}
 
 async function load(){
-  const [proj,sess,dec]=await Promise.all([
+  const q=SEL?`&project=${encodeURIComponent(SEL)}`:'';
+  const [proj,sess,dec,toil]=await Promise.all([
     fetch(`/api/projects?days=${DAYS}`).then(r=>r.json()),
     fetch(`/api/sessions?days=${DAYS}&limit=60`).then(r=>r.json()),
-    fetch(`/api/decisions?days=${DAYS}&limit=60`).then(r=>r.json())]);
+    fetch(`/api/decisions?days=${DAYS}&limit=60`).then(r=>r.json()),
+    fetch(`/api/toil?days=${Math.max(DAYS,90)}&limit=25${q}`).then(r=>r.json())]);
   const t=proj.totals;
 
   document.getElementById('kpis').innerHTML=`
@@ -155,6 +170,16 @@ async function load(){
       <td class=n>${n(r.turns)}</td><td class=n>${n(r.output_tokens)}</td>
       <td class="n ${r.cost?.amount!=null?'money':'dim'}">${usd(r.cost?.amount)||'not priced'}</td>
     </tr>`).join('')+`</tbody></table>`:`<p class=empty>No sessions in window.</p>`;
+
+  document.getElementById('tc').textContent=toil.rows.length;
+  document.getElementById('toil').innerHTML = toil.rows.length ? `
+    <div class=themes>${toil.themes.map(t=>`<span class=chip>${esc(t.theme)} <b>${t.count}</b></span>`).join('')}</div>`
+    + toil.rows.map(r=>`<div class=toil>
+        <span class=tag>${esc(r.theme)}</span>
+        <span class=ev>${esc(r.evidence)}</span>
+        <span class=src>${esc(r.project||'—')} · ${esc(r.entry_id.slice(0,8))}</span>
+      </div>`).join('')
+    : `<p class=empty>Nothing found. This reads notes the fleet wrote about its own work.</p>`;
 
   const drows=dec.rows.filter(r=>!SEL||r.project===SEL);
   document.getElementById('dc').textContent=drows.length;
