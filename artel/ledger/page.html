@@ -1,197 +1,179 @@
 <!doctype html><meta charset=utf-8>
 <meta name=viewport content="width=device-width,initial-scale=1">
-<title>Artel — ledger</title>
+<title>Artel ledger</title>
 <style>
-/* Editorial ledger. Warm paper, warm-rotated ink (cool grey on warm paper reads as
-   two stacked sheets). 1.25 modular scale, 4px grid, tabular figures everywhere a
-   number appears. Hairline rules instead of cards: this is a printed account, not a
-   dashboard of floating panels. */
+/* Instrument panel. Full-bleed, dense, monospace throughout — this is a readout, not
+   a document. Warm-dark rather than the usual cold slate; amber for money because it
+   is the only hue that appears, so a figure never has to be labelled to be found.
+   Every table scrolls inside its own gutter: the failure before was a 76ch column
+   with 7-column tables in it. */
 :root{
-  --paper:#f7f3ec; --ink:#1a1410; --muted:#6b5f52;
-  --hair:#e2dbcf; --edge:#8d7f6c; --accent:#8c3d17; --pos:#3f5d34;
-  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s6:24px; --s8:32px; --s12:48px;
-  --t-1:12.8px; --t0:16px; --t1:20px; --t2:25px; --t3:31px;
+  --bg:#14120f; --panel:#1b1815; --row:#1f1c18;
+  --fg:#e8e2d8; --dim:#9a9086; --rule:#332e28; --edge:#6d6357;
+  --money:#e0a458; --warn:#d1705a; --ok:#8bab6d;
+  --mono:"SF Mono",ui-monospace,"JetBrains Mono","Roboto Mono",Menlo,monospace;
 }
-*{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--paper);color:var(--ink);
-  font:var(--t0)/1.5 "Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
-  font-feature-settings:"onum" 1;}
-.sheet{max-width:76ch;margin:0 auto;padding:var(--s12) var(--s6) var(--s12)}
-mono,.mono,td.n,th.n,.fig{font-family:"SF Mono",ui-monospace,"Roboto Mono",Menlo,monospace;
-  font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font:13px/1.4 var(--mono);
+  font-variant-numeric:tabular-nums lining-nums;overflow-y:scroll}
 
-header{border-bottom:2px solid var(--ink);padding-bottom:var(--s3);margin-bottom:var(--s6)}
-h1{font-size:var(--t3);margin:0;letter-spacing:-.01em;font-weight:600}
-.dek{color:var(--muted);font-size:var(--t-1);margin:var(--s1) 0 0;
-  font-family:"SF Mono",ui-monospace,monospace;text-transform:uppercase;letter-spacing:.08em}
+/* ---- top bar: identity left, window control right, KPIs beneath ---- */
+.bar{display:flex;align-items:center;gap:16px;padding:10px 16px;
+  border-bottom:1px solid var(--rule);background:var(--panel);
+  position:sticky;top:0;z-index:5}
+.brand{font-weight:600;letter-spacing:.14em;text-transform:uppercase;font-size:11px}
+.brand i{color:var(--money);font-style:normal}
+.spacer{flex:1}
+.seg{display:flex;border:1px solid var(--edge)}
+.seg button{background:transparent;border:0;border-right:1px solid var(--edge);
+  color:var(--dim);font:11px/1 var(--mono);padding:6px 10px;cursor:pointer;
+  letter-spacing:.08em}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--money);color:#14120f;font-weight:700}
+.stamp{font-size:10px;color:var(--dim);letter-spacing:.06em}
 
-form{display:flex;gap:var(--s2);margin:var(--s6) 0 var(--s2);align-items:stretch}
-input[type=text]{flex:1;padding:var(--s3);border:1px solid var(--edge);background:transparent;
-  color:var(--ink);font:var(--t0)/1.4 inherit;border-radius:0}
-input[type=text]:focus{outline:2px solid var(--accent);outline-offset:-1px}
-button{padding:var(--s3) var(--s6);border:1px solid var(--ink);background:var(--ink);
-  color:var(--paper);font:600 var(--t-1)/1 "SF Mono",ui-monospace,monospace;
-  letter-spacing:.08em;text-transform:uppercase;cursor:pointer;border-radius:0}
-button:hover{background:var(--accent);border-color:var(--accent)}
-.hints{font-size:var(--t-1);color:var(--muted);margin-bottom:var(--s8)}
-.hints b{font-weight:400;color:var(--accent);cursor:pointer;border-bottom:1px solid var(--hair);
-  margin-right:var(--s3);display:inline-block}
-.hints b:hover{border-color:var(--accent)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  border-bottom:1px solid var(--rule)}
+.kpi{padding:12px 16px;border-right:1px solid var(--rule)}
+.kpi:last-child{border-right:0}
+.kpi .k{font-size:10px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase}
+.kpi .v{font-size:22px;line-height:1.15;margin-top:3px}
+.kpi .v.money{color:var(--money)}
+.kpi .sub{font-size:10px;color:var(--dim);margin-top:2px}
 
-h2{font-size:var(--t-1);text-transform:uppercase;letter-spacing:.1em;color:var(--muted);
-  font-family:"SF Mono",ui-monospace,monospace;font-weight:400;
-  margin:var(--s8) 0 var(--s3);padding-bottom:var(--s1);border-bottom:1px solid var(--hair)}
-table{width:100%;border-collapse:collapse;font-size:var(--t-1)}
-th{text-align:left;font-weight:400;color:var(--muted);padding:var(--s1) var(--s2);
-  border-bottom:1px solid var(--edge);font-family:"SF Mono",ui-monospace,monospace;
-  text-transform:uppercase;letter-spacing:.06em;font-size:11px}
-td{padding:var(--s2);border-bottom:1px solid var(--hair);vertical-align:baseline}
+/* ---- panels ---- */
+main{display:grid;grid-template-columns:1fr;gap:0}
+section{border-bottom:1px solid var(--rule)}
+h2{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);
+  font-weight:400;padding:9px 16px;border-bottom:1px solid var(--rule);
+  display:flex;align-items:center;gap:10px;background:var(--panel)}
+h2 .count{color:var(--edge)}
+h2 .clear{margin-left:auto;color:var(--money);cursor:pointer;text-transform:none;
+  letter-spacing:0}
+
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;white-space:nowrap;min-width:640px}
+th{position:sticky;top:0;text-align:left;font-weight:400;font-size:10px;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--dim);
+  padding:7px 12px;background:var(--panel);border-bottom:1px solid var(--rule)}
+td{padding:6px 12px;border-bottom:1px solid var(--rule)}
+tbody tr:nth-child(even){background:var(--row)}
+tbody tr:hover{background:#26221d}
 td.n,th.n{text-align:right}
-tr:hover td{background:rgba(140,61,23,.045)}
-td.proj{font-weight:600;cursor:pointer}
-td.proj:hover{color:var(--accent)}
-.dim{color:var(--muted)}
-.money{color:var(--accent);font-weight:600}
+td.money{color:var(--money)}
+td.dim,.dim{color:var(--dim)}
+td.name{cursor:pointer}
+td.name:hover{color:var(--money)}
+tr.sel td{background:#2b2620;box-shadow:inset 2px 0 0 var(--money)}
+.bar-cell{display:block;height:3px;background:var(--money);opacity:.55;margin-top:4px}
 
-.answer{font-size:var(--t1);line-height:1.45;margin:var(--s4) 0 var(--s6);
-  border-left:3px solid var(--accent);padding-left:var(--s4)}
-.dry{font-family:"SF Mono",ui-monospace,monospace;font-size:var(--t-1);color:var(--accent);
-  border:1px dashed var(--edge);padding:var(--s3);margin-bottom:var(--s4)}
-pre{font-family:"SF Mono",ui-monospace,monospace;font-size:var(--t-1);line-height:1.5;
-  white-space:pre;overflow-x:auto;margin:0;color:var(--ink)}
-.rec{border-top:1px solid var(--hair);padding:var(--s3) 0}
-.rec .meta{font-family:"SF Mono",ui-monospace,monospace;font-size:11px;color:var(--muted);
-  text-transform:uppercase;letter-spacing:.05em;margin-bottom:var(--s1)}
-.dec{border-top:1px solid var(--hair);padding:var(--s3) 0}
-.dec .what{font-size:var(--t1);line-height:1.35}
-.dec .why{color:var(--muted);font-size:var(--t-1);margin-top:var(--s1)}
-.dec .alt{font-family:"SF Mono",ui-monospace,monospace;font-size:11px;color:var(--muted);
-  margin-top:var(--s2)}
-.dec .alt s{text-decoration-color:var(--edge)}
-.win{float:right;font-family:"SF Mono",ui-monospace,monospace;font-size:var(--t-1)}
-.win a{color:var(--muted);text-decoration:none;margin-left:var(--s3);cursor:pointer}
-.win a.on{color:var(--accent);border-bottom:2px solid var(--accent)}
-footer{margin-top:var(--s12);padding-top:var(--s3);border-top:1px solid var(--hair);
-  font-family:"SF Mono",ui-monospace,monospace;font-size:11px;color:var(--muted)}
-.wait{color:var(--muted);font-style:italic}
+/* ---- decisions: list, not prose ---- */
+.dec{padding:10px 16px;border-bottom:1px solid var(--rule);display:grid;
+  grid-template-columns:1fr 120px;gap:12px;align-items:start}
+.dec:nth-child(even){background:var(--row)}
+.dec .txt{min-width:0}
+.dec .what{font-size:13px;overflow-wrap:anywhere}
+.dec .why{color:var(--dim);font-size:11px;margin-top:3px;overflow-wrap:anywhere}
+.dec .meta{font-size:10px;color:var(--edge);margin-top:5px;letter-spacing:.05em}
+.dec .rej{color:var(--warn)}
+.dec .cost{text-align:right;color:var(--money);font-size:13px}
+.dec .cost small{display:block;color:var(--dim);font-size:10px;letter-spacing:.05em}
+.empty{padding:16px;color:var(--dim);font-size:11px}
+footer{padding:10px 16px;color:var(--edge);font-size:10px;letter-spacing:.05em}
 </style>
-<div class=sheet>
-<header>
-  <h1>Fleet ledger</h1>
-  <p class=dek>What the agents did · what it was worth · what was decided</p>
-</header>
 
-
-<h2>Accounts <span class=win id=win></span></h2>
-<div id=ledger><p class=wait>reading…</p></div>
-
-<h2>Cost by session</h2>
-<div id=sessions><p class=wait>reading…</p></div>
-
-<h2>What each decision cost to reach</h2>
-<div id=decisions><p class=wait>reading…</p></div>
-
-<footer id=foot></footer>
+<div class=bar>
+  <span class=brand>artel <i>ledger</i></span>
+  <span class=stamp id=stamp></span>
+  <span class=spacer></span>
+  <span class=seg id=seg></span>
 </div>
+
+<div class=kpis id=kpis></div>
+
+<main>
+  <section><h2>Projects <span class=count id=pc></span>
+    <span class=clear id=clr hidden onclick="pick(null)">clear filter ×</span></h2>
+    <div class=scroll id=projects></div></section>
+  <section><h2>Sessions <span class=count id=sc></span></h2>
+    <div class=scroll id=sessions></div></section>
+  <section><h2>Decisions <span class=count id=dc></span></h2>
+    <div id=decisions></div></section>
+</main>
+<footer id=foot></footer>
+
 <script>
-let DAYS = 30, PROJECT = null;
-const esc = t => (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
-const num = n => (n||0).toLocaleString('en-US');
+let DAYS=30, SEL=null;
+const esc=t=>(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const n=v=>(v||0).toLocaleString('en-US');
+const usd=v=>v==null?null:'$'+Math.round(v).toLocaleString('en-US');
 
-function windows(){
-  document.getElementById('win').innerHTML = [7,30,90]
-    .map(d=>`<a class="${d===DAYS?'on':''}" onclick="setDays(${d})">${d}d</a>`).join('');
-}
-function setDays(d){ DAYS=d; function refresh(){ loadLedger(); loadSessions(); loadDecisions(); }
+function seg(){document.getElementById('seg').innerHTML=[7,30,90]
+  .map(d=>`<button class="${d===DAYS?'on':''}" onclick="setDays(${d})">${d}d</button>`).join('')}
+function setDays(d){DAYS=d;seg();load()}
+function pick(p){SEL=(SEL===p?null:p);document.getElementById('clr').hidden=!SEL;load()}
 
-async function loadSessions(){
-  const d = await fetch(`/api/sessions?days=${DAYS}`).then(r=>r.json());
-  if(!d.rows?.length){ document.getElementById('sessions').innerHTML =
-    `<p class=dim>No sessions in this window.</p>`; return; }
-  let h = `<table><thead><tr><th>Session</th><th>Project</th><th>Model</th>
-    <th class=n>Turns</th><th class=n>Output</th><th class=n>Cost</th></tr></thead><tbody>`;
-  for(const r of d.rows.slice(0,15)){
-    const c = r.cost?.amount;
-    h += `<tr><td class=mono>${esc((r.session_id||'').slice(0,8))}</td>
-      <td>${esc(r.project)}</td><td class="mono dim">${esc(r.model)}</td>
-      <td class="n mono">${num(r.turns)}</td>
-      <td class="n mono">${num(r.output_tokens)}</td>
-      <td class="n mono ${c!==null?'money':'dim'}">${c!==null?'$'+num(Math.round(c)):'—'}</td></tr>`;
-  }
-  document.getElementById('sessions').innerHTML = h + '</tbody></table>';
-}
+async function load(){
+  const [proj,sess,dec]=await Promise.all([
+    fetch(`/api/projects?days=${DAYS}`).then(r=>r.json()),
+    fetch(`/api/sessions?days=${DAYS}&limit=60`).then(r=>r.json()),
+    fetch(`/api/decisions?days=${DAYS}&limit=60`).then(r=>r.json())]);
+  const t=proj.totals;
 
-async function loadDecisions(){
-  const d = await fetch(`/api/decisions?days=${DAYS}`).then(r=>r.json());
-  const rows = (d.rows||[]).filter(r=>!PROJECT || r.project===PROJECT);
-  if(!rows.length){ document.getElementById('decisions').innerHTML =
-    `<p class=dim>Nothing on record yet, or no session attached. The archivist mines these from captures as they arrive.</p>`;
-    return; }
-  document.getElementById('decisions').innerHTML = rows.map(r=>`
+  document.getElementById('kpis').innerHTML=`
+    <div class=kpi><div class=k>Value of work</div><div class="v money">${usd(t.equivalent)||'—'}</div>
+      <div class=sub>list-price equivalent</div></div>
+    <div class=kpi><div class=k>Billed</div><div class=v>${usd(t.billed)}</div>
+      <div class=sub>metered, actually invoiced</div></div>
+    <div class=kpi><div class=k>Sessions</div><div class=v>${n(t.sessions)}</div>
+      <div class=sub>${n(proj.rows.reduce((a,r)=>a+r.turns,0))} turns</div></div>
+    <div class=kpi><div class=k>Decisions</div><div class=v>${n(t.decisions)}</div>
+      <div class=sub>mined from captures</div></div>`;
+
+  const max=Math.max(...proj.rows.map(r=>r.equivalent||0),1);
+  document.getElementById('pc').textContent=proj.rows.length;
+  document.getElementById('projects').innerHTML=`<table><thead><tr>
+    <th>Project</th><th class=n>Sessions</th><th class=n>Turns</th><th class=n>Output</th>
+    <th class=n>Cache read</th><th class=n>Decisions</th><th class=n>Value</th></tr></thead><tbody>`+
+    proj.rows.map(r=>`<tr class="${SEL===r.project?'sel':''}">
+      <td class=name onclick="pick('${r.project}')">${esc(r.project)}</td>
+      <td class=n>${n(r.sessions)}</td><td class=n>${n(r.turns)}</td>
+      <td class=n>${n(r.output_tokens)}</td><td class="n dim">${n(r.cache_read)}</td>
+      <td class=n>${r.decisions||'<span class=dim>0</span>'}</td>
+      <td class="n money">${usd(r.equivalent||r.billed)}
+        <span class=bar-cell style="width:${Math.max(4,(r.equivalent/max)*100)}%"></span></td>
+    </tr>`).join('')+`</tbody></table>`;
+
+  const srows=sess.rows.filter(r=>!SEL||r.project===SEL);
+  document.getElementById('sc').textContent=srows.length;
+  document.getElementById('sessions').innerHTML=srows.length?`<table><thead><tr>
+    <th>Session</th><th>Project</th><th>Model</th><th class=n>Turns</th>
+    <th class=n>Output</th><th class=n>Cost</th></tr></thead><tbody>`+
+    srows.slice(0,40).map(r=>`<tr><td>${esc((r.session_id||'').slice(0,8))}</td>
+      <td>${esc(r.project)}</td><td class=dim>${esc(r.model)}</td>
+      <td class=n>${n(r.turns)}</td><td class=n>${n(r.output_tokens)}</td>
+      <td class="n ${r.cost?.amount!=null?'money':'dim'}">${usd(r.cost?.amount)||'not priced'}</td>
+    </tr>`).join('')+`</tbody></table>`:`<p class=empty>No sessions in window.</p>`;
+
+  const drows=dec.rows.filter(r=>!SEL||r.project===SEL);
+  document.getElementById('dc').textContent=drows.length;
+  document.getElementById('decisions').innerHTML=drows.length?drows.map(r=>`
     <div class=dec>
-      <div class=what>${esc(r.decision)}</div>
-      ${r.rationale?`<div class=why>${esc(r.rationale)}</div>`:''}
-      ${r.alternatives?.length?`<div class=alt>rejected: ${r.alternatives.map(a=>`<s>${esc(a)}</s>`).join(' · ')}</div>`:''}
-      <div class=alt>${esc(r.project||'unscoped')} · ${esc((r.created_at||'').slice(0,10))}
-        · session ${esc((r.session_id||'').slice(0,8))}
-        · <span class="${r.session_cost!==null?'money':'dim'}">${r.session_cost!==null?'$'+num(Math.round(r.session_cost)):'not priced'}</span>
-        <span class=dim>to reach</span></div>
-    </div>`).join('') +
-    `<p class=hints style="margin-top:12px"><span class=dim>Cost is the whole session that
-     produced the decision — the work containing the choice, not the choice alone. Not divided
-     between decisions, because dividing would invent precision the data has not got.</span></p>`;
+      <div class=txt>
+        <div class=what>${esc(r.decision)}</div>
+        ${r.rationale?`<div class=why>${esc(r.rationale)}</div>`:''}
+        <div class=meta>${esc(r.project||'unscoped')} · ${esc((r.created_at||'').slice(0,10))}
+          · ${esc((r.session_id||'—').slice(0,8))}
+          ${r.alternatives?.length?`· <span class=rej>rejected ${r.alternatives.map(esc).join(', ')}</span>`:''}</div>
+      </div>
+      <div class=cost>${usd(r.session_cost)||'<span class=dim>—</span>'}<small>session total</small></div>
+    </div>`).join(''):`<p class=empty>Nothing on record. The archivist mines these from captures.</p>`;
+
+  document.getElementById('stamp').textContent=new Date().toLocaleTimeString('en-GB');
+  document.getElementById('foot').textContent=
+    `Figures computed from the store, never generated · decision cost is the whole session that produced it, not divided between decisions · refreshes every 30s`
+    + (t.unpriced.length?` · unpriced models: ${t.unpriced.join(', ')}`:'');
 }
-
-windows(); refresh();
-setInterval(refresh, 30000); }
-
-async function loadLedger(){
-  const fleet = await fetch(`/api/projects?days=${DAYS}`).then(r=>r.json());
-  const t = fleet.totals;
-  let h = `<table><thead><tr>
-    <th>Project</th><th class=n>Sessions</th><th class=n>Turns</th><th class=n>Output tokens</th>
-    <th class=n>Cache read</th><th class=n>Decisions</th><th class=n>Value</th></tr></thead><tbody>`;
-  for(const r of fleet.rows){
-    h += `<tr><td class=proj onclick="drill('${r.project}')">${esc(r.project)}</td>
-      <td class="n mono">${num(r.sessions)}</td>
-      <td class="n mono">${num(r.turns)}</td>
-      <td class="n mono">${num(r.output_tokens)}</td>
-      <td class="n mono dim">${num(r.cache_read)}</td>
-      <td class="n mono">${r.decisions?num(r.decisions):'<span class=dim>0</span>'}</td>
-      <td class="n mono money">$${num(Math.round(r.equivalent||r.billed))}</td></tr>`;
-  }
-  h += `</tbody></table>
-    <p class=hints style="margin-top:12px">
-      <span class=money>$${num(t.equivalent)}</span> list-price equivalent — what this
-      work would have cost per-token, i.e. what the seats are worth.
-      ${t.billed?`<br><span class=money>$${num(t.billed)}</span> actually billed (metered).`:''}
-      ${t.unpriced.length?`<br><span class=dim>No published rate, so no figure: ${t.unpriced.map(esc).join(', ')}</span>`:''}
-      <br><span class=dim>Read live from the store · refreshed every 30s · every figure computed, never generated.</span>
-    </p>`;
-  document.getElementById('ledger').innerHTML = h;
-}
-
-async function loadDecisions(){
-  const d = await fetch(`/api/decisions?days=${DAYS}${PROJECT?`&project=${PROJECT}`:''}`).then(r=>r.json());
-  if(!d.rows.length){
-    document.getElementById('decisions').innerHTML =
-      `<p class=dim>Nothing on record yet. The archivist mines these from sessions as they are captured.</p>`;
-    return;
-  }
-  document.getElementById('decisions').innerHTML = d.rows.map(r=>`
-    <div class=dec>
-      <div class=what>${esc(r.decision)}</div>
-      ${r.rationale?`<div class=why>${esc(r.rationale)}</div>`:''}
-      ${r.alternatives?.length?`<div class=alt>rejected: ${r.alternatives.map(a=>`<s>${esc(a)}</s>`).join(' · ')}</div>`:''}
-      <div class=alt>${esc(r.project||'unscoped')} · ${esc((r.created_at||'').slice(0,10))}</div>
-    </div>`).join('');
-}
-
-function drill(p){ PROJECT = (PROJECT===p? null : p); loadDecisions();
-  document.getElementById('foot').textContent = PROJECT? `filtered to ${PROJECT} — click again to clear` : ''; }
-
-
-windows(); loadLedger(); loadDecisions();
-
+seg(); load(); setInterval(load,30000);
 </script>
