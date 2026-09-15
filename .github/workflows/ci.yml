@@ -209,8 +209,15 @@ jobs:
           for plugin in d.get("plugins", []):
               plugin["version"] = v
           p.write_text(json.dumps(d, indent=2) + "\n")
+          # server.json is the MCP Registry listing. It sat at 0.17.1 through 29
+          # releases because nothing synced it, which reads as an abandoned project
+          # on the one page people check before installing.
+          p = pathlib.Path("server.json")
+          d = json.loads(p.read_text())
+          d["version"] = v
+          p.write_text(json.dumps(d, indent=2) + "\n")
           EOF
-            git add .claude-plugin/plugin.json .claude-plugin/marketplace.json
+            git add .claude-plugin/plugin.json .claude-plugin/marketplace.json server.json
             if git diff --cached --quiet; then
               echo "manifests already at $VERSION"
               exit 0

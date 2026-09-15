@@ -1,8 +1,16 @@
+import datetime
 import os
 
 import pytest
 
 from artel.store import pricing
+
+# Relative, never a literal date. /usage filters on when tokens were SPENT, so a
+# hardcoded window_end silently ages out of the query window and the test starts
+# failing days later for a reason that has nothing to do with the code.
+RECENT = (datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=1)).strftime(
+    "%Y-%m-%dT%H:%M:%SZ"
+)
 
 
 class TestPricingRefusals:
@@ -77,7 +85,7 @@ class TestUsageIngest:
 
     def test_distinct_windows_accumulate(self, client):
         client.post("/usage", json=BODY, headers=H)
-        client.post("/usage", json=dict(BODY, window_end="2026-09-03T10:00:00Z"), headers=H)
+        client.post("/usage", json=dict(BODY, window_end=RECENT), headers=H)
         rows = client.get("/usage?days=7", headers=H).json()["rows"]
         assert rows[0]["output_tokens"] == 1000
 
