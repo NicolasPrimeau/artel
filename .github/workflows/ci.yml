@@ -176,6 +176,9 @@ jobs:
       - name: Generate redirects
         run: uv run python scripts/gen_vercel_config.py
 
+      - name: Generate sitemap and robots
+        run: uv run python scripts/gen_sitemap.py
+
       - name: Deploy to Vercel
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
