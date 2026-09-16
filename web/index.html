@@ -137,6 +137,28 @@ pre .p{color:var(--auto)}
 .note{border-left:2px solid var(--edge);padding:2px 0 2px 14px;color:var(--dim);font-size:13.5px;
   max-width:62ch;margin:22px 0 0}
 
+/* ---------- signup ---------- */
+.form{display:grid;gap:12px;max-width:600px}
+.row{display:grid;gap:12px;grid-template-columns:1fr}
+.f label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--faint);margin-bottom:5px}
+.f input,.f textarea{width:100%;background:var(--panel);border:1px solid var(--rule);border-radius:2px;
+  color:var(--fg);font:14px/1.5 var(--sans);padding:9px 11px;resize:vertical}
+.f input:focus,.f textarea:focus{outline:0;border-color:var(--edge);background:var(--row)}
+.f input::placeholder,.f textarea::placeholder{color:var(--faint)}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chips label{display:inline-flex;align-items:center;gap:6px;margin:0;cursor:pointer;
+  border:1px solid var(--rule);border-radius:2px;padding:6px 10px;background:var(--panel);
+  font-family:var(--mono);font-size:11.5px;letter-spacing:.04em;text-transform:none;color:var(--dim)}
+.chips label:hover{border-color:var(--edge);color:var(--fg)}
+.chips input{position:absolute;opacity:0;width:0;height:0}
+.chips input:checked + span{color:var(--money)}
+.chips label:has(input:checked){border-color:var(--money);background:var(--row-hi)}
+.submit{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.msg{font-family:var(--mono);font-size:12px;color:var(--auto)}
+.msg.err{color:var(--manual)}
+@media(min-width:620px){.row.two{grid-template-columns:1fr 1fr}}
+
 footer{border-top:1px solid var(--rule);padding:26px 0 44px;color:var(--faint);
   font-family:var(--mono);font-size:12px;display:flex;gap:18px;flex-wrap:wrap;align-items:center}
 footer a{color:var(--dim);border:0}
@@ -153,6 +175,7 @@ footer a:hover{color:var(--money)}
     <a href="#how">How</a>
     <a href="#inside">Inside</a>
     <a href="/docs/">Docs</a>
+    <a href="#ask">Talk</a>
     <a href="https://github.com/NicolasPrimeau/artel">GitHub</a>
   </nav>
 </div></header>
@@ -334,6 +357,46 @@ docker compose up -d</pre>
       <a href="/docs/">docs</a>.</p>
   </section>
 
+  <section id="ask">
+    <p class="eyebrow">Tell me</p>
+    <h2>What would you want it to tell you?</h2>
+    <p class="say">Artel is one person's tool that turned out to be useful. I would rather build
+    the next part for someone specific than guess. Say what you run, what you wish you could see,
+    and I will tell you whether it already does it.</p>
+
+    <form class="form" id="ask-form" action="https://formspree.io/f/xreyoaaw" method="POST">
+      <div class="row two">
+        <div class="f"><label for="q-email">Email</label>
+          <input id="q-email" type="email" name="email" placeholder="you@wherever" required></div>
+        <div class="f"><label for="q-fleet">What do you run?</label>
+          <input id="q-fleet" type="text" name="fleet" placeholder="Claude Code, 3 machines, solo"></div>
+      </div>
+      <div class="f"><label>What drew you here</label>
+        <div class="chips">
+          <label><input type="checkbox" name="interest" value="toil"><span>the toil panel</span></label>
+          <label><input type="checkbox" name="interest" value="cost"><span>cost per decision</span></label>
+          <label><input type="checkbox" name="interest" value="memory"><span>shared memory</span></label>
+          <label><input type="checkbox" name="interest" value="decisions"><span>decision record</span></label>
+          <label><input type="checkbox" name="interest" value="mesh"><span>multi-machine mesh</span></label>
+          <label><input type="checkbox" name="interest" value="other"><span>something else</span></label>
+        </div>
+      </div>
+      <div class="f"><label for="q-msg">What would you want it to tell you?</label>
+        <textarea id="q-msg" name="message" rows="3"
+          placeholder="The thing you wish you could ask about your own fleet."></textarea></div>
+      <input type="hidden" name="product" value="artel">
+      <input type="hidden" name="_subject" value="Artel — landing page">
+      <input type="hidden" name="referrer" id="q-ref">
+      <input type="hidden" name="saw" id="q-saw">
+      <div class="submit">
+        <button class="btn key" type="submit">Send</button>
+        <span class="msg" id="ask-msg"></span>
+      </div>
+    </form>
+    <p class="note">Goes to an inbox, not a mailing list. No sequence, no drip, and I answer them
+    myself.</p>
+  </section>
+
 </div>
 
 <footer><div class="wrap" style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;padding:0">
@@ -398,12 +461,55 @@ docker compose up -d</pre>
     a.addEventListener("click", () => ev("docs_click", { to: a.getAttribute("href") })));
   const pre = document.querySelector("#run pre");
   if (pre) pre.addEventListener("copy", () => ev("install_copy"));
-  const toil = document.getElementById("toil-panel");
-  if (toil && "IntersectionObserver" in window) {
+  // What each visitor actually reached, in order. Submitted with the form, so a
+  // reply is readable against what the person had seen when they wrote it --
+  // "wants cost, never scrolled past the hero" is a different note from
+  // "read the whole ledger section first".
+  const saw = [];
+  const note = (k) => { if (!saw.includes(k)) saw.push(k); };
+  document.querySelectorAll('a[href^="/sandbox"]').forEach((a) =>
+    a.addEventListener("click", () => note("sandbox")));
+  if ("IntersectionObserver" in window) {
     const io = new IntersectionObserver((es) => es.forEach((e) => {
-      if (e.isIntersecting) { ev("toil_view"); io.disconnect(); }
-    }), { threshold: 0.4 });
-    io.observe(toil);
+      if (!e.isIntersecting) return;
+      const id = e.target.id;
+      note(id);
+      if (id === "toil") ev("toil_view");
+      io.unobserve(e.target);
+    }), { threshold: 0.35 });
+    document.querySelectorAll("section[id]").forEach((x) => io.observe(x));
+  }
+
+  const form = document.getElementById("ask-form");
+  const msg = document.getElementById("ask-msg");
+  if (form) {
+    document.getElementById("q-ref").value = document.referrer || "direct";
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      document.getElementById("q-saw").value = saw.join(" > ") || "hero only";
+      const btn = form.querySelector("button");
+      btn.disabled = true;
+      msg.className = "msg";
+      msg.textContent = "sending...";
+      try {
+        const r = await fetch(form.action, {
+          method: "POST",
+          body: new FormData(form),
+          headers: { Accept: "application/json" },
+        });
+        if (!r.ok) throw new Error(r.status);
+        form.querySelectorAll("input:not([type=hidden]), textarea").forEach((i) => {
+          if (i.type === "checkbox") i.checked = false; else i.value = "";
+        });
+        msg.textContent = "got it — I'll reply myself.";
+        ev("lead_submit", { saw: saw.join(">") });
+      } catch (err) {
+        msg.className = "msg err";
+        msg.innerHTML = 'that failed. mail me instead: <a href="mailto:nicolas.primeau@gmail.com">nicolas.primeau@gmail.com</a>';
+      } finally {
+        btn.disabled = false;
+      }
+    });
   }
 })();
 </script>
