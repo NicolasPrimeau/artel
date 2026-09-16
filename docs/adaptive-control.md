@@ -4,23 +4,23 @@ anchors:
   - artel/archivist/control.py
 ---
 
-# Artel — Adaptive Control Architecture
+# Artel, Adaptive Control Architecture
 
 ## Thesis
 
 Artel is instrumented like a control system but has run **open-loop**. The archivist
-records rich signals — `utilization_rate`, `decay_regret_count`, `synthesis_uptake_rate`,
-`contradiction_count`, corroboration edges — into `archivist_metrics`, but nothing read
+records rich signals, `utilization_rate`, `decay_regret_count`, `synthesis_uptake_rate`,
+`contradiction_count`, corroboration edges, into `archivist_metrics`, but nothing read
 them back to change behavior. Every decision (decay rate, synthesis cadence, task routing,
 what to inject into a prompt) was static config.
 
-The genuinely adaptive parts that already existed — Hebbian co-retrieval edges, stigmergic
-trails, per-agent tag affinity — are all *local, usage-driven* kernels. The archivist's
+The genuinely adaptive parts that already existed, Hebbian co-retrieval edges, stigmergic
+trails, per-agent tag affinity, are all *local, usage-driven* kernels. The archivist's
 *global* policy was not adaptive at all.
 
 This document describes the move to a **closed-loop, adaptive system**: control theory
 provides the stability layer; a policy layer (bandits / RL / emergent algorithms) sits on
-top. They must be built together — a learning policy without damping and saturation will
+top. They must be built together, a learning policy without damping and saturation will
 thrash the corpus.
 
 ## The plant
@@ -33,21 +33,21 @@ thrash the corpus.
 
 ### PI control with stability guardrails
 
-`artel/archivist/control.py` — a pure, side-effect-free SISO PI controller:
+`artel/archivist/control.py`, a pure, side-effect-free SISO PI controller:
 
 - **Proportional + Integral** toward a setpoint.
-- **Clamping anti-windup** — when the actuator saturates in the direction of the error,
+- **Clamping anti-windup**, when the actuator saturates in the direction of the error,
   the integral is frozen (no windup, prompt recovery). Verified: bounded output and
   return-to-bias within a few cycles after a sustained disturbance clears.
-- **Deadband / hysteresis** — errors within a tolerance produce no action, killing chatter.
-- **Leaky integrator** — the integral bleeds toward zero, so the actuator returns to its
+- **Deadband / hysteresis**, errors within a tolerance produce no action, killing chatter.
+- **Leaky integrator**, the integral bleeds toward zero, so the actuator returns to its
   bias operating point once the disturbance clears (bounded memory; no permanent drift).
 
 All properties are proven by `tests/test_control.py` (steady-state at bias, back-off on
 error, saturation bounds, anti-windup recovery, deadband, monotone return-to-bias,
 fixed-point convergence under constant load).
 
-### Loop #1 — regret-servo on decay rate (implemented)
+### Loop #1, regret-servo on decay rate (implemented)
 
 The first closed loop, live in the archivist scheduler:
 
@@ -57,19 +57,19 @@ The first closed loop, live in the archivist scheduler:
   (0.9), clamped to `[control_decay_min, control_decay_max]`.
 - **Actuator:** `decay_rate`, persisted in the `kv` store, read by `decay_confidence`.
 - **Behavior:** at the setpoint the loop sits in its deadband. Above it, back off decay
-  (raise `decay_rate` toward `max`, i.e. decay more gently); below it, prune harder. As
+  (raise `decay_rate` toward `max`, i.e, decay more gently); below it, prune harder. As
   regret returns to target, the leak brings the rate back to bias.
 - **Why the setpoint is not zero.** It was, and that made the target unreachable: the
   baseline rate is around 0.9 events per cycle, so the error never went negative, the
   integral wound up, and the rate pinned at `control_decay_max`. That is the same
-  failure this loop had when its sensor was a standing stock rather than a flow —
+  failure this loop had when its sensor was a standing stock rather than a flow
   a setpoint no measurement can reach is indistinguishable from a broken sensor.
 - **Why the threshold is 0.85.** Regret is gated on `regret_threshold`. At 0.7 the
   sensor was blind: ranking and the recall floor mean sub-0.7 entries are almost never
   surfaced (8 of 7192 surfacings in a fortnight; lowest returned 0.6816), so it logged
   one event in three weeks. 0.85 sits inside the band recall actually returns.
 - **Ordering:** `capture_metrics` runs first each cycle (steps the controller), then
-  `decay_confidence` applies the new rate — a one-cycle closed loop.
+  `decay_confidence` applies the new rate, a one-cycle closed loop.
 - **Reversible:** `control_decay_enabled` (default on) falls back to the static rate.
 
 Wiring: `run_decay_control` / `controlled_decay_rate` in `synthesis.py`; config knobs
@@ -77,22 +77,22 @@ Wiring: `run_decay_control` / `controlled_decay_rate` in `synthesis.py`; config 
 
 ### Observability fix
 
-`synthesis_uptake_rate` was hardcoded to `0.0` — the key reward signal was never observed.
+`synthesis_uptake_rate` was hardcoded to `0.0`, the key reward signal was never observed.
 It is now real: the fraction of archivist-authored entries created in the window that were
 subsequently read. This is the sensor the policy layer's reward bus will consume.
 
-## Roadmap — remaining control loops
+## Roadmap, remaining control loops
 
-- **Cascade control** — nest a fast inner loop (per-entry retention) inside a slow outer
+- **Cascade control**, nest a fast inner loop (per-entry retention) inside a slow outer
   loop (global corpus-size setpoint) so coupled controllers (decay / promotion / synthesis)
   don't fight.
-- **Quorum-sensing trigger** — replace the fixed `synthesis_interval` with a load-adaptive
+- **Quorum-sensing trigger**, replace the fixed `synthesis_interval` with a load-adaptive
   trigger: consolidate a topic region when local write/capture density crosses a threshold.
-- **Kalman usefulness estimator** — estimate true per-entry usefulness from noisy
+- **Kalman usefulness estimator**, estimate true per-entry usefulness from noisy
   read/uptake signals before feeding it to controllers.
-- **MPC for the LLM budget** — model-predictive allocation of the archivist's per-cycle
+- **MPC for the LLM budget**, model-predictive allocation of the archivist's per-cycle
   token budget across synthesis / merge / headline actions.
-- **Lyapunov analysis** — a corpus "energy" function to certify the closed loop is a
+- **Lyapunov analysis**, a corpus "energy" function to certify the closed loop is a
   contraction (no unbounded growth or collapse) before running policies unsupervised.
 
 ## Policy layer (on top of control)
@@ -102,42 +102,42 @@ Artel signal into a reward.
 
 ### Reinforcement learning
 
-- **A1 — contextual bandit for recall-injection gating.** *(implemented, shadow mode)*
+- **A1, contextual bandit for recall-injection gating.** *(implemented, shadow mode)*
   An online logistic bandit (`store/bandit.py`) over per-candidate features
   (relevance, confidence, recency, trail, distinct-readers). Reward = uptake: recall
   surfaces are logged to `recall_events` (the reward bus), and the archivist's
   `run_recall_feedback` step resolves each event to 1/0 based on whether the entry was
   re-read after being surfaced, then updates the bandit weights (`store/recall_bandit.py`).
   Gated by `recall_bandit_enabled` (default off); currently learns without yet driving
-  ranking — flip to driving once the weights are validated on real traffic. This is the
+  ranking, flip to driving once the weights are validated on real traffic. This is the
   first tap into the reward bus and makes `synthesis_uptake_rate`'s cousin signal real.
-- **A2 — regret-minimizing retention policy.** The generalization of Loop #1: an online
+- **A2, regret-minimizing retention policy.** The generalization of Loop #1: an online
   policy predicting `P(needed again | features)`, trained on regret events.
-- **A3 — contextual bandit for task routing.** Arms = agents, reward = task outcome
+- **A3, contextual bandit for task routing.** Arms = agents, reward = task outcome
   (success / latency / re-assignment). Generalizes the affinity table from claims to
   outcomes; the existing LLM `suggest_task_assignment` becomes the cold-start prior.
 
 ### Emergent behavior
 
-- **B1 — EigenTrust reputation** over the `corroborates` / `contradicts` graph. Writer
+- **B1, EigenTrust reputation** over the `corroborates` / `contradicts` graph. Writer
   reliability as the principal eigenvector; feeds confidence priors and the CRDT semantic
   tiebreak (trust-weighted instead of pure LWW). Answers the open "writer-scope staleness"
   need.
-- **B2 — quorum sensing** (also a control trigger, above).
-- **B3 — STDP** — make Hebbian edges directional/timing-aware (A-before-B strengthens
+- **B2, quorum sensing** (also a control trigger, above).
+- **B3, STDP**, make Hebbian edges directional/timing-aware (A-before-B strengthens
   A→B), learning a predictive transition model over memory.
 
 ### Plugin integration
 
-- **C1 — diverse recall via DPP / MMR.** *(implemented)* Maximal Marginal Relevance
+- **C1, diverse recall via DPP / MMR.** *(implemented)* Maximal Marginal Relevance
   (`store/mmr.py`) selects relevant *and* mutually diverse memories instead of top-k
   near-duplicates, using stored embedding vectors. Exposed as `/memory/search?diversify=true`
   and used by the recall hook. Same math makes capture compression a submodular coverage
   problem under a token budget (future).
-- **C2 — predictive JIT retrieval hook.** From the trajectory of files/tools just touched,
+- **C2, predictive JIT retrieval hook.** From the trajectory of files/tools just touched,
   walk STDP edges (B3) + spreading activation to pre-surface the next-needed memory; gated
   by the A1 bandit.
-- **C3 — collaborative filtering** over the (agent × memory) uptake matrix — "agents like
+- **C3, collaborative filtering** over the (agent × memory) uptake matrix, "agents like
   you found this useful."
 
 ## The keystone: a reward bus
@@ -150,6 +150,6 @@ what flips Artel from open-loop to closed-loop across the board. Loop #1 and the
 ## Guardrails
 
 - Keep an ε-exploration floor; never suppress directives / high-confidence docs.
-- Treat reward as noisy and delayed — batch updates, never tune on a single session.
+- Treat reward as noisy and delayed, batch updates, never tune on a single session.
 - Every policy behind a flag, reversible (as `control_decay_enabled` is).
 - Prove or bound stability (anti-windup, saturation, Lyapunov) before autonomy.

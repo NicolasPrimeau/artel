@@ -13,4 +13,4 @@ decision_list()      # what has been decided, newest first
 decision_get(id)     # one decision in full
 ```
 
-Each record carries the choice, the reasoning, the alternatives considered, who made it, and optionally the task it came out of. When someone asks six months later why the store is a single file, the answer is on the record with its alternatives — instead of being reconstructed, badly, from a merged note.
+Each record carries the choice, the reasoning, the alternatives considered, who made it, and optionally the task it came out of. When someone asks six months later why the store is a single file, the answer is on the record with its alternatives, instead of being reconstructed, badly, from a merged note.

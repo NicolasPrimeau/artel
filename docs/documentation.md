@@ -4,13 +4,13 @@ Documentation rots because it hand-duplicates things that already have a source 
 
 ## Two kinds of page
 
-**Reference pages are generated.** [MCP tools](reference/mcp-tools.md), [REST API](reference/rest.md), and [Configuration](reference/configuration.md) are produced by `scripts/gen_docs.py` from the tool docstrings, `openapi.json`, and the `BaseSettings` classes. They are regenerated at publish time rather than committed, so there is no copy that can disagree with the code. Never edit them by hand — your edit will vanish on the next build.
+**Reference pages are generated.** [MCP tools](reference/mcp-tools.md), [REST API](reference/rest.md), and [Configuration](reference/configuration.md) are produced by `scripts/gen_docs.py` from the tool docstrings, `openapi.json`, and the `BaseSettings` classes. They are regenerated at publish time rather than committed, so there is no copy that can disagree with the code. Never edit them by hand, your edit will vanish on the next build.
 
 ```bash
 uv run python scripts/gen_docs.py    # writes docs/reference/*.md
 ```
 
-Config *descriptions* are the one thing that cannot be derived — pydantic fields carry no help text — so they come from `SETTING_NOTES` in the generator. The generator emits every field it finds regardless, so a new setting can never be silently missing: it appears marked **Undocumented** and the run warns.
+Config *descriptions* are the one thing that cannot be derived, pydantic fields carry no help text, so they come from `SETTING_NOTES` in the generator. The generator emits every field it finds regardless, so a new setting can never be silently missing: it appears marked **Undocumented** and the run warns.
 
 **Prose pages are watched.** Concept and guide pages are written by hand, and nothing can generate them. Instead they declare the code they describe, in front matter:
 
@@ -30,14 +30,14 @@ uv run python scripts/check_docs.py --json    # machine-readable
 uv run python scripts/check_docs.py --update  # re-bless after correcting a page
 ```
 
-A page goes stale on exactly the signal a compiled memory does: the code it is anchored to moved. This is a hash comparison, not a judgement — there is no model involved and no way for it to be confidently wrong.
+A page goes stale on exactly the signal a compiled memory does: the code it is anchored to moved. This is a hash comparison, not a judgement, there is no model involved and no way for it to be confidently wrong.
 
-Module anchors hash the file's *shape* — its imports and top-level symbols — not its bytes. Editing a function body does not restale a page anchored to the module, only one anchored to that symbol. A third form, `path::*`, hashes the whole file, for files whose content *is* data: adding a table to a SQL schema string moves no symbol, so a module anchor is blind to it.
+Module anchors hash the file's *shape*, its imports and top-level symbols, not its bytes. Editing a function body does not restale a page anchored to the module, only one anchored to that symbol. A third form, `path::*`, hashes the whole file, for files whose content *is* data: adding a table to a SQL schema string moves no symbol, so a module anchor is blind to it.
 
-**Choose the anchor that matches what the page actually claims.** A protocol spec describing the API should anchor to the models and routes, not to the storage schema — otherwise every internal table addition raises a false alarm, and an anchor that cries wolf gets ignored. Equally, a module anchor on a file that is pure data will never fire at all, which is worse than no anchor because it looks like coverage.
+**Choose the anchor that matches what the page actually claims.** A protocol spec describing the API should anchor to the models and routes, not to the storage schema, otherwise every internal table addition raises a false alarm, and an anchor that cries wolf gets ignored. Equally, a module anchor on a file that is pure data will never fire at all, which is worse than no anchor because it looks like coverage.
 
 !!! warning "Blessing an already-stale page freezes the error"
-    Anchors only detect drift *after* the point you blessed them. If a page was already wrong when you added its anchor, the lockfile records that as correct and nothing will ever flag it. Read the page against the code the first time you anchor it — this exact trap was hit while setting this up, and `spec.md` had been documenting entry types and scopes that no longer existed.
+    Anchors only detect drift *after* the point you blessed them. If a page was already wrong when you added its anchor, the lockfile records that as correct and nothing will ever flag it. Read the page against the code the first time you anchor it, this exact trap was hit while setting this up, and `spec.md` had been documenting entry types and scopes that no longer existed.
 
 ## Where it runs
 
@@ -48,7 +48,7 @@ Module anchors hash the file's *shape* — its imports and top-level symbols —
 | `--open-task` | Files the drift as an Artel task for someone to act on. |
 
 ```bash
-export ARTEL_URL=... ARTEL_AGENT_ID=... ARTEL_API_KEY=...
+export ARTEL_URL=.. ARTEL_AGENT_ID=.. ARTEL_API_KEY=..
 uv run python scripts/check_docs.py --open-task
 ```
 
@@ -64,7 +64,7 @@ The freshness check is deliberately non-blocking. A prose page lagging the code 
 
 ## Testing for silence
 
-The failure mode this codebase actually produces is not a crash — it is a quiet,
+The failure mode this codebase actually produces is not a crash, it is a quiet,
 believable wrong answer. Captures digested but never acknowledged. An inert plugin
 reporting "0 tokens of overhead". An unauthenticated CLI returning empty patches
 indistinguishable from failed fixes. A docs anchor blessing a page that was
@@ -95,4 +95,4 @@ An agent does not write these docs unattended. Drift *detection* is safe to auto
 
 So the loop stops at filing work: the checker flags a page, `--open-task` puts it on the board, and a human or agent reads the diff and rewrites the prose. The rewrite goes through review like any other change.
 
-If the rewrite is ever automated, it should produce a pull request — never a direct publish. The checker deliberately has no path that edits a page.
+If the rewrite is ever automated, it should produce a pull request, never a direct publish. The checker deliberately has no path that edits a page.

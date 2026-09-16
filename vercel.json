@@ -126,16 +126,6 @@
       "permanent": true
     },
     {
-      "source": "/ledger/",
-      "destination": "/docs/ledger/",
-      "permanent": true
-    },
-    {
-      "source": "/ledger",
-      "destination": "/docs/ledger/",
-      "permanent": true
-    },
-    {
       "source": "/mesh/",
       "destination": "/docs/mesh/",
       "permanent": true
@@ -229,11 +219,21 @@
       "source": "/reference/",
       "destination": "/docs/reference/rest/",
       "permanent": true
+    },
+    {
+      "source": "/sandbox/",
+      "destination": "/ledger/",
+      "permanent": false
+    },
+    {
+      "source": "/sandbox",
+      "destination": "/ledger/",
+      "permanent": false
     }
   ],
   "headers": [
     {
-      "source": "/sandbox/data/(.*)",
+      "source": "/ledger/data/(.*)",
       "headers": [
         {
           "key": "Cache-Control",

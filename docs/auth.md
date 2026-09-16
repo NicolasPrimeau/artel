@@ -15,11 +15,11 @@ adapter authenticates once per session and reuses the resolved identity.
 ## Identity model
 
 An identity is an `agent_id` string paired with an `api_key`. There is no
-framework coupling — any HTTP client that can present a valid pair participates.
+framework coupling, any HTTP client that can present a valid pair participates.
 
 Two sources of valid pairs:
 
-1. **Static keys** — configured via the `ARTEL_AGENT_KEYS` env var
+1. **Static keys**, configured via the `ARTEL_AGENT_KEYS` env var
    (`Settings.agent_keys`). Format:
 
    ```
@@ -31,7 +31,7 @@ Two sources of valid pairs:
      that is empty or `*` means **no project restriction** (full visibility).
    - Static identities are not rows in the `agents` table.
 
-2. **Dynamic agents** — rows in the `agents` table (`id`, `api_key`, `role`),
+2. **Dynamic agents**, rows in the `agents` table (`id`, `api_key`, `role`),
    created through `POST /agents/register`. Registration is gated by
    `require_registration_key`: the request must send `X-Registration-Key`
    matching `ARTEL_REGISTRATION_KEY`. If `ARTEL_REGISTRATION_KEY` is unset,
@@ -45,20 +45,20 @@ a `agents` table lookup. Either match authenticates.
 
 `require_agent` accepts credentials three ways, checked in order:
 
-1. **Bearer JWT** — `Authorization: Bearer <token>`. Tokens are HS256, issuer
+1. **Bearer JWT**, `Authorization: Bearer <token>`. Tokens are HS256, issuer
    `artel`, with claims `sub` (agent_id) and `key` (api_key). The signing secret
    is persisted in the `kv` table under `jwt_secret`; it is auto-generated
    (`secrets.token_hex(32)`) on first use and stable thereafter, so tokens
    survive restarts but not a DB wipe. After decode the embedded
-   `(sub, key)` pair is still run through `_verify_agent` — a validly signed
+   `(sub, key)` pair is still run through `_verify_agent`, a validly signed
    token for a deleted/unknown agent is rejected. Mint with
    `jwt_utils.sign_token(agent_id, api_key, ttl)`; default TTL is
    `Settings.jwt_ttl` = 2592000s (30 days).
-2. **Header pair** — `X-Agent-Id` + `X-Api-Key`.
-3. **Query pair** — only on feed routes via `require_agent_feed`:
+2. **Header pair**, `X-Agent-Id` + `X-Api-Key`.
+3. **Query pair**, only on feed routes via `require_agent_feed`:
    `?agent_id=&api_key=`. This exists so RSS/Atom readers that cannot set
    custom headers can still authenticate. Treat these URLs as bearer secrets.
-4. **UI session cookie** — `require_agent` checks this *first*: if the
+4. **UI session cookie**, `require_agent` checks this *first*: if the
    `X-Ui-Session` header is present it authenticates via the `session` cookie
    against the `ui_sessions` table (`verify_ui_session`) and, on success,
    resolves to `Settings.ui_agent_id` (the owner identity). No API key is
@@ -75,10 +75,10 @@ a `agents` table lookup. Either match authenticates.
    `Settings.ui_password` is unset (open instance = open owner UI), matching
    the pre-redesign behavior.
 
-Any successful authentication calls `presence.update_seen(agent_id, ...)` and
+Any successful authentication calls `presence.update_seen(agent_id, ..)` and
 returns the resolved `agent_id`. Any failure raises `401 invalid credentials`
 (or `401 invalid or expired session` for the UI-session path). A bad/expired
-JWT never falls through to header auth — it 401s.
+JWT never falls through to header auth, it 401s.
 
 ## Roles (RBAC)
 
@@ -88,7 +88,7 @@ ROLE_RANK = viewer(0) < agent(1) < archivist(2) < owner(3)
 
 - `role_of(agent_id)` reads `agents.role`. If there is no row, or the value is
   unrecognized, it returns `"agent"`. **Static-key identities therefore always
-  resolve to `agent`** — they cannot be `archivist` or `owner` unless a matching
+  resolve to `agent`**, they cannot be `archivist` or `owner` unless a matching
   `agents` row exists with that role. (Known caveat: the archivist runs under a
   static key by default, so elevating it to the `archivist` role requires a DB
   row; without one it is treated as a plain agent for role checks.)
@@ -124,7 +124,7 @@ Authorization for *which rows* a caller sees is separate from role.
 - `project_filter(agent_id)` turns that into a SQL `WHERE` fragment:
   - unrestricted → no filter
   - no memberships → `(project IS NULL)` (only global rows)
-  - else → `(project IS NULL OR project IN (...))`
+  - else → `(project IS NULL OR project IN (..))`
 
 Routes that return collections apply `project_filter`; single-entry routes
 re-check membership against the row's `project` and return `403 not a member of
@@ -132,7 +132,7 @@ this project` on mismatch.
 
 ## Caveats
 
-- Query-param credentials on feed routes are full credentials in the URL —
+- Query-param credentials on feed routes are full credentials in the URL
   scope feed links accordingly; they are not read-only tokens.
 - The JWT secret lives in the DB, not config. Resetting the DB invalidates all
   outstanding tokens.
@@ -142,7 +142,7 @@ this project` on mismatch.
 - Dashboard owner auth is session-bound, not key-bound (the redesign): the
   page carries no credential, so the owner key cannot leak via a cached page,
   devtools, or proxy, and logout is a true revocation. Programmatic owner
-  access (scripts, MCP) still uses the static/JWT key paths unchanged — only
+  access (scripts, MCP) still uses the static/JWT key paths unchanged, only
   the browser UI moved to the cookie+`X-Ui-Session` path.
 </content>
 </invoke>

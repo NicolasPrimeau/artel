@@ -108,10 +108,10 @@ def _register(agent_id):
             print('action: add this line to ~/.bashrc and re-run:')
             print('  export ARTEL_REG_KEY=<your-registration-key>')
         else:
-            print('error: registration failed ({{}}) — {{}}'.format(e.code, detail))
+            print('error: registration failed ({{}}), {{}}'.format(e.code, detail))
         sys.exit(1)
     except urllib.error.URLError as e:
-        print('error: could not reach {{}} — {{}}'.format(url, e.reason)); sys.exit(1)
+        print('error: could not reach {{}}, {{}}'.format(url, e.reason)); sys.exit(1)
 
 def _write_mcp(aid, akey):
     mcp_config = {{
@@ -131,7 +131,7 @@ refreshed = False
 
 valid = _valid(aid, akey)
 if valid is None:
-    print('error: cannot reach {{}} — is the server running?'.format(url)); sys.exit(1)
+    print('error: cannot reach {{}}, is the server running?'.format(url)); sys.exit(1)
 elif valid:
     _write_mcp(aid, akey)
     print('  agent    : ' + aid + '  (credentials valid, refreshed .mcp.json)')
@@ -277,17 +277,17 @@ def register(aid):
             print('error: registration requires a key. add to your shell and re-run:')
             print('  export ARTEL_REG_KEY=<your-registration-key>')
         else:
-            print('error: registration failed ({}) — {}'.format(e.code, detail))
+            print('error: registration failed ({}), {}'.format(e.code, detail))
         sys.exit(1)
     except urllib.error.URLError as e:
-        print('error: could not reach {} — {}'.format(url, e.reason))
+        print('error: could not reach {}, {}'.format(url, e.reason))
         sys.exit(1)
 
 candidate = creds_dir / base_id
 aid, akey = parse(candidate) if candidate.exists() else (None, None)
 v = valid(aid, akey)
 if v is None:
-    print('error: cannot reach {} — is the server running?'.format(url))
+    print('error: cannot reach {}, is the server running?'.format(url))
     sys.exit(1)
 if not v:
     data = register(base_id)
@@ -300,7 +300,7 @@ if not v:
 )
 
 # Claude Code substitutes ${ARTEL_*} in the plugin's MCP config from its settings
-# env block (reliable, launch-independent) — unlike a shell file, which only works
+# env block (reliable, launch-independent), unlike a shell file, which only works
 # when Claude Code is launched from a shell that sourced it. Merge, preserving any
 # existing settings.
 settings_path = pathlib.Path.home() / '.claude' / 'settings.json'
@@ -332,9 +332,9 @@ if command -v claude >/dev/null 2>&1; then
     claude plugin marketplace add "$REPO" || echo "  (if this failed, run in Claude Code: /plugin marketplace add $REPO)"
     claude plugin install "$PLUGIN@$MKT" || echo "  (if this failed, run in Claude Code: /plugin install $PLUGIN@$MKT)"
     echo
-    echo "done — start a new Claude Code session to activate the plugin."
+    echo "done, start a new Claude Code session to activate the plugin."
 else
-    echo "agent registered and env written. claude CLI not found — in a Claude Code session run:"
+    echo "agent registered and env written. claude CLI not found, in a Claude Code session run:"
     echo "  /plugin marketplace add $REPO"
     echo "  /plugin install $PLUGIN@$MKT"
 fi

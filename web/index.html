@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Artel — the ledger for your agent fleet</title>
+<title>Artel, the ledger for your agent fleet</title>
 <meta name="description" content="A shared notepad for you and every agent you run. It reads back what the fleet learned, and keeps the ledger: what each session and decision cost, and the work you keep doing by hand.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='5' fill='%23101316'/><path d='M7 9h18M7 16h18M7 23h11' stroke='%235cb8ae' stroke-width='2.4' stroke-linecap='round'/></svg>">
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-CYMPQ0NXJN"></script>
@@ -16,7 +16,7 @@ gtag("config", "G-CYMPQ0NXJN");
 <style>
 :root{
   --bg:#101316; --panel:#171b1f; --row:#1c2126; --row-hi:#232a31;
-  --fg:#e0e5e9; --dim:#939ca4; --faint:#3a444d;
+  --fg:#e0e5e9; --dim:#939ca4; --faint:#818b94;
   --rule:#252c33; --edge:#3a444d;
   --money:#5cb8ae; --manual:#d98a72; --auto:#9ab973;
   --mono:ui-monospace,"SF Mono","JetBrains Mono","Roboto Mono",Menlo,Consolas,monospace;
@@ -186,10 +186,10 @@ footer a:hover{color:var(--money)}
     <p class="kicker">Self-hosted · MIT · your machine</p>
     <h1>Your agents already wrote down what you keep doing <em>by hand</em>.</h1>
     <p class="lede">Artel is a shared notepad for you and every agent you run. It hands back what
-    the fleet learned when it matters — and it keeps the <strong>ledger</strong>: what each session
+    the fleet learned when it matters, and it keeps the <strong>ledger</strong>: what each session
     and each decision cost, and which work keeps coming back.</p>
     <div class="cta">
-      <a class="btn key" href="/sandbox/">Open the sandbox →</a>
+      <a class="btn key" href="/ledger/">Open the ledger →</a>
       <a class="btn" href="#run">Run it yourself</a>
       <a class="btn" href="https://github.com/NicolasPrimeau/artel">Source</a>
     </div>
@@ -198,7 +198,7 @@ footer a:hover{color:var(--money)}
   <section id="toil">
     <p class="eyebrow">Toil</p>
     <h2>Nobody files a ticket for the thing they redo every Monday.</h2>
-    <p class="say">They mention it, once, in passing, in a note meant for something else — and it
+    <p class="say">They mention it, once, in passing, in a note meant for something else, and it
     is never seen again. Artel reads every note the fleet has written and pulls out the sentences
     where somebody admits to doing work by hand, groups them, and <strong>quotes the note it came
     from</strong> so you can check it.</p>
@@ -241,7 +241,7 @@ footer a:hover{color:var(--money)}
     <p class="note">It is a deterministic read of your own notes, not a model asked what to
     automate. A model will answer that question whether or not the evidence exists, and an
     unfalsifiable answer is worth nothing to someone deciding where to spend a week. Every row
-    here links to the note it came from — including the ones it <em>declined</em> to flag, like
+    here links to the note it came from, including the ones it <em>declined</em> to flag, like
     “do not manually edit this file, it is generated”.</p>
   </section>
 
@@ -250,7 +250,7 @@ footer a:hover{color:var(--money)}
     <h2>What did that decision actually cost?</h2>
     <p class="say">Token dashboards tell you a number for the month. Artel knows which session
     produced which decision, so it can put a price on <strong>the work that contained the
-    choice</strong> — and show you the cheap call you agonised over next to the expensive one you
+    choice</strong>, and show you the cheap call you agonised over next to the expensive one you
     made in four minutes.</p>
 
     <div class="panel">
@@ -281,7 +281,7 @@ footer a:hover{color:var(--money)}
     <p class="note">Attribution is by shared session, not causation: a session that produced three
     decisions spent its tokens on all three and on everything else it did. Artel does not divide
     the total between them, because dividing would invent a precision the data has not got. On a
-    subscription the same figure is shown as what the work <em>would</em> have cost metered —
+    subscription the same figure is shown as what the work <em>would</em> have cost metered,
     labelled as an equivalent, never as an invoice.</p>
   </section>
 
@@ -289,12 +289,12 @@ footer a:hover{color:var(--money)}
     <p class="eyebrow">How</p>
     <h2>It can tell you this because everything already goes through the pad.</h2>
     <p class="say">One notepad that you and every agent you run write into. Whatever any of you
-    works out is written once and handed back the moment it matters — the gotcha about
+    works out is written once and handed back the moment it matters: the gotcha about
     <em>this</em> file right before you edit it, where you stopped on Friday, the thing another
     agent already learned the hard way. Nothing to file, nothing to tag, nothing to look up.</p>
     <p class="say">It runs on <strong>hooks, not instructions</strong>. Nothing depends on an agent
     remembering to call a tool: sessions are captured as they happen, and a background archivist
-    works the pile while you are gone — merging duplicates, retiring what stopped being true,
+    works the pile while you are gone, merging duplicates, retiring what stopped being true,
     promoting what held up. The ledger and the toil panel are just what you can see once that
     record exists.</p>
 
@@ -316,13 +316,13 @@ footer a:hover{color:var(--money)}
     <p class="say">One container. Each of these has a page in the <a href="/docs/">docs</a>.</p>
     <div class="grid">
       <div class="cell"><h3><a href="/docs/plugin/">The plugin</a></h3>
-        <p>The half that speaks up — injects the right note at session start, on each prompt, and before you edit a file.</p></div>
+        <p>The half that speaks up. Injects the right note at session start, on each prompt, and before you edit a file.</p></div>
       <div class="cell"><h3><a href="/docs/capture/">Capture</a></h3>
         <p>Sessions become notes on their own, spooled in ~10 ms so writing never slows an agent down.</p></div>
       <div class="cell"><h3><a href="/docs/archivist/">Archivist</a></h3>
         <p>The part that learns: merges duplicates, resolves contradictions, decays what stopped being true, promotes what held.</p></div>
       <div class="cell"><h3><a href="/docs/decisions/">Decisions</a></h3>
-        <p>Append-only record of what you chose and why. Never merged, never decayed — and what the ledger prices.</p></div>
+        <p>Append-only record of what you chose and why. Never merged, never decayed, and what the ledger prices.</p></div>
       <div class="cell"><h3><a href="/docs/compile-mode/">Compile mode</a></h3>
         <p>Notes about code pinned to the code, so they re-derive instead of rotting.</p></div>
       <div class="cell"><h3><a href="/docs/blueprints/">Blueprints</a></h3>
@@ -330,7 +330,7 @@ footer a:hover{color:var(--money)}
       <div class="cell"><h3><a href="/docs/mesh/">Mesh &amp; feeds</a></h3>
         <p>Several machines converging as CRDTs, plus RSS/Atom subscriptions from the outside world.</p></div>
       <div class="cell"><h3><a href="/docs/dashboard/">Dashboard</a></h3>
-        <p>Browse, search and watch the fleet from a browser — alongside the ledger.</p></div>
+        <p>Browse, search and watch the fleet from a browser, alongside the ledger.</p></div>
       <div class="cell"><h3><a href="/docs/adaptive-control/">Adaptive decay</a></h3>
         <p>A control loop tunes how fast confidence fades, measured against notes you actually reach for.</p></div>
     </div>
@@ -340,7 +340,7 @@ footer a:hover{color:var(--money)}
       <span class="kind">directive</span> standing instruction, never fades ·
       <span class="kind">skill</span> how to do a thing ·
       <span class="kind">compiled</span> pinned to source.
-      Any agent that speaks HTTP or MCP joins — 47 MCP tools, or the plain
+      Any agent that speaks HTTP or MCP joins, using 47 MCP tools or the plain
       <a href="/docs/reference/rest/">REST API</a>.</p>
   </section>
 
@@ -385,7 +385,7 @@ docker compose up -d</pre>
         <textarea id="q-msg" name="message" rows="3"
           placeholder="What you are trying to do, or what is in the way."></textarea></div>
       <input type="hidden" name="product" value="artel">
-      <input type="hidden" name="_subject" value="Artel — landing page">
+      <input type="hidden" name="_subject" value="Artel: landing page">
       <input type="hidden" name="referrer" id="q-ref">
       <input type="hidden" name="saw" id="q-saw">
       <div class="submit">
@@ -402,8 +402,8 @@ docker compose up -d</pre>
   <span>Artel · MIT</span>
   <a href="https://github.com/NicolasPrimeau/artel">GitHub</a>
   <a href="/docs/">Docs</a>
-  <a href="/sandbox/">Sandbox</a>
-  <span style="margin-left:auto;color:var(--faint)">Sandbox data is fictional.</span>
+  <a href="/ledger/">Ledger</a>
+  <span style="margin-left:auto;color:var(--faint)">Ledger demo data is fictional.</span>
 </div></footer>
 
 
@@ -416,7 +416,7 @@ docker compose up -d</pre>
   const esc = (t) => (t || "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
   const stat = (v, l) => `<div class="stat"><b>${v}</b><span>${l}</span></div>`;
   try {
-    const d = await (await fetch("/sandbox/data/d30.json")).json();
+    const d = await (await fetch("/ledger/data/d30.json")).json();
     const t = d.projects.totals;
 
     const toil = d.toil.rows;
@@ -454,8 +454,8 @@ docker compose up -d</pre>
 // did they open the sandbox, did they take the install command, did they go read.
 (() => {
   const ev = (n, p) => window.gtag && gtag("event", n, p || {});
-  document.querySelectorAll('a[href^="/sandbox"]').forEach((a) =>
-    a.addEventListener("click", () => ev("sandbox_open", { from: a.closest("section")?.id || "hero" })));
+  document.querySelectorAll('a[href^="/ledger"]').forEach((a) =>
+    a.addEventListener("click", () => ev("ledger_open", { from: a.closest("section")?.id || "hero" })));
   document.querySelectorAll('a[href^="/docs"]').forEach((a) =>
     a.addEventListener("click", () => ev("docs_click", { to: a.getAttribute("href") })));
   const pre = document.querySelector("#run pre");
@@ -466,8 +466,8 @@ docker compose up -d</pre>
   // "read the whole ledger section first".
   const saw = [];
   const note = (k) => { if (!saw.includes(k)) saw.push(k); };
-  document.querySelectorAll('a[href^="/sandbox"]').forEach((a) =>
-    a.addEventListener("click", () => note("sandbox")));
+  document.querySelectorAll('a[href^="/ledger"]').forEach((a) =>
+    a.addEventListener("click", () => note("ledger")));
   if ("IntersectionObserver" in window) {
     const io = new IntersectionObserver((es) => es.forEach((e) => {
       if (!e.isIntersecting) return;

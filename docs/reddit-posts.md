@@ -1,8 +1,8 @@
-# Artel — Reddit launch post (r/ClaudeAI)
+# Artel, Reddit launch post (r/ClaudeAI)
 
 Copy-paste ready. Attach the demo GIF (`docs/reddit.gif`) as the post image.
 
-> No sandbox link: there is no hosted instance any more. artel.run serves the docs.
+> No sandbox link: there is no hosted instance any more, artel.run serves the docs.
 > If you want a live demo for a launch, bring one up first with `scripts/sandbox.sh up`
 > and link `https://artel-sandbox.fly.dev/ui`, then take it down after.
 

@@ -335,7 +335,7 @@ def build(path: pathlib.Path, days: int = 14) -> dict:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default="web/sandbox/demo.db")
+    ap.add_argument("--out", default="web/ledger/demo.db")
     ap.add_argument("--days", type=int, default=14)
     args = ap.parse_args()
     out = pathlib.Path(args.out)

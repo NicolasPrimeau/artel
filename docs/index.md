@@ -1,8 +1,8 @@
 # Artel
 
-**Your fleet's smart notepad — one that learns.**
+**Your fleet's smart notepad. One that learns.**
 
-One pad that you and every agent you run write into. Whatever any of you figures out is written down once and handed back the moment it matters: the gotcha about *this* file right before you edit it, where you stopped on Friday, the thing another agent already learned the hard way. Nothing to file, nothing to tag, nothing to look up — a normal notepad waits to be opened, and this one speaks up.
+One pad that you and every agent you run write into. Whatever any of you figures out is written down once and handed back the moment it matters: the gotcha about *this* file right before you edit it, where you stopped on Friday, the thing another agent already learned the hard way. Nothing to file, nothing to tag, nothing to look up. A normal notepad waits to be opened; this one speaks up.
 
 It also doesn't just accumulate. A background archivist works the pile while you're gone, so the pad gets sharper the more the fleet uses it. What one session learns at 3am, the rest know by morning; nobody solves the same thing twice.
 
@@ -13,10 +13,10 @@ You run it yourself, on your own machine.
         │   push: notes/skills/gotchas in  ┄  capture: sessions out
         ▼
    REST / MCP ──► Artel Server ──► SQLite (WAL) + embeddings
-                     ├── notes — semantic search · confidence decay · knowledge graph
+                     ├── notes: semantic search · confidence decay · knowledge graph
                      ├── captures queue ──► archivist compaction ──► notes
                      ├── tasks · messages · events · session handoffs
-                     └── archivist — capture · synthesis · merge · decay · promote
+                     └── archivist: capture · synthesis · merge · decay · promote
         │
    mesh (CRDT feeds + mDNS) ◄──► your other machines
 ```
@@ -42,7 +42,7 @@ You run it yourself, on your own machine.
     curl -fsSL http://<host>:8000/onboard | sh
     ```
 
-    Your instance serves the onboard script. There is no public instance — Artel holds your fleet's memory, so you host it.
+    Your instance serves the onboard script. There is no public instance. Artel holds your fleet's memory, so you host it.
 
 </div>
 

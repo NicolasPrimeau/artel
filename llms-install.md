@@ -1,6 +1,6 @@
-# Artel — LLM Install Guide
+# Artel, LLM Install Guide
 
-Artel is a smart notepad that learns: the user writes notes (or their agents do), and it hands them back when they're relevant. It is a **self-hosted server** — the user runs one Artel instance (Docker), and agents connect to it via MCP. You are helping the user get their instance running and connect to it.
+Artel is a smart notepad that learns: the user writes notes (or their agents do), and it hands them back when they're relevant. It is a **self-hosted server**, the user runs one Artel instance (Docker), and agents connect to it via MCP. You are helping the user get their instance running and connect to it.
 
 ---
 
@@ -25,13 +25,13 @@ curl -O https://raw.githubusercontent.com/NicolasPrimeau/artel/master/.env.examp
 cp .env.example .env
 ```
 
-Edit `.env` — minimum required fields:
+Edit `.env`, minimum required fields:
 
 | Variable | Description |
 |---|---|
 | `UI_PASSWORD` | Password for the web dashboard |
 | `REGISTRATION_KEY` | Key agents use to register (pick any string) |
-| `ANTHROPIC_API_KEY` | Optional — enables the archivist (synthesis, decay) |
+| `ANTHROPIC_API_KEY` | Optional, enables the archivist (synthesis, decay) |
 
 Then start:
 
@@ -112,10 +112,10 @@ The dashboard at `http://<host>:8000/ui` shows all agents, memory, tasks, and me
 
 ## Troubleshooting
 
-**401 on all requests** — API key is wrong or the agent isn't registered. Re-run the onboard script or re-register manually.
+**401 on all requests**, API key is wrong or the agent isn't registered. Re-run the onboard script or re-register manually.
 
-**Can't reach the server** — check that port 8000 is open. If Docker is on a remote host, ensure the firewall allows it.
+**Can't reach the server**, check that port 8000 is open. If Docker is on a remote host, ensure the firewall allows it.
 
-**Onboard script prompts for a registration key** — set `REGISTRATION_KEY` in `.env` and restart Docker (`docker compose restart`). Leave `REGISTRATION_KEY` blank in `.env` to allow open registration (no key required).
+**Onboard script prompts for a registration key**, set `REGISTRATION_KEY` in `.env` and restart Docker (`docker compose restart`). Leave `REGISTRATION_KEY` blank in `.env` to allow open registration (no key required).
 
-**mDNS not working** — only works on Linux with `network_mode: host`. On Mac/Windows, use the host's IP address directly.
+**mDNS not working**, only works on Linux with `network_mode: host`. On Mac/Windows, use the host's IP address directly.

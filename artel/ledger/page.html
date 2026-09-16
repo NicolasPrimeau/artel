@@ -3,7 +3,7 @@
 <title>Artel ledger</title>
 <link rel=icon href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='5' fill='%23101316'/><path d='M7 9h18M7 16h18M7 23h11' stroke='%235cb8ae' stroke-width='2.4' stroke-linecap='round'/></svg>">
 <style>
-/* Instrument panel. Full-bleed, dense, monospace throughout — this is a readout, not
+/* Instrument panel. Full-bleed, dense, monospace throughout. This is a readout, not
    a document. Warm-dark rather than the usual cold slate; amber for money because it
    is the only hue that appears, so a figure never has to be labelled to be found.
    Every table scrolls inside its own gutter: the failure before was a 76ch column
@@ -11,7 +11,7 @@
 :root{
   --bg:#101316; --panel:#171b1f; --row:#1c2126;
   --fg:#e0e5e9; --dim:#939ca4; --rule:#252c33; --edge:#3a444d;
-  --money:#5cb8ae; --warn:#d98a72; --ok:#9ab973;
+  --faint:#818b94; --money:#5cb8ae; --warn:#d98a72; --ok:#9ab973;
   --mono:"SF Mono",ui-monospace,"JetBrains Mono","Roboto Mono",Menlo,monospace;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -49,7 +49,7 @@ section{border-bottom:1px solid var(--rule)}
 h2{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);
   font-weight:400;padding:9px 16px;border-bottom:1px solid var(--rule);
   display:flex;align-items:center;gap:10px;background:var(--panel)}
-h2 .count{color:var(--edge)}
+h2 .count{color:var(--faint)}
 h2 .clear{margin-left:auto;color:var(--money);cursor:pointer;text-transform:none;
   letter-spacing:0}
 
@@ -76,7 +76,7 @@ tr.sel td{background:#232a31;box-shadow:inset 2px 0 0 var(--money)}
 .dec .txt{min-width:0}
 .dec .what{font-size:13px;overflow-wrap:anywhere}
 .dec .why{color:var(--dim);font-size:11px;margin-top:3px;overflow-wrap:anywhere}
-.dec .meta{font-size:10px;color:var(--edge);margin-top:5px;letter-spacing:.05em}
+.dec .meta{font-size:10px;color:var(--faint);margin-top:5px;letter-spacing:.05em}
 .dec .rej{color:var(--warn)}
 .dec .cost{text-align:right;color:var(--money);font-size:13px}
 .dec .cost small{display:block;color:var(--dim);font-size:10px;letter-spacing:.05em}
@@ -90,8 +90,8 @@ tr.sel td{background:#232a31;box-shadow:inset 2px 0 0 var(--money)}
 .toil:nth-child(even){background:var(--row)}
 .toil .tag{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--money)}
 .toil .ev{overflow-wrap:anywhere;font-size:12px}
-.toil .src{text-align:right;font-size:10px;color:var(--edge)}
-footer{padding:10px 16px;color:var(--edge);font-size:10px;letter-spacing:.05em}
+.toil .src{text-align:right;font-size:10px;color:var(--faint)}
+footer{padding:10px 16px;color:var(--faint);font-size:10px;letter-spacing:.05em}
 </style>
 
 <div class=bar>
@@ -138,7 +138,7 @@ async function load(){
   const t=proj.totals;
 
   document.getElementById('kpis').innerHTML=`
-    <div class=kpi><div class=k>Value of work</div><div class="v money">${usd(t.equivalent)||'—'}</div>
+    <div class=kpi><div class=k>Value of work</div><div class="v money">${usd(t.equivalent)||'-'}</div>
       <div class=sub>list-price equivalent</div></div>
     <div class=kpi><div class=k>Billed</div><div class=v>${usd(t.billed)}</div>
       <div class=sub>metered, actually invoiced</div></div>
@@ -178,7 +178,7 @@ async function load(){
     + toil.rows.map(r=>`<div class=toil>
         <span class=tag>${esc(r.theme)}</span>
         <span class=ev>${esc(r.evidence)}</span>
-        <span class=src>${esc(r.project||'—')} · ${esc(r.entry_id.slice(0,8))}</span>
+        <span class=src>${esc(r.project||'-')} · ${esc(r.entry_id.slice(0,8))}</span>
       </div>`).join('')
     : `<p class=empty>Nothing found. This reads notes the fleet wrote about its own work.</p>`;
 
@@ -190,10 +190,10 @@ async function load(){
         <div class=what>${esc(r.decision)}</div>
         ${r.rationale?`<div class=why>${esc(r.rationale)}</div>`:''}
         <div class=meta>${esc(r.project||'unscoped')} · ${esc((r.created_at||'').slice(0,10))}
-          · ${esc((r.session_id||'—').slice(0,8))}
+          · ${esc((r.session_id||'-').slice(0,8))}
           ${r.alternatives?.length?`· <span class=rej>rejected ${r.alternatives.map(esc).join(', ')}</span>`:''}</div>
       </div>
-      <div class=cost>${usd(r.session_cost)||'<span class=dim>—</span>'}<small>session total</small></div>
+      <div class=cost>${usd(r.session_cost)||'<span class=dim>-</span>'}<small>session total</small></div>
     </div>`).join(''):`<p class=empty>Nothing on record. The archivist mines these from captures.</p>`;
 
   document.getElementById('stamp').textContent=new Date().toLocaleTimeString('en-GB');

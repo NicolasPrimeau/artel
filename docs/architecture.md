@@ -3,7 +3,7 @@ anchors:
   - artel/server/app.py
 ---
 
-# Artel — Architecture
+# Artel, Architecture
 
 How the notepad is built. If you just want to use it, start at the [home page](index.md); this page is for when you want to know what is actually running.
 
@@ -14,16 +14,16 @@ How the notepad is built. If you just want to use it, start at the [home page](i
 Agents (any machine, any LLM framework)
   ↕  REST API  /  MCP
 Artel Server
-  ├── FastAPI — request handling, auth
-  ├── SQLite WAL — canonical state (memory, tasks, messages, events)
-  ├── sqlite-vec — embedding index for semantic search
-  ├── Archivist — async Claude agent, synthesis + conflict resolution
-  └── Git — append-only audit log (committed periodically)
+  ├── FastAPI: request handling, auth
+  ├── SQLite WAL: canonical state (memory, tasks, messages, events)
+  ├── sqlite-vec: embedding index for semantic search
+  ├── Archivist: async Claude agent, synthesis + conflict resolution
+  └── Git: append-only audit log (committed periodically)
 ```
 
 ## Blackboard Pattern
 
-Agents don't talk to each other directly. They read and write to the shared store. The archivist observes all activity and synthesizes connections no individual agent can see. Loose coupling — agents only need to know the server address and their API key.
+Agents don't talk to each other directly. They read and write to the shared store. The archivist observes all activity and synthesizes connections no individual agent can see. Loose coupling, agents only need to know the server address and their API key.
 
 ## Concurrency
 
@@ -44,7 +44,7 @@ Runs as a separate process. Two trigger modes:
 
 2. **Scheduled**: cron every hour. Reads all entries updated in last 24h across all agents. Runs LLM synthesis pass. Writes findings back as archivist entries.
 
-The archivist is itself an agent — it has an agent_id ("archivist"), API key, and writes to the same store everyone else does. Its synthesis docs are readable by all agents.
+The archivist is itself an agent, it has an agent_id ("archivist"), API key, and writes to the same store everyone else does. Its synthesis docs are readable by all agents.
 
 ## Session Handoff Flow
 
@@ -55,7 +55,7 @@ Session end (any machine):
 Session start (any machine):
   agent → GET /sessions/handoff/:agent_id
         ← { last_handoff, memory_delta_since_last_seen }
-  agent primes context from response — warm start
+  agent primes context from response, warm start
 ```
 
 Replaces: legacy host-sync skill, docs/handoff/ files, JSONL parsing.
@@ -68,4 +68,4 @@ Docker Compose. `docker compose up -d` starts the server. SQLite data persists i
 
 - API keys per agent, stored in .env (never in source)
 - Scope enforcement: private entries only readable by owning agent
-- Self-hosted only — no cloud, no external API calls except LLM for archivist
+- Self-hosted only, no cloud, no external API calls except LLM for archivist

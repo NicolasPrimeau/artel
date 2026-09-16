@@ -1399,7 +1399,7 @@ pre{
       <span>▸</span> link manually
     </summary>
     <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px">
-      <input id="mesh-url" placeholder="peer Artel URL  e.g. http://host:8000" style="width:100%;box-sizing:border-box">
+      <input id="mesh-url" placeholder="peer Artel URL  e.g, http://host:8000" style="width:100%;box-sizing:border-box">
       <input id="mesh-token" placeholder="peer's mesh token" style="width:100%;box-sizing:border-box">
       <input id="mesh-proj" placeholder="project scope (leave blank for all)" style="width:100%;box-sizing:border-box">
       <button class="p" onclick="addPeer()" style="align-self:flex-start">link peer</button>
@@ -1409,7 +1409,7 @@ pre{
   <!-- inbound tokens -->
   <div class="section-header">
     <span class="section-label">my tokens</span>
-    <span style="font-size:11px;color:var(--t4)">— share with peers so they can pull from you</span>
+    <span style="font-size:11px;color:var(--t4)"> share with peers so they can pull from you</span>
   </div>
   <div id="mesh-token-section"></div>
 </div>
@@ -1423,7 +1423,7 @@ pre{
   </div>
 
   <div class="section-header"><span class="section-label">knowledge graph</span>
-    <span style="font-size:11px;color:var(--t4)">— solid: archivist-asserted · dashed: learned from co-retrieval · red: contradicts</span>
+    <span style="font-size:11px;color:var(--t4)"> solid: archivist-asserted · dashed: learned from co-retrieval · red: contradicts</span>
   </div>
   <div style="position:relative;margin-bottom:20px">
     <canvas id="pulse-canvas" style="width:100%;height:380px;border:1px solid var(--b1);border-radius:6px;background:var(--s1);display:block"></canvas>
@@ -1433,22 +1433,22 @@ pre{
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px">
     <div>
       <div class="section-header"><span class="section-label">hottest trails</span>
-        <span style="font-size:11px;color:var(--t4)">— what the fleet keeps reaching for</span></div>
+        <span style="font-size:11px;color:var(--t4)"> what the fleet keeps reaching for</span></div>
       <div id="pulse-trails"></div>
     </div>
     <div>
       <div class="section-header"><span class="section-label">most central knowledge</span>
-        <span style="font-size:11px;color:var(--t4)">— pagerank over support edges</span></div>
+        <span style="font-size:11px;color:var(--t4)"> pagerank over support edges</span></div>
       <div id="pulse-central"></div>
     </div>
     <div>
       <div class="section-header"><span class="section-label">agent specializations</span>
-        <span style="font-size:11px;color:var(--t4)">— earned from completed tasks</span></div>
+        <span style="font-size:11px;color:var(--t4)"> earned from completed tasks</span></div>
       <div id="pulse-affinity"></div>
     </div>
     <div>
       <div class="section-header"><span class="section-label">sync conflicts</span>
-        <span style="font-size:11px;color:var(--t4)">— preserved losers awaiting resolution</span></div>
+        <span style="font-size:11px;color:var(--t4)"> preserved losers awaiting resolution</span></div>
       <div id="pulse-conflicts"></div>
     </div>
   </div>
@@ -1476,7 +1476,7 @@ pre{
     <div style="margin-top:16px;border-top:1px solid var(--s3);padding-top:12px">
       <div class="modal-title" style="margin-bottom:8px">comments</div>
       <div id="et-comments" style="max-height:240px;overflow-y:auto;margin-bottom:8px;font-size:12px"></div>
-      <textarea id="et-cmtbody" placeholder="add a comment..." rows="2" style="width:100%;margin-bottom:6px"></textarea>
+      <textarea id="et-cmtbody" placeholder="add a comment.." rows="2" style="width:100%;margin-bottom:6px"></textarea>
       <div class="write-row">
         <div class="spacer"></div>
         <button class="p sm" onclick="postTaskComment()">add comment</button>
@@ -1695,7 +1695,7 @@ function onAgentChange(){
 
 async function init(){
   if(window._agent_role==='viewer'){
-    // read-only visitor: there is no session to log out of — offer the way IN instead
+    // read-only visitor: there is no session to log out of, offer the way IN instead
     document.querySelectorAll('.auth-link').forEach(a=>{a.textContent='log in';a.href='/ui/login';});
   }
   if(window._agent_role==='owner'){
@@ -1706,7 +1706,7 @@ async function init(){
   await Promise.all([loadProjectsHeader(),loadAgentsGlobal()]);
   // deep link: /ui?project=<name>#<tab> lands with that project pre-selected
   const dlp=new URLSearchParams(location.search).get('project');
-  if(dlp&&[...$('h-project').options].some(o=>o.value===dlp)){$('h-project').value=dlp;}
+  if(dlp&&[..$('h-project').options].some(o=>o.value===dlp)){$('h-project').value=dlp;}
   _restoreTab();checkInbox();setInterval(checkInbox,30000);
   loadProjects();renderThemePickers();startLive();
   // on the dashboard, a deep-linked project opens its drill-down directly
@@ -1798,7 +1798,7 @@ function renderMem(es,isSearch=false){
   hdr.style.display='flex';
   hdr.querySelector('.section-label').textContent=isSearch?'results':'entries';
   cnt.textContent=es.length;
-  const sorted=[...es].sort((a,b)=>_typeOrder(a.type)-_typeOrder(b.type));
+  const sorted=[..es].sort((a,b)=>_typeOrder(a.type)-_typeOrder(b.type));
   $('mlist').innerHTML=sorted.map(e=>{
     const pct=Math.round(e.confidence*100);
     const cc=confClass(e.confidence);
@@ -1951,7 +1951,7 @@ function openTaskEdit(id){
   $('et-pri').value=d.pri||'normal';
   $('et-tags').value=(d.tags||[]).join(', ');
   $('et-cmtbody').value='';
-  $('et-comments').innerHTML='<span style="color:var(--t4)">loading...</span>';
+  $('et-comments').innerHTML='<span style="color:var(--t4)">loading..</span>';
   $('task-modal').classList.add('open');
   loadTaskComments(id);
 }
@@ -2093,7 +2093,7 @@ function _liveRefresh(){
 }
 function startLive(){
   // an always-on background event stream: any task/message/memory write anywhere
-  // refreshes whatever view is on screen — the UI follows the fleet in real time
+  // refreshes whatever view is on screen, the UI follows the fleet in real time
   if(_liveAbort)return;
   _liveAbort=new AbortController();
   (async()=>{
@@ -2176,7 +2176,7 @@ async function loadAgents(){
       $('alist').innerHTML=emptyState('◎',proj?`no agents in ${esc(proj)}`:'no agents registered');return;
     }
     const now=Date.now();
-    const sorted=[...list].sort((a,b)=>{
+    const sorted=[..list].sort((a,b)=>{
       return (b.last_seen?Date.parse(b.last_seen):0)-(a.last_seen?Date.parse(a.last_seen):0);
     });
     const activeCount=sorted.filter(p=>p.last_seen&&(now-Date.parse(p.last_seen))<300000).length;
@@ -2229,7 +2229,7 @@ async function loadProjects(){
       req('GET','/projects/mine').catch(()=>[]),
     ]);
     _myProjects=new Set(mine.map(p=>p.project_id));
-    const rows=[...new Set([...mine.map(p=>p.project_id),...ps.map(p=>p.name)])];
+    const rows=[..new Set([..mine.map(p=>p.project_id),..ps.map(p=>p.name)])];
     const html=rows.length?rows.map(name=>{
       const isMine=_myProjects.has(name);
       return `<div class="nav-pj${isMine?' mine':''}">
@@ -2510,24 +2510,24 @@ async function loadPulse(){
         <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.label)}</span>
         <span style="color:var(--t4);font-family:var(--mono);font-size:10px">${t.trail}</span>
       </div>`;
-    }).join(''):'<div style="color:var(--t4);font-size:12px">No trails yet — trails form as agents retrieve memories.</div>';
+    }).join(''):'<div style="color:var(--t4);font-size:12px">No trails yet, trails form as agents retrieve memories.</div>';
     $('pulse-central').innerHTML=d.central.length?d.central.map((c,i)=>`
       <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--b1);font-size:12px">
         <span style="color:var(--t4);font-family:var(--mono);font-size:10px;width:14px">${i+1}</span>
         <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.label)}</span>
-      </div>`).join(''):'<div style="color:var(--t4);font-size:12px">No support edges yet — the archivist links corroborating memories as it synthesizes.</div>';
+      </div>`).join(''):'<div style="color:var(--t4);font-size:12px">No support edges yet, the archivist links corroborating memories as it synthesizes.</div>';
     const byAgent={};
     d.affinities.forEach(a=>{(byAgent[a.agent_id]=byAgent[a.agent_id]||[]).push(a)});
     $('pulse-affinity').innerHTML=Object.keys(byAgent).length?Object.entries(byAgent).map(([ag,rows])=>`
       <div style="padding:5px 0;border-bottom:1px solid var(--b1);font-size:12px">
         <span style="font-family:var(--mono);color:var(--t2)">${esc(ag)}</span>
         <span style="margin-left:6px">${rows.slice(0,5).map(r=>`<span class="tag" title="${r.weight}">${esc(r.tag)}</span>`).join(' ')}</span>
-      </div>`).join(''):'<div style="color:var(--t4);font-size:12px">No specializations yet — agents earn tag affinity by completing tasks.</div>';
+      </div>`).join(''):'<div style="color:var(--t4);font-size:12px">No specializations yet, agents earn tag affinity by completing tasks.</div>';
     $('pulse-conflicts').innerHTML=d.conflicts.length?d.conflicts.map(c=>`
       <div class="card" style="border-left:2px solid var(--red,#e06c75);margin-bottom:6px;font-size:12px">
         <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.label)}</div>
         <div style="color:var(--t4);font-size:10px;font-family:var(--mono)">contradicts ${esc((c.parents[0]||'').slice(0,8))} · ${ago(c.created_at)}</div>
-      </div>`).join(''):'<div style="color:var(--t4);font-size:12px">None — the mesh has no unresolved concurrent edits.</div>';
+      </div>`).join(''):'<div style="color:var(--t4);font-size:12px">None, the mesh has no unresolved concurrent edits.</div>';
   }catch(e){
     $('pulse-trails').innerHTML=`<div style="color:var(--red,#e06c75);font-size:12px">${esc(e.message)}</div>`;
     $('pulse-central').innerHTML='';$('pulse-affinity').innerHTML='';$('pulse-conflicts').innerHTML='';
@@ -2549,10 +2549,10 @@ function drawPulseGraph(g){
   ctx.clearRect(0,0,W,H);
   if(!g.nodes.length){
     ctx.fillStyle=col.t3;ctx.font='12px sans-serif';ctx.textAlign='center';
-    ctx.fillText('No graph yet — edges appear as the archivist links memories and agents co-retrieve them.',W/2,H/2);
+    ctx.fillText('No graph yet, edges appear as the archivist links memories and agents co-retrieve them.',W/2,H/2);
     _pulseNodes=[];return;
   }
-  const nodes=g.nodes.map((n,i)=>({...n,
+  const nodes=g.nodes.map((n,i)=>({..n,
     x:W/2+Math.cos(i*2.399963)*Math.sqrt(i+1)*14,
     y:H/2+Math.sin(i*2.399963)*Math.sqrt(i+1)*14,vx:0,vy:0}));
   const idx={};nodes.forEach((n,i)=>idx[n.id]=i);
@@ -2628,7 +2628,7 @@ async function loadDashboard(){
       <div class="dash-stat"><span class="dash-stat-val">${active}</span><span class="dash-stat-lbl">active agents</span></div>
       <div class="dash-stat"><span class="dash-stat-val">${openT}</span><span class="dash-stat-lbl">open tasks</span></div>
       <div class="dash-stat"><span class="dash-stat-val">${claimedT}</span><span class="dash-stat-lbl">in progress</span></div>
-      <div class="dash-stat"><span class="dash-stat-val">${unread||'—'}</span><span class="dash-stat-lbl">unread messages</span></div>`;
+      <div class="dash-stat"><span class="dash-stat-val">${unread||''}</span><span class="dash-stat-lbl">unread messages</span></div>`;
     const projMap=new Map();
     _projects.forEach(p=>projMap.set(p.name,{name:p.name,open:0,claimed:0,last:null}));
     if(!projMap.has(null))projMap.set(null,{name:null,open:0,claimed:0,last:null});
@@ -2641,7 +2641,7 @@ async function loadDashboard(){
       const ua=t.updated_at||t.created_at;
       if(!p.last||ua>p.last)p.last=ua;
     });
-    const cards=[...projMap.values()].sort((a,b)=>{
+    const cards=[..projMap.values()].sort((a,b)=>{
       if(a.name===null&&b.name!==null)return 1;
       if(b.name===null&&a.name!==null)return -1;
       return(b.open+b.claimed)-(a.open+a.claimed)||(a.name||'').localeCompare(b.name||'');

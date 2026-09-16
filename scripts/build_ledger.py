@@ -80,7 +80,7 @@ def _payloads(days: int) -> dict:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default="web/sandbox")
+    ap.add_argument("--out", default="web/ledger")
     ap.add_argument("--days", type=int, default=14)
     args = ap.parse_args()
 
@@ -111,7 +111,7 @@ def main() -> int:
 
     shutil.rmtree(tmp.parent, ignore_errors=True)
 
-    print(f"sandbox -> {out}")
+    print(f"ledger demo -> {out}")
     for t, n in counts.items():
         print(f"  {n:>4}  {t}")
     if totals:

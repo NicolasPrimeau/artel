@@ -172,7 +172,7 @@ class ArtelMCP(FastMCP):
             if new_key:
                 raise RuntimeError(
                     "Your Artel API key was stale and has been refreshed for this session. "
-                    "Retry this tool call — it will succeed. "
+                    "Retry this tool call, it will succeed. "
                     f"To persist the new key: curl {settings.artel_url.rstrip('/')}/onboard | sh"
                 )
             raise RuntimeError(
@@ -283,30 +283,30 @@ mcp = ArtelMCP(
     host=settings.mcp_host,
     port=settings.mcp_port,
     stateless_http=True,
-    instructions="""You are connected to Artel — your fleet's smart notepad. One place you and every other agent write
+    instructions="""You are connected to Artel, your fleet's smart notepad. One place you and every other agent write
 down what you figure out, and it gets better at handing the right note back as it fills.
 
 Your standing job: write down what is worth keeping, and look before you act. What you learn, the
-whole fleet learns — including a future session of you.
+whole fleet learns, including a future session of you.
 
 SESSION LIFECYCLE (do these every session, no exceptions):
-1. START: call session_context() — loads your last handoff + what changed in memory while you were gone.
-2. START: call message_inbox() — read messages from other agents. Messages stay unread until you call message_mark_read().
+1. START: call session_context(), loads your last handoff + what changed in memory while you were gone.
+2. START: call message_inbox(), read messages from other agents. Messages stay unread until you call message_mark_read().
 3. After processing messages: call message_mark_read() with the IDs you've handled (or no args to clear all).
-4. END: call session_handoff() — saves what you did so the next session (or another agent) can continue.
+4. END: call session_handoff(), saves what you did so the next session (or another agent) can continue.
 
 NOTES (write often, read before you act):
-- Call memory_search() before starting any non-trivial work. It may already be solved — or already have
-  been tried and failed — by another agent, by your user, or by you last week.
+- Call memory_search() before starting any non-trivial work. It may already be solved, or already have
+  been tried and failed, by another agent, by your user, or by you last week.
 - Call memory_write() whenever you learn something worth keeping: facts, findings, plans, bugs.
-- Call decision_write() when you CHOOSE between options — the choice, why, and what you
+- Call decision_write() when you CHOOSE between options, the choice, why, and what you
   rejected. Not the same as a memory: notes decay, merge and get rewritten as understanding
   improves, which is right for knowledge and wrong for a record of what was decided. A
   decision is append-only and is what someone reads six months later asking "why is it
   like this?". Record it when you pick a library, a schema, a tradeoff, or reverse an
   earlier call.
 - entry_type="memory" is the default and right for almost everything. The archivist promotes stable entries to entry_type="doc" automatically.
-- Use entry_type="skill" for procedural knowledge — how to do something. Skills decay like memories but are never promoted to doc and are never merged. If a directive covers the same topic, the directive takes precedence.
+- Use entry_type="skill" for procedural knowledge, how to do something. Skills decay like memories but are never promoted to doc and are never merged. If a directive covers the same topic, the directive takes precedence.
 - Use tags to make things findable. Use scope="agent" only for things no other agent should see.
 - If MCP_PROJECT is set, all memory calls default to that project automatically.
 
@@ -315,7 +315,7 @@ COORDINATION:
 - Call project_list() to see what projects are active and who is in them.
 - Use project_join() to join a project and gain visibility into its shared memories and tasks.
 - Use task_list(status="open") to find work that needs doing.
-- Claim a task before starting it. Complete or fail it when done — never leave tasks in limbo.
+- Claim a task before starting it. Complete or fail it when done, never leave tasks in limbo.
 
 INBOX CRON (first session only):
 - Call inbox_cron_setup() to get instructions for scheduling automatic inbox checks.
@@ -329,7 +329,7 @@ COMPILE MODE (ground memory in code):
 IDENTITY:
 - Your agent_id and api_key are in your environment (MCP_AGENT_ID, MCP_AGENT_KEY).
 - The whole fleet shares one notepad, task list, and message bus. What you write, every other agent and
-  your user can read — so write it for a teammate, not as a note to self.""",
+  your user can read, so write it for a teammate, not as a note to self.""",
 )
 
 
@@ -351,7 +351,7 @@ def _err(e: Exception) -> str:
             detail = e.response.text
         return f"error {e.response.status_code}: {detail}"
     if isinstance(e, httpx.ConnectError):
-        return f"error: cannot connect to Artel server — {e}"
+        return f"error: cannot connect to Artel server, {e}"
     if isinstance(e, httpx.ReadTimeout):
         return "error: request timed out"
     return f"error: {type(e).__name__}: {e}"
@@ -362,7 +362,7 @@ class _StaleKeyError(BaseException):
 
 
 def _fmt_memory(e: dict, full_content: bool = False) -> str:
-    tags = ", ".join(e["tags"]) if e["tags"] else "—"
+    tags = ", ".join(e["tags"]) if e["tags"] else ""
     project = f" project={e['project']}" if e.get("project") else ""
     version = f" v{e['version']}" if e.get("version") is not None else ""
     meta = f"[{e['id']}]{version} ({e['agent_id']}, {e['type']}, conf={e['confidence']:.2f}, tags={tags}{project})"
@@ -394,7 +394,7 @@ def _knowledge_map(project: str, entries: list[dict]) -> str | None:
             docs.append(e)
         elif e["type"] == "directive":
             directives.append(e)
-    lines = [f"## Knowledge map — {project} ({len(entries)} entries)"]
+    lines = [f"## Knowledge map, {project} ({len(entries)} entries)"]
     shared = {t: n for t, n in tag_counts.items() if n > 1}
     top = sorted((shared or tag_counts).items(), key=lambda kv: (-kv[1], kv[0]))[:20]
     if top:
@@ -448,7 +448,7 @@ async def session_context(agent_id: str | None = None) -> str:
             brief_r.raise_for_status()
             briefs = brief_r.json()
             if briefs:
-                parts.append(f"## Project brief — {project}\n{briefs[0]['content']}")
+                parts.append(f"## Project brief, {project}\n{briefs[0]['content']}")
         except _HTTPX_ERRORS:
             pass
         try:
@@ -492,7 +492,7 @@ async def session_context(agent_id: str | None = None) -> str:
         total = len(delta)
         shown = delta[:20]
         label = f"{total} entries" + (
-            ", showing first 20 — call memory_delta() for the rest" if total > 20 else ""
+            ", showing first 20, call memory_delta() for the rest" if total > 20 else ""
         )
         parts.append(f"\n## Memory since last session ({label})")
         for e in shown:
@@ -510,14 +510,14 @@ async def session_handoff(
     next_steps: list[str] | None = None,
     in_progress: list[str] | None = None,
 ) -> str:
-    """CALL THIS LAST before your session ends — saves state for your next session.
+    """CALL THIS LAST before your session ends, saves state for your next session.
 
     Stores what you did, what's in progress, and what to do next. The next time you (or
     any agent loading your context) calls session_context(), this is what they'll get.
     Write a thorough summary: decisions made, blockers hit, context that would be lost otherwise.
 
     Args:
-        summary: What you accomplished this session. Be specific — this is your only record.
+        summary: What you accomplished this session. Be specific, this is your only record.
         next_steps: What to do in the next session, in order of priority.
         in_progress: Task IDs that are currently claimed and not yet completed.
     """
@@ -561,10 +561,10 @@ async def memory_write(
     - Anything another agent (or future you) would want to know
 
     Types:
-    - memory: default — use this for everything
+    - memory: default, use this for everything
     - doc: stable reference material; normally written by the archivist, not agents
     - directive: a standing instruction the archivist reads before synthesis; scoped like any entry, but the archivist loads directives from every project it can see, so write it to apply beyond this project too; confidence is always forced to 1.0 and it never decays
-    - skill: procedural knowledge — how to do something; decays like memory, never promoted, never merged; superseded by directives on the same topic
+    - skill: procedural knowledge, how to do something; decays like memory, never promoted, never merged; superseded by directives on the same topic
 
     Scopes:
     - project: visible to all members of this project (default)
@@ -575,7 +575,7 @@ async def memory_write(
         entry_type: See types above. Default: memory.
         scope: See scopes above. Default: project.
         project: Project to scope the entry to. Defaults to MCP_PROJECT if set.
-        tags: Tags for filtering and retrieval. Use them — they make memory_list useful.
+        tags: Tags for filtering and retrieval. Use them, they make memory_list useful.
         confidence: How certain you are (0.0–1.0). Default 1.0. Use lower for guesses.
     """
     c = _http()
@@ -613,7 +613,7 @@ async def memory_search(
 ) -> str:
     """Search shared memory by meaning. Call this before starting work.
 
-    Uses semantic (embedding) search — finds entries by meaning, not exact keywords.
+    Uses semantic (embedding) search, finds entries by meaning, not exact keywords.
     Always search before writing: another agent may have already captured what you need.
     Also useful for: finding prior decisions, understanding what's been explored, avoiding duplication.
 
@@ -701,7 +701,7 @@ async def memory_get(entry_id: str) -> str:
 
     Use when memory_search() or memory_list() returned a truncated entry and you need
     the complete text, or when you have a specific entry ID and want all its metadata
-    (confidence, tags, origin, read count). Read-only — no side effects.
+    (confidence, tags, origin, read count). Read-only, no side effects.
 
     Args:
         entry_id: The UUID of the entry. Short prefixes (min 4 chars) are resolved if unambiguous.
@@ -801,7 +801,7 @@ async def memory_delta(since: str) -> str:
     """Get all memory written or updated after a timestamp.
 
     Use when you need to catch up on a specific time window. session_context() calls this
-    automatically since your last handoff — use memory_delta directly only if you need
+    automatically since your last handoff, use memory_delta directly only if you need
     a custom time range.
 
     Args:
@@ -828,7 +828,7 @@ async def compile_status(project: str | None = None) -> str:
 
     Compiled memory is the build-invalidated half of the store: a grounded description of what code
     IS, stamped with its source SHA. Fresh = trust it without re-reading the code; stale = the source
-    moved, recheck. Authored memory (the decaying half) is unaffected — both modes share this store.
+    moved, recheck. Authored memory (the decaying half) is unaffected, both modes share this store.
 
     Args:
         project: Restrict to a project. Defaults to MCP_PROJECT if set.
@@ -862,7 +862,7 @@ async def compile_status(project: str | None = None) -> str:
 async def compile_stale(project: str | None = None) -> str:
     """List compiled descriptions whose source changed since they were built (SHA != HEAD).
 
-    These are no longer provably current — recompile (re-run the hook on those files) before trusting.
+    These are no longer provably current, recompile (re-run the hook on those files) before trusting.
 
     Args:
         project: Restrict to a project. Defaults to MCP_PROJECT if set.
@@ -877,7 +877,7 @@ async def compile_stale(project: str | None = None) -> str:
         return _err(e)
     rows = r.json()
     if not rows:
-        return "No stale compiled nodes — every grounded description is current."
+        return "No stale compiled nodes, every grounded description is current."
     return "\n\n".join(_fmt_memory(m) for m in rows)
 
 
@@ -889,8 +889,8 @@ async def graph_neighbors(node_id: str) -> str:
     """Inspect a node in the memory knowledge graph: its kind, typed edges, and viability.
 
     Edges are grounds / relies_on / applies_to / contradicts / corroborates. Viability is derived from
-    connectivity — the more (fresh) connections, the more a node is worth trusting; a bare node fades.
-    node_id is a memory id or a code-anchor id (4-char prefixes are NOT resolved here — pass a full id).
+    connectivity, the more (fresh) connections, the more a node is worth trusting; a bare node fades.
+    node_id is a memory id or a code-anchor id (4-char prefixes are NOT resolved here, pass a full id).
 
     Args:
         node_id: The graph node id (memory or code anchor).
@@ -907,7 +907,7 @@ async def graph_neighbors(node_id: str) -> str:
     inc = "\n".join(f"  <-{e['rel']}- {e['src']}" for e in g["edges"]["in"]) or "  (none)"
     return (
         f"[{g['kind']}] {node_id}\n"
-        f"viability {v['score']} — degree {v['degree']}, fresh_grounds {v['fresh_grounds']}, "
+        f"viability {v['score']}, degree {v['degree']}, fresh_grounds {v['fresh_grounds']}, "
         f"stale_grounds {v['stale_grounds']}, backlinks {v['backlinks']}, contradictions {v['contradictions']}\n"
         f"out:\n{out}\nin:\n{inc}"
     )
@@ -951,13 +951,13 @@ async def graph_link(
     annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False),
 )
 def compile_setup(project: str | None = None) -> str:
-    """Set up compile mode for the current git repo — ground the fleet's notes about code in the code itself.
+    """Set up compile mode for the current git repo, ground the fleet's notes about code in the code itself.
 
     Compile mode adds a pre-commit hook that, on every commit, compiles changed source files into
     `compiled` memory: grounded descriptions of what the code IS, stamped with its content hash so
     they recompile instead of decaying. Run this once per repo. Ask me "set up compile mode" anytime.
 
-    The hook is a single self-contained, stdlib-only Python file — no `pip install` needed, and it is
+    The hook is a single self-contained, stdlib-only Python file, no `pip install` needed, and it is
     a safe no-op until ARTEL_AGENT_ID/ARTEL_AGENT_KEY (or MCP_AGENT_ID/MCP_AGENT_KEY) are present.
 
     Args:
@@ -993,7 +993,7 @@ async def project_list() -> str:
 
     Use this to understand what projects are active, who's working on what,
     and how much shared context each project has. Your default project is
-    MCP_PROJECT (if set) — memory you write goes there automatically.
+    MCP_PROJECT (if set), memory you write goes there automatically.
     """
     c = _http()
     try:
@@ -1008,7 +1008,7 @@ async def project_list() -> str:
     for p in projects:
         marker = " ◀ yours" if p["name"] == settings.resolve_project() else ""
         lines.append(
-            f"{p['name']}{marker} — {p['memory_count']} memories, {p['task_count']} tasks"
+            f"{p['name']}{marker}, {p['memory_count']} memories, {p['task_count']} tasks"
             f" | agents: {', '.join(p['agents']) or 'none'}"
             f" | last: {(p['last_activity'] or 'never')[:16]}"
         )
@@ -1020,7 +1020,7 @@ async def project_list() -> str:
     annotations=ToolAnnotations(destructiveHint=False, idempotentHint=True, openWorldHint=False),
 )
 async def project_join(project_id: str) -> str:
-    """Switch to a project — this becomes your single active project.
+    """Switch to a project, this becomes your single active project.
 
     You are in exactly one project at a time; joining a new one replaces the
     previous membership. After joining, this project's scoped memory and tasks
@@ -1044,7 +1044,7 @@ async def project_join(project_id: str) -> str:
     annotations=ToolAnnotations(destructiveHint=False, idempotentHint=True, openWorldHint=False),
 )
 async def project_leave(project_id: str) -> str:
-    """Leave a project — removes you from its member list.
+    """Leave a project, removes you from its member list.
 
     After leaving, project-scoped memories for this project no longer appear in
     memory_search() or memory_list() results. Memory you already wrote to the project
@@ -1071,7 +1071,7 @@ async def project_members(project_id: str) -> str:
 
     Use before sending project-wide messages or assigning tasks to confirm who
     has visibility into the project's shared memory. Returns each member's agent_id
-    and join timestamp. Requires membership — non-members cannot enumerate a project's members.
+    and join timestamp. Requires membership, non-members cannot enumerate a project's members.
 
     Args:
         project_id: The project name to inspect.
@@ -1110,7 +1110,7 @@ async def agent_list() -> str:
     lines = []
     for p in participants:
         parts = [
-            f"{p['agent_id']} — last seen: {p['last_seen'][:16] if p['last_seen'] else 'never'}"
+            f"{p['agent_id']}, last seen: {p['last_seen'][:16] if p['last_seen'] else 'never'}"
         ]
         if p.get("project"):
             parts.append(f"project={p['project']}")
@@ -1251,12 +1251,12 @@ async def agent_rename(new_id: str) -> str:
     ),
 )
 async def message_inbox() -> str:
-    """DEPRECATED: the harness owns this now — Claude Code discovers peers and manages its own task list. Still works; not where new work should go.
+    """DEPRECATED: the harness owns this now, Claude Code discovers peers and manages its own task list. Still works; not where new work should go.
 
     Read your unread messages. Call this at session start.
 
     Messages stay unread until you call message_mark_read(). This lets you read
-    without consuming — safe across multiple sessions and concurrent agents.
+    without consuming, safe across multiple sessions and concurrent agents.
     Call message_mark_read() once you've processed a message.
     """
     c = _http()
@@ -1309,7 +1309,7 @@ async def message_mark_read(msg_ids: list[str] | None = None) -> str:
     structured_output=True, annotations=ToolAnnotations(destructiveHint=False, openWorldHint=False)
 )
 async def message_send(to: str, body: str, subject: str = "") -> str:
-    """DEPRECATED: the harness owns this now — Claude Code discovers peers and manages its own task list. Still works; not where new work should go.
+    """DEPRECATED: the harness owns this now, Claude Code discovers peers and manages its own task list. Still works; not where new work should go.
 
     Send a message to another agent's inbox.
 
@@ -1339,7 +1339,7 @@ async def message_send(to: str, body: str, subject: str = "") -> str:
     annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False),
 )
 async def message_list(read: bool | None = None, limit: int = 50) -> str:
-    """DEPRECATED: the harness owns this now — Claude Code discovers peers and manages its own task list. Still works; not where new work should go.
+    """DEPRECATED: the harness owns this now, Claude Code discovers peers and manages its own task list. Still works; not where new work should go.
 
     List all messages sent to or from you (full history, not just unread).
 
@@ -1385,7 +1385,7 @@ async def task_list(
     tag: str | None = None,
     unblocked: bool = False,
 ) -> str:
-    """DEPRECATED: the harness owns this now — Claude Code discovers peers and manages its own task list. Still works; not where new work should go.
+    """DEPRECATED: the harness owns this now, Claude Code discovers peers and manages its own task list. Still works; not where new work should go.
 
     List tasks. Call with status="open" to find work that needs doing.
 
@@ -1439,7 +1439,7 @@ async def task_create(
     depends_on: list[str] | None = None,
     completion_contract: dict | None = None,
 ) -> str:
-    """DEPRECATED: the harness owns this now — Claude Code discovers peers and manages its own task list. Still works; not where new work should go.
+    """DEPRECATED: the harness owns this now, Claude Code discovers peers and manages its own task list. Still works; not where new work should go.
 
     Create a task for yourself or another agent to pick up.
 
@@ -1450,14 +1450,14 @@ async def task_create(
     Args:
         title: Short imperative description, e.g. "Fix auth token expiry bug".
         description: Context, acceptance criteria, or relevant links.
-        expected_outcome: What done looks like — specific, observable result.
+        expected_outcome: What done looks like, specific, observable result.
         project: Project scope. Defaults to MCP_PROJECT if set.
         priority: low, normal (default), or high.
         tags: Labels for filtering, e.g. ["writing", "infra"].
         depends_on: Task IDs that must be completed before this task is unblocked.
         completion_contract: Optional shape the completing agent's structured output must
             match. When set, task_complete() REJECTS a completion whose output is missing
-            or malformed — use it when something downstream consumes the result (e.g. one
+            or malformed, use it when something downstream consumes the result (e.g. one
             follow-up task per discovered item). Omit for ordinary tasks. Supported subset
             of JSON Schema: type (object/array/string/number/integer/boolean), required,
             properties, items, enum, minItems, minLength. Example:
@@ -1492,9 +1492,9 @@ async def task_create(
     structured_output=True, annotations=ToolAnnotations(destructiveHint=False, openWorldHint=False)
 )
 async def task_claim(task_id: str, body: str = "") -> str:
-    """DEPRECATED: the harness owns this now — Claude Code discovers peers and manages its own task list. Still works; not where new work should go.
+    """DEPRECATED: the harness owns this now, Claude Code discovers peers and manages its own task list. Still works; not where new work should go.
 
-    Claim an open task — marks it as yours and sets status to 'claimed'.
+    Claim an open task, marks it as yours and sets status to 'claimed'.
 
     Always claim a task before working on it. This prevents two agents from doing
     the same work. Call task_complete(), task_fail(), or task_unclaim() when done.
@@ -1517,7 +1517,7 @@ async def task_claim(task_id: str, body: str = "") -> str:
     structured_output=True, annotations=ToolAnnotations(destructiveHint=False, openWorldHint=False)
 )
 async def task_unclaim(task_id: str, body: str = "") -> str:
-    """Release your claim on a task — returns it to 'open' so others can pick it up.
+    """Release your claim on a task, returns it to 'open' so others can pick it up.
 
     Use when you're stepping away mid-flight and the task isn't done or failed
     (e.g. blocked on an async external process, handing off, ending a session).
@@ -1525,7 +1525,7 @@ async def task_unclaim(task_id: str, body: str = "") -> str:
 
     Args:
         task_id: ID of a task you have claimed.
-        body: Optional reason recorded on the task's comment log. Strongly recommended —
+        body: Optional reason recorded on the task's comment log. Strongly recommended
               the next agent to look at this task will see your context.
     """
     c = _http()
@@ -1542,7 +1542,7 @@ async def task_unclaim(task_id: str, body: str = "") -> str:
     structured_output=True, annotations=ToolAnnotations(destructiveHint=False, openWorldHint=False)
 )
 async def task_complete(task_id: str, body: str = "", output: dict | None = None) -> str:
-    """DEPRECATED: the harness owns this now — Claude Code discovers peers and manages its own task list. Still works; not where new work should go.
+    """DEPRECATED: the harness owns this now, Claude Code discovers peers and manages its own task list. Still works; not where new work should go.
 
     Mark your claimed task as completed. Only the claiming agent can complete it.
 
@@ -1554,8 +1554,8 @@ async def task_complete(task_id: str, body: str = "", output: dict | None = None
     Args:
         task_id: ID of a task you have claimed.
         body: Summary of what was accomplished, including follow-up IDs or links.
-              Recommended — it is the only record future agents have of what was done.
-        output: Structured result of the work. Required — and shape-checked — when the task
+              Recommended, it is the only record future agents have of what was done.
+        output: Structured result of the work. Required, and shape-checked, when the task
               declares a completion_contract; check the task with task_get() before
               completing. Completion is REJECTED if it is missing or does not match.
               Optional otherwise, in which case it is stored as-is.
@@ -1574,11 +1574,11 @@ async def task_complete(task_id: str, body: str = "", output: dict | None = None
     structured_output=True, annotations=ToolAnnotations(destructiveHint=False, openWorldHint=False)
 )
 async def task_fail(task_id: str, body: str = "") -> str:
-    """DEPRECATED: the harness owns this now — Claude Code discovers peers and manages its own task list. Still works; not where new work should go.
+    """DEPRECATED: the harness owns this now, Claude Code discovers peers and manages its own task list. Still works; not where new work should go.
 
     Mark your claimed task as failed. Use when you cannot complete it.
 
-    Prefer this over abandoning — it unblocks other agents who can see the task
+    Prefer this over abandoning, it unblocks other agents who can see the task
     failed and decide what to do next. If you're stepping away but the task isn't
     truly failed, use task_unclaim() instead.
 
@@ -1629,7 +1629,7 @@ async def task_get(task_id: str) -> str:
     """Fetch full details of a task by ID, including its chronological comment log.
 
     Use when task_list() gave you an ID and you need the description, expected outcome,
-    and full history of status changes and agent comments. Read-only — no side effects.
+    and full history of status changes and agent comments. Read-only, no side effects.
 
     Args:
         task_id: The UUID of the task. Short prefixes (min 4 chars) are resolved if unambiguous.
@@ -1656,7 +1656,7 @@ async def task_get(task_id: str) -> str:
         lines.append(f"expected outcome: {t['expected_outcome']}")
     if t.get("completion_contract"):
         lines.append(
-            "completion contract — task_complete(output=...) must match this shape or it"
+            "completion contract, task_complete(output=...) must match this shape or it"
             f" is rejected: {json.dumps(t['completion_contract'])}"
         )
     if t.get("completion_payload"):
@@ -1746,7 +1746,7 @@ async def task_add_dependency(task_id: str, depends_on: str) -> str:
     except _HTTPX_ERRORS as e:
         return _err(e)
     t = r.json()
-    return f"[{task_id}] now depends on [{depends_on}] — blocked_by={t.get('depends_on', [])}"
+    return f"[{task_id}] now depends on [{depends_on}], blocked_by={t.get('depends_on', [])}"
 
 
 @mcp.tool(
@@ -1788,11 +1788,11 @@ def _fmt_run(run: dict) -> str:
     structured_output=True, annotations=ToolAnnotations(destructiveHint=False, openWorldHint=False)
 )
 async def blueprint_instantiate(name: str, params: dict | None = None) -> str:
-    """Start a blueprint run — scaffolds a multi-step procedure as a self-expanding task DAG.
+    """Start a blueprint run, scaffolds a multi-step procedure as a self-expanding task DAG.
 
     A blueprint is a compiled procedure: template tasks plus the dependencies between
     them. Instantiating creates only the FIRST wave of real tasks. As each one is
-    completed, the server expands the next wave automatically — including fan-out,
+    completed, the server expands the next wave automatically, including fan-out,
     where one task per discovered item is created from the completing task's output.
 
     You do not drive the run. After instantiating, work it like any other board:
@@ -1824,7 +1824,7 @@ async def blueprint_run(run_id: str) -> str:
     """Show a blueprint run: its status and every task materialized so far.
 
     Use to see how far a run has expanded and which tasks are still open.
-    Read-only — no side effects.
+    Read-only, no side effects.
 
     Args:
         run_id: The run ID returned by blueprint_instantiate().
@@ -1845,9 +1845,9 @@ async def blueprint_run(run_id: str) -> str:
 async def blueprint_list() -> str:
     """List the blueprints available to instantiate.
 
-    A blueprint is a procedure compiled into a task DAG — instantiate one with
+    A blueprint is a procedure compiled into a task DAG, instantiate one with
     blueprint_instantiate() instead of trying to follow a long procedure by hand.
-    Read-only — no side effects.
+    Read-only, no side effects.
     """
     c = _http()
     try:
@@ -1862,7 +1862,7 @@ async def blueprint_list() -> str:
     for entry in entries:
         doc = entry["document"]
         params = ", ".join(doc.get("params", [])) or "none"
-        lines.append(f"[{entry['name']}] v{entry['version']} — {doc.get('description', '')}")
+        lines.append(f"[{entry['name']}] v{entry['version']}, {doc.get('description', '')}")
         pct = int(entry.get("lowered_fraction", 0) * 100)
         lines.append(
             f"  params: {params} | nodes: {len(doc.get('nodes', []))}"
@@ -1886,7 +1886,7 @@ async def decision_write(
 ) -> str:
     """Record an irreversible decision with its rationale.
 
-    Decisions are append-only — they cannot be updated or deleted. Use them
+    Decisions are append-only, they cannot be updated or deleted. Use them
     for choices that future agents should not re-litigate: architecture picks,
     scope cuts, approach selections. Memory captures what is true; decisions
     capture what was chosen and why.
@@ -1928,7 +1928,7 @@ async def decision_list(
 ) -> str:
     """List recorded decisions, most recent first.
 
-    Read before starting work on something already decided — this is where
+    Read before starting work on something already decided, this is where
     settled questions live. Complements memory_search() for factual context.
 
     Args:
@@ -2081,7 +2081,7 @@ async def feed_list(project: str | None = None) -> str:
 
     Use before subscribing to check for duplicates, or to find a feed_id for
     feed_unsubscribe(). Shows subscription metadata including poll interval and last
-    fetch timestamp. Does not trigger a fetch — the archivist polls on schedule.
+    fetch timestamp. Does not trigger a fetch, the archivist polls on schedule.
 
     Args:
         project: Filter by project. Omit to list all accessible feeds.
@@ -2099,7 +2099,7 @@ async def feed_list(project: str | None = None) -> str:
         return "No feed subscriptions."
     lines = []
     for f in feeds:
-        tags = ", ".join(f["tags"]) if f["tags"] else "—"
+        tags = ", ".join(f["tags"]) if f["tags"] else ""
         last = (f["last_fetched_at"] or "never")[:16]
         lines.append(
             f"[{f['id']}] {f['name']} | {f['url']} | project={f['project']}"
@@ -2116,7 +2116,7 @@ async def feed_unsubscribe(feed_id: str) -> str:
     """Unsubscribe from a feed and stop future polling.
 
     Removes the subscription and its seen-item deduplication history. Memory entries
-    already written from this feed are NOT deleted — only the subscription is removed.
+    already written from this feed are NOT deleted, only the subscription is removed.
     If the feed is re-subscribed later, previously seen items may be re-ingested.
     Use feed_list() to find the feed_id.
 
@@ -2177,14 +2177,14 @@ def triage_backlog(project: str = "") -> str:
         "Triage the backlog: call task_list(status='open'"
         + (f", project='{project}'" if project else "")
         + "), pick the highest-value unclaimed task, task_claim() it, and "
-        "complete or fail it when done — never leave a task in limbo."
+        "complete or fail it when done, never leave a task in limbo."
     )
 
 
 @mcp.prompt()
 def capture_finding(topic: str = "") -> str:
     """Persist a decision, bug, or discovery to the fleet's notepad so the whole
-    fleet — and future you — benefits instead of relearning it.
+    fleet, and future you, benefits instead of relearning it.
 
     Args:
         topic: What the finding is about.

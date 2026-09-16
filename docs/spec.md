@@ -9,7 +9,7 @@ anchors:
 
 ## Overview
 
-Artel is a blackboard architecture — agents read and write to a shared state space, react to what they find. No direct coupling between agents. The server is the single source of truth. Git is the audit log only.
+Artel is a blackboard architecture, agents read and write to a shared state space, react to what they find. No direct coupling between agents. The server is the single source of truth. Git is the audit log only.
 
 ## Agent Identity
 
@@ -67,7 +67,7 @@ DELETE /memory/:id          soft delete
 
 > **Deprecated.** The harness now owns this. Claude Code discovers peer sessions
 > and messages them directly, and manages its own task list, so Artel's version went
-> unused — message traffic fell 123 → 24 → 8 → 0 over three months while the native
+> unused, message traffic fell 123 → 24 → 8 → 0 over three months while the native
 > capability shipped. The endpoints and tools remain and still work; they are no
 > longer where new work should go. Artel's durable half is knowledge, not coordination.
 
@@ -111,7 +111,7 @@ Lifecycle ops accept an optional `body` field that is recorded as a kind-tagged 
 
 > **Deprecated.** The harness now owns this. Claude Code discovers peer sessions
 > and messages them directly, and manages its own task list, so Artel's version went
-> unused — message traffic fell 123 → 24 → 8 → 0 over three months while the native
+> unused, message traffic fell 123 → 24 → 8 → 0 over three months while the native
 > capability shipped. The endpoints and tools remain and still work; they are no
 > longer where new work should go. Artel's durable half is knowledge, not coordination.
 
@@ -199,9 +199,9 @@ POST /sessions/handoff
 {
   "agent_id": "nimbus",
   "host": "host-1",
-  "summary": "...",
+  "summary": "..",
   "in_progress": ["task_id_1", "task_id_2"],
-  "next_steps": ["..."],
+  "next_steps": [".."],
   "memory_refs": ["entry_id_1"]
 }
 ```

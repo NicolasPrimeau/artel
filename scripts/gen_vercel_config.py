@@ -3,7 +3,8 @@ import pathlib
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-DOCS = ROOT / "web" / "docs"
+WEB = ROOT / "web"
+DOCS = WEB / "docs"
 
 BASE = {
     "$schema": "https://openapi.vercel.sh/vercel.json",
@@ -28,8 +29,15 @@ def main() -> int:
     # Sources carry the trailing slash: with trailingSlash enabled Vercel 308s
     # /plugin -> /plugin/ BEFORE redirects are evaluated, so a slash-less source
     # never matches. Both forms are emitted so the slash-less URL is a single hop.
+    # A redirect whose source is also a real top-level path would shadow it: the
+    # docs contain a page called "ledger", and /ledger/ is the ledger demo. Vercel
+    # evaluates redirects before static files, so the demo simply vanished.
+    reserved = {d.name for d in WEB.iterdir() if d.is_dir() and d.name != "docs"}
     redirects = []
     for page in pages:
+        if page.split("/")[0] in reserved:
+            print(f"  skipping /{page} -- shadows the real /{page}")
+            continue
         redirects.append(
             {"source": f"/{page}/", "destination": f"/docs/{page}/", "permanent": True}
         )
@@ -37,11 +45,16 @@ def main() -> int:
     redirects.append(
         {"source": "/reference/", "destination": "/docs/reference/rest/", "permanent": True}
     )
+    # /sandbox was this page's name for one afternoon. It promised the Artel
+    # dashboard and delivered the ledger, so the ledger took the honest name and
+    # /sandbox is left free for a live instance later.
+    redirects.append({"source": "/sandbox/", "destination": "/ledger/", "permanent": False})
+    redirects.append({"source": "/sandbox", "destination": "/ledger/", "permanent": False})
     cfg = dict(BASE)
     cfg["redirects"] = redirects
     cfg["headers"] = [
         {
-            "source": "/sandbox/data/(.*)",
+            "source": "/ledger/data/(.*)",
             "headers": [{"key": "Cache-Control", "value": "public, max-age=300"}],
         }
     ]

@@ -168,8 +168,8 @@ jobs:
       - name: Build docs into the site
         run: uv run mkdocs build --strict -f mkdocs.web.yml
 
-      - name: Build the sandbox
-        run: uv run python scripts/build_sandbox.py
+      - name: Build the ledger demo
+        run: uv run python scripts/build_ledger.py
 
       # Redirects are derived from the pages that exist, so a page added or
       # renamed never leaves its old URL dangling.

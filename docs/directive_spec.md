@@ -3,16 +3,16 @@ anchors:
   - artel/server/models.py
 ---
 
-# Directive Entry Type — Design Spec
+# Directive Entry Type, Design Spec
 
 ## Overview
 
-A `directive` is a third `entry_type` for the Artel memory store, alongside `memory` and `doc`. It represents a standing instruction that shapes agent behavior — particularly the archivist's — within a project or for a specific agent. Directives are authoritative by definition: they are written intentionally by humans or trusted agents, never synthesized from data.
+A `directive` is a third `entry_type` for the Artel memory store, alongside `memory` and `doc`. It represents a standing instruction that shapes agent behavior, particularly the archivist's, within a project or for a specific agent. Directives are authoritative by definition: they are written intentionally by humans or trusted agents, never synthesized from data.
 
 The type hierarchy in intent:
-- `memory` — observed facts; ephemeral, confidence decays, may be promoted
-- `doc` — promoted stable knowledge; long-lived but still participates in synthesis
-- `directive` — behavioral instructions; immune to automated modification, loaded as context not content
+- `memory`, observed facts; ephemeral, confidence decays, may be promoted
+- `doc`, promoted stable knowledge; long-lived but still participates in synthesis
+- `directive`, behavioral instructions; immune to automated modification, loaded as context not content
 
 ---
 
@@ -26,7 +26,7 @@ Directives are **inert with respect to all automated archivist operations**. The
 - Soft-delete a directive
 - Include a directive in the synthesis memory block that is passed to the LLM
 
-The confidence field on a directive is fixed at `1.0` on write and cannot be changed by any automated process. A human (or a trusted agent with explicit owner rights — see §3) may update it via `PATCH`, but the archivist client must never call `patch_memory` on an entry with `type="directive"`.
+The confidence field on a directive is fixed at `1.0` on write and cannot be changed by any automated process. A human (or a trusted agent with explicit owner rights, see §3) may update it via `PATCH`, but the archivist client must never call `patch_memory` on an entry with `type="directive"`.
 
 Directives are not versioned by synthesis. Their `version` field increments only on explicit human `PATCH` calls, which is useful for auditing whether a directive has been revised.
 
@@ -34,7 +34,7 @@ Directives are not versioned by synthesis. Their `version` field increments only
 
 | Operation | Memory | Doc | Directive |
 |---|---|---|---|
-| Included in synthesis LLM prompt | Yes | Yes | No — loaded as preamble |
+| Included in synthesis LLM prompt | Yes | Yes | No, loaded as preamble |
 | Confidence decay | Yes | Yes | No |
 | Promotion | Yes | No | No |
 | Conflict merge | Yes | Yes | No |
@@ -47,25 +47,25 @@ Directives are not versioned by synthesis. Their `version` field increments only
 
 The existing `scope` field (`agent` | `project`) maps cleanly onto directive semantics.
 
-**`scope="project"` + `project=<name>` — project-scoped directive**
+**`scope="project"` + `project=<name>`, project-scoped directive**
 
 Visible to all agents in the project. Applies to any agent operating within that project context. This is the primary form. Examples:
 - "Never store PII in this project's memories"
 - "Elevate anything tagged `mcp-plugin` to high priority"
 - "Flag memories with confidence < 0.3 for human review instead of letting them decay to floor"
 
-**`scope="agent"` — agent-scoped directive**
+**`scope="agent"`, agent-scoped directive**
 
 Visible only to the owning agent (enforced by existing scope logic). Used to customize one agent's behavior without polluting the shared context. Primarily useful for archivist-specific guidance that shouldn't be visible to other agents. Examples:
 - "When synthesizing this project, weight entries from agent `nimbus` more heavily than `poseidon`"
-- "Do not create tasks from synthesis — only write findings"
+- "Do not create tasks from synthesis, only write findings"
 
 **Valid combinations:**
 
 | scope | project | Semantics |
 |---|---|---|
 | `project` | set | All agents in that project see and apply this directive |
-| `project` | null | Global directive — all projects, all agents. Use sparingly. |
+| `project` | null | Global directive, all projects, all agents. Use sparingly. |
 | `agent` | set | One agent's private instruction, project-contextualized |
 | `agent` | null | One agent's global private instruction |
 
@@ -81,7 +81,7 @@ This means project-specific instructions override global ones, and archivist-pri
 
 ## 3. Write Permissions
 
-> **Superseded — this section described an allowlist that was never built.**
+> **Superseded, this section described an allowlist that was never built.**
 > `DIRECTIVE_WRITERS` does not exist in the code. The original intent below
 > (human-authored only, archivist excluded) was not what shipped: the first
 > implementation gated on `can_curate_memory`, which *includes* the archivist.
@@ -94,7 +94,7 @@ Original rationale, kept for context: directives are authoritative. If the archi
 
 `POST /memory` with `type="directive"` calls `can_write_directive(agent_id)` (`artel/server/auth.py`), which is `ROLE_RANK[role] >= ROLE_RANK["agent"]`. So `agent`, `archivist`, and `owner` may write directives; `viewer` receives `403 Forbidden` with detail `"directive writes require an agent role"`.
 
-This is deliberately *not* `can_curate_memory` — that predicate also governs editing and deleting entries the caller does not own, and writing a standing instruction is a different privilege from editing another agent's memory.
+This is deliberately *not* `can_curate_memory`, that predicate also governs editing and deleting entries the caller does not own, and writing a standing instruction is a different privilege from editing another agent's memory.
 
 The self-instruction loop the original design worried about is therefore live: the archivist can write a directive it will later read. Nothing currently prevents that.
 
@@ -117,7 +117,7 @@ Only the original author. The soft-delete endpoint checks `agent_id` ownership, 
 At the start of `run_synthesis`, before fetching the delta entries and before constructing the LLM prompt, the archivist calls a dedicated helper:
 
 ```python
-async def load_directives(client: ArtelClient, project: str | None) -> list[dict]: ...
+async def load_directives(client: ArtelClient, project: str | None) -> list[dict]: ..
 ```
 
 This makes two calls to `GET /memory` with `type=directive`:
@@ -136,10 +136,10 @@ Directives are formatted into a preamble block that is prepended to the system p
 --- STANDING DIRECTIVES ---
 [1] (project: my-project) Never store PII. Redact or refuse any memory that contains names, emails, or identifiers.
 [2] (project: my-project) Elevate anything tagged `mcp-plugin` in your synthesis output.
-[3] (agent-private) Do not create tasks from synthesis — only write findings.
+[3] (agent-private) Do not create tasks from synthesis, only write findings.
 --- END DIRECTIVES ---
 
-You are the Artel archivist. Your role is to surface what no individual agent can see...
+You are the Artel archivist. Your role is to surface what no individual agent can see..
 ```
 
 This places directives as fixed context that the LLM sees before its persona, making them high-salience instructions rather than data to reason about.
@@ -174,7 +174,7 @@ entries = [e for e in entries if e["type"] != "directive"]
 
 Two directives can contradict each other. The archivist must detect this but must not resolve it.
 
-**Detection:** During the loading phase, after collecting all directives, the archivist runs a lightweight conflict check. This is not an embedding similarity check — directives are short and intentional enough that semantic overlap is a signal, not noise. The check uses the existing embedding similarity logic but with a lower threshold (configurable as `directive_conflict_threshold`, default `0.85`).
+**Detection:** During the loading phase, after collecting all directives, the archivist runs a lightweight conflict check. This is not an embedding similarity check, directives are short and intentional enough that semantic overlap is a signal, not noise. The check uses the existing embedding similarity logic but with a lower threshold (configurable as `directive_conflict_threshold`, default `0.85`).
 
 When two directives exceed the similarity threshold, the archivist:
 
@@ -188,7 +188,7 @@ The archivist never merges, deletes, or modifies a directive to resolve a confli
 
 ## 6. Staleness
 
-Directives can become orphaned — referencing tags, agents, or patterns that no longer exist. Confidence decay does not apply, so there's no natural expiry mechanism.
+Directives can become orphaned, referencing tags, agents, or patterns that no longer exist. Confidence decay does not apply, so there's no natural expiry mechanism.
 
 **Optional `expires_at` field:**
 
@@ -205,7 +205,7 @@ During each synthesis pass, after loading directives, the archivist checks each 
 
 When any signal fires, the archivist sends a message to `UI_AGENT_ID`: `"Directive [id] may be stale: [reason]. Review and delete if no longer relevant."` It does not delete or modify the directive.
 
-The archivist must not send the same staleness warning more than once per `directive_staleness_cooldown_hours` (configurable, default 168 — one week) per directive. Track this in a new `kv` table entry: `key="directive_stale_notified:<id>"`, `value=<ISO timestamp>`.
+The archivist must not send the same staleness warning more than once per `directive_staleness_cooldown_hours` (configurable, default 168, one week) per directive. Track this in a new `kv` table entry: `key="directive_stale_notified:<id>"`, `value=<ISO timestamp>`.
 
 ---
 
@@ -217,19 +217,19 @@ Directives live in the memory table and share all memory infrastructure (embeddi
 
 What does change:
 
-**Write — `POST /memory`**
+**Write, `POST /memory`**
 
-The `MemoryWrite` model gains `"directive"` as a valid `type` literal. The route adds the permission check against `DIRECTIVE_WRITERS` when `type="directive"`. On success, emits `memory.written` event as normal — the archivist's event handler ignores directives in `check_and_merge` (type filter).
+The `MemoryWrite` model gains `"directive"` as a valid `type` literal. The route adds the permission check against `DIRECTIVE_WRITERS` when `type="directive"`. On success, emits `memory.written` event as normal, the archivist's event handler ignores directives in `check_and_merge` (type filter).
 
-**Read — `GET /memory`**
+**Read, `GET /memory`**
 
-The `type` query parameter already supports filtering. Agents that want only directives call `GET /memory?type=directive`. Directives appear in the default unfiltered list alongside memory and doc entries — agents should filter if they only want one type.
+The `type` query parameter already supports filtering. Agents that want only directives call `GET /memory?type=directive`. Directives appear in the default unfiltered list alongside memory and doc entries, agents should filter if they only want one type.
 
-**Search — `GET /memory/search`**
+**Search, `GET /memory/search`**
 
 Directives are included in semantic search results by default. The `type` filter applies. No change needed.
 
-**Delta — `GET /memory/delta`**
+**Delta, `GET /memory/delta`**
 
 Directives appear in delta results. Agents that use delta for context-loading (e.g., session handoff) will pick up new directives automatically. No change needed.
 
@@ -241,7 +241,7 @@ This is optional and can be deferred. It would return all directives visible to 
 
 ## 8. UI
 
-Directives need to be visually distinct and immediately recognizable as authoritative — not something the system generated.
+Directives need to be visually distinct and immediately recognizable as authoritative, not something the system generated.
 
 **Badge/pill:**
 
@@ -257,11 +257,11 @@ Add a `.pill.directive` class using the existing blue (`--blue`) color slot. The
 
 **Card treatment:**
 
-Directive cards use `.card.blue` (border-left color `--blue`). The card should display a lock icon or "directive" label prefix in the header to signal immutability. No confidence meter for directive cards — confidence is always 1.0 and displaying it is noise.
+Directive cards use `.card.blue` (border-left color `--blue`). The card should display a lock icon or "directive" label prefix in the header to signal immutability. No confidence meter for directive cards, confidence is always 1.0 and displaying it is noise.
 
 **Placement:**
 
-Directives appear in the Memory tab, not in a separate view. They are pinned to the top of the list when no filter is active — directives sort before `doc` entries, which sort before `memory` entries. When `?type=directive` is selected in the filter dropdown, only directives appear.
+Directives appear in the Memory tab, not in a separate view. They are pinned to the top of the list when no filter is active, directives sort before `doc` entries, which sort before `memory` entries. When `?type=directive` is selected in the filter dropdown, only directives appear.
 
 Add `directive` as a type option in the memory type filter dropdown (`<select id="mtype">`).
 
@@ -279,12 +279,12 @@ The archivist's synthesis output already has a `### Recommended Actions` section
 
 ```
 ### Suggested Directives
-- DIRECTIVE SUGGESTION: Elevate all entries tagged `feed-item` from the Claude Code RSS feed — they consistently surface breaking changes before other agents catch them.
+- DIRECTIVE SUGGESTION: Elevate all entries tagged `feed-item` from the Claude Code RSS feed, they consistently surface breaking changes before other agents catch them.
 ```
 
 The archivist writes this section into its synthesis doc as plain text. It does not call `POST /memory` with `type="directive"`. A human reads the synthesis, agrees with the suggestion, and creates the directive manually via the UI or API.
 
-**Formatting rule:** Suggested directives must be prefixed with `DIRECTIVE SUGGESTION:` so the UI can optionally parse and highlight them. Do not auto-create tasks for these suggestions — they are advisory, not actionable items for an agent.
+**Formatting rule:** Suggested directives must be prefixed with `DIRECTIVE SUGGESTION:` so the UI can optionally parse and highlight them. Do not auto-create tasks for these suggestions, they are advisory, not actionable items for an agent.
 
 **Why not auto-create a task asking the human to create the directive?** Because a task saying "create this directive" would be redundant with the synthesis doc itself. The synthesis is already the human's read queue. Keeping it in-doc avoids task spam for what may be low-priority suggestions.
 
@@ -322,7 +322,7 @@ Projects start with zero directives. The bootstrapping flow is:
 2. Human writes the first directive via the UI or API (`POST /memory` with `type="directive"`, `scope="project"`, `project=<name>`).
 3. The archivist picks it up on its next synthesis cycle.
 
-Shipping default directives (e.g., "never store PII") would impose policy decisions on every project, which is inappropriate for a self-hosted tool. If a team wants a standing PII rule, they create it explicitly. This also means the absence of a directive is unambiguous — there are no hidden defaults to discover.
+Shipping default directives (e.g., "never store PII") would impose policy decisions on every project, which is inappropriate for a self-hosted tool. If a team wants a standing PII rule, they create it explicitly. This also means the absence of a directive is unambiguous, there are no hidden defaults to discover.
 
 **MCP tool update:**
 

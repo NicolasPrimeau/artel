@@ -9,7 +9,7 @@ BASE = "https://artel.run"
 # mkdocs writes its own sitemap covering /docs only. Search Console needs one that
 # also knows about the landing page and the sandbox, or they are discoverable by
 # crawl alone.
-PRIORITY = {"": "1.0", "sandbox/": "0.8"}
+PRIORITY = {"": "1.0", "ledger/": "0.8"}
 
 
 def main() -> int:
@@ -18,8 +18,8 @@ def main() -> int:
         return 1
     today = datetime.date.today().isoformat()
     urls = [""]
-    if (WEB / "sandbox" / "index.html").exists():
-        urls.append("sandbox/")
+    if (WEB / "ledger" / "index.html").exists():
+        urls.append("ledger/")
     docs = WEB / "docs"
     if docs.is_dir():
         urls.append("docs/")

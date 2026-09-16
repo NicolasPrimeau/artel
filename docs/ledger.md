@@ -1,7 +1,7 @@
 <!-- covers: ledger -->
 # The ledger
 
-What the fleet did, what it was worth, and what was decided — on its own port,
+What the fleet did, what it was worth, and what was decided, on its own port,
 served by the same container.
 
 ```
@@ -17,7 +17,7 @@ and free of agent controls.
 | | |
 |---|---|
 | **Accounts** | Per project: sessions, turns, output tokens, cache reads, decisions, value |
-| **By session** | The unit people recognise — "that run cost this much" |
+| **By session** | The unit people recognise, "that run cost this much" |
 | **By decision** | What it cost to reach each recorded choice |
 
 Every figure is computed from `usage_events`, `decisions` and `memory`. Nothing is
@@ -26,7 +26,7 @@ report.
 
 ## Repeated by hand
 
-The panel that answers "what should we automate?" — mined from what the fleet wrote
+The panel that answers "what should we automate?", mined from what the fleet wrote
 about its own work, not from a model's opinion. Sentences matching `manually`,
 `by hand`, `every time`, `must be re-run` and similar, grouped into themes and each
 quoting the note it came from.
@@ -37,7 +37,7 @@ nothing to someone deciding where to spend a week. Every candidate here is a sen
 somebody actually wrote, with the entry id beside it.
 
 The pattern is deliberately narrow. `must be re-\w+` once matched "must be resolved",
-which is not repeated work — a false candidate is worse than a missed one, because it
+which is not repeated work, a false candidate is worse than a missed one, because it
 sends someone to automate something that was never manual.
 
 ## Cost per decision is attribution, not causation
@@ -60,5 +60,5 @@ from the store.
 ## Rounding
 
 Money is stored and returned at six decimal places, not two. Rounding to cents in the
-data layer silently zeroes anything under half a cent — most single calls on a cheap
-model — so display rounds and storage does not.
+data layer silently zeroes anything under half a cent, most single calls on a cheap
+model, so display rounds and storage does not.

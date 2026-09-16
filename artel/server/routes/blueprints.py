@@ -123,7 +123,7 @@ async def list_blueprints(project: str | None = Query(default=None), agent_id: s
     "/{name}/instantiate",
     response_model=BlueprintRunEntry,
     status_code=201,
-    summary="Instantiate a blueprint — materializes its root tasks and starts the reactor run",
+    summary="Instantiate a blueprint, materializes its root tasks and starts the reactor run",
 )
 async def instantiate_blueprint(name: str, body: BlueprintInstantiate, agent_id: str = ActorDep):
     db = get_db()
