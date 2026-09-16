@@ -50,8 +50,10 @@ ACKS = {
 
 
 def _load_env_file():
-    if os.environ.get("ARTEL_URL") or os.environ.get("CLAUDE_PLUGIN_OPTION_ARTEL_URL"):
-        return
+    # Read unconditionally. Returning early when ARTEL_URL was already set meant a
+    # host that gets its URL from a plugin option never picked up the other keys
+    # from this file -- they were dropped with no sign anything had been skipped.
+    # setdefault already lets the real environment win, so there is nothing to guard.
     path = os.path.expanduser("~/.config/artel/env.sh")
     try:
         for line in open(path):
@@ -59,7 +61,7 @@ def _load_env_file():
             if line.startswith("export "):
                 line = line[7:]
             key, _, val = line.partition("=")
-            if key in ("ARTEL_URL", "ARTEL_AGENT_ID", "ARTEL_API_KEY"):
+            if key in ("ARTEL_URL", "ARTEL_AGENT_ID", "ARTEL_API_KEY", "ARTEL_BILLING_MODE"):
                 os.environ.setdefault(key, val.strip().strip('"').strip("'"))
     except OSError:
         pass
