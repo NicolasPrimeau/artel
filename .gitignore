@@ -36,3 +36,7 @@ scripts/sync_env_secrets.py
 !docs/dash_*.png
 site/
 docs/reference/
+site/sandbox/
+
+# Generated sandbox bundles -- rebuilt by scripts/build_sandbox.py
+web/sandbox/

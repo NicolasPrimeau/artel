@@ -215,10 +215,15 @@ DEMO_RATES = {
     for model, (i, o, cr, cw) in _PER_M.items()
 }
 
+# Two billing modes on purpose. A fleet that runs some work on a seat and some on
+# the API is the normal case, and it is the only way the demo can show the
+# invoice/equivalent split that the ledger exists to keep apart.
 MODELS = (
     ("claude-opus-5", "metered", 0.40),
     ("claude-sonnet-5", "metered", 0.42),
     ("claude-haiku-4-5-20251001", "metered", 0.18),
+    ("claude-opus-5", "subscription", 0.40),
+    ("claude-sonnet-5", "subscription", 0.42),
 )
 
 
@@ -330,7 +335,7 @@ def build(path: pathlib.Path, days: int = 14) -> dict:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default="site/sandbox/demo.db")
+    ap.add_argument("--out", default="web/sandbox/demo.db")
     ap.add_argument("--days", type=int, default=14)
     args = ap.parse_args()
     out = pathlib.Path(args.out)

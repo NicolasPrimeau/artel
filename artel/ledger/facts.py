@@ -200,7 +200,11 @@ _STRONG = (
     rf"re-?{_REDO} (?:it|them|this|each|every|by hand|manually)"
 )
 _WEAK = r"keeps? in sync|kept in sync|must be kept|every time|each time"
-_TOIL = re.compile(rf"[^.\n]*\b({_STRONG}|{_WEAK})\b[^.\n]*", re.I)
+# A sentence ends at ". ", not at any dot: `marketing/plans.html` and
+# `refresh_rates.py` were cutting the evidence mid-filename, so a quote could
+# begin "html` must be manually kept in sync".
+_SENT = r"(?:[^.\n]|\.(?!\s|$))*"
+_TOIL = re.compile(rf"{_SENT}\b({_STRONG}|{_WEAK})\b{_SENT}", re.I)
 _STRONG_RE = re.compile(rf"\b({_STRONG})\b", re.I)
 
 # A sentence can name manual work and still be evidence that nobody does it by hand:
@@ -232,30 +236,27 @@ def _is_toil(snippet: str) -> bool:
 
 
 # What the sentence is about, so twelve one-off quotes become a handful of themes.
+# Order is precedence: the first pattern that matches wins, so the most specific
+# signal goes first. "kept in sync" is a stronger clue than the word "billing"
+# appearing inside a path like `billing/plans.py`.
 _THEMES = (
+    (
+        "cross-copy in sync",
+        r"\b(in sync|sync\w*|cop(?:y|ied|ies)|mirror\w*|duplicat\w+|splice\w*)\b",
+    ),
     ("deploy / migrate", r"\b(deploy\w*|migrat\w+|alembic|upgrade head|release\w*|rollout)\b"),
     (
         "data refresh",
         r"\b(refresh\w*|backfill\w*|reprocess\w*|regenerat\w+|rebuild\w*|ingest\w*)\b",
     ),
-    (
-        "monitoring / alerts",
-        r"\b(alert\w*|alarm\w*|baseline|monitor\w*|false alarm|stale\w*|drift)\b",
-    ),
+    ("monitoring / alerts", r"\b(alert\w*|alarm\w*|baseline|monitor\w*|drift)\b"),
     ("credentials / login", r"\b(2fa|login|oauth|sso|token\w*|verification|consent|api key)\b"),
-    (
-        "billing / accounts",
-        r"\b(stripe|subscription\w*|trial|invoice\w*|reactivat\w+|refund\w*|billing)\b",
-    ),
-    ("cross-copy in sync", r"\b(sync\w*|cop(?:y|ied|ies)|mirror\w*|duplicat\w+|splice\w*)\b"),
+    ("billing / accounts", r"\b(stripe|subscription\w*|trial|invoice\w*|reactivat\w+|refund\w*)\b"),
     (
         "provisioning",
-        r"\b(share\w*|view\w*|grant\w*|schedul\w+|eventbridge|api|endpoint\w*|queue|sqs|whitelist)\b",
+        r"\b(share\w*|grant\w*|schedul\w+|eventbridge|endpoint\w*|queue|sqs|whitelist)\b",
     ),
-    (
-        "content / i18n",
-        r"\b(copy|email\w*|translation\w*|html|wording|page\w*|nav|sitemap|markup)\b",
-    ),
+    ("content / i18n", r"\b(translation\w*|translat\w+|wording|sitemap|markup|nav|email\w*)\b"),
     (
         "scripts / tooling",
         r"\b(script\w*|command\w*|cli|makefile|hook\w*|pipeline\w*|workflow\w*)\b",
