@@ -1,6 +1,6 @@
 site_name: Artel
 site_description: Your fleet's smart notepad — one that learns.
-site_url: https://artel.run/
+site_url: https://artel.run/docs/
 repo_url: https://github.com/NicolasPrimeau/artel
 repo_name: NicolasPrimeau/artel
 edit_uri: edit/master/docs/

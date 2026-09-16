@@ -6,6 +6,13 @@
 <title>Artel — the ledger for your agent fleet</title>
 <meta name="description" content="A shared notepad for you and every agent you run. It reads back what the fleet learned, and keeps the ledger: what each session and decision cost, and the work you keep doing by hand.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='5' fill='%2314120f'/><path d='M7 9h18M7 16h18M7 23h11' stroke='%23e0a458' stroke-width='2.4' stroke-linecap='round'/></svg>">
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-CYMPQ0NXJN"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments)}
+gtag("js", new Date());
+gtag("config", "G-CYMPQ0NXJN");
+</script>
 <style>
 :root{
   --bg:#14120f; --panel:#1b1815; --row:#1f1c18; --row-hi:#26221d;
@@ -377,6 +384,27 @@ docker compose up -d</pre>
       stat(usd(t.billed + t.equivalent), "30 days") + stat(t.sessions, "sessions") +
       stat(t.decisions, "decisions") + stat(d.projects.rows.length, "projects");
   } catch (e) { /* fallback markup stands */ }
+})();
+</script>
+
+<script>
+// Four questions this page exists to answer: did they reach the toil panel at all,
+// did they open the sandbox, did they take the install command, did they go read.
+(() => {
+  const ev = (n, p) => window.gtag && gtag("event", n, p || {});
+  document.querySelectorAll('a[href^="/sandbox"]').forEach((a) =>
+    a.addEventListener("click", () => ev("sandbox_open", { from: a.closest("section")?.id || "hero" })));
+  document.querySelectorAll('a[href^="/docs"]').forEach((a) =>
+    a.addEventListener("click", () => ev("docs_click", { to: a.getAttribute("href") })));
+  const pre = document.querySelector("#run pre");
+  if (pre) pre.addEventListener("copy", () => ev("install_copy"));
+  const toil = document.getElementById("toil-panel");
+  if (toil && "IntersectionObserver" in window) {
+    const io = new IntersectionObserver((es) => es.forEach((e) => {
+      if (e.isIntersecting) { ev("toil_view"); io.disconnect(); }
+    }), { threshold: 0.4 });
+    io.observe(toil);
+  }
 })();
 </script>
 </body>

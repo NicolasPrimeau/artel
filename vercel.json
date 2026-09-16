@@ -4,10 +4,242 @@
   "buildCommand": null,
   "outputDirectory": "web",
   "trailingSlash": true,
+  "redirects": [
+    {
+      "source": "/adaptive-control/",
+      "destination": "/docs/adaptive-control/",
+      "permanent": true
+    },
+    {
+      "source": "/adaptive-control",
+      "destination": "/docs/adaptive-control/",
+      "permanent": true
+    },
+    {
+      "source": "/architecture/",
+      "destination": "/docs/architecture/",
+      "permanent": true
+    },
+    {
+      "source": "/architecture",
+      "destination": "/docs/architecture/",
+      "permanent": true
+    },
+    {
+      "source": "/archivist/",
+      "destination": "/docs/archivist/",
+      "permanent": true
+    },
+    {
+      "source": "/archivist",
+      "destination": "/docs/archivist/",
+      "permanent": true
+    },
+    {
+      "source": "/auth/",
+      "destination": "/docs/auth/",
+      "permanent": true
+    },
+    {
+      "source": "/auth",
+      "destination": "/docs/auth/",
+      "permanent": true
+    },
+    {
+      "source": "/blueprints/",
+      "destination": "/docs/blueprints/",
+      "permanent": true
+    },
+    {
+      "source": "/blueprints",
+      "destination": "/docs/blueprints/",
+      "permanent": true
+    },
+    {
+      "source": "/capture/",
+      "destination": "/docs/capture/",
+      "permanent": true
+    },
+    {
+      "source": "/capture",
+      "destination": "/docs/capture/",
+      "permanent": true
+    },
+    {
+      "source": "/clients/",
+      "destination": "/docs/clients/",
+      "permanent": true
+    },
+    {
+      "source": "/clients",
+      "destination": "/docs/clients/",
+      "permanent": true
+    },
+    {
+      "source": "/compile-mode/",
+      "destination": "/docs/compile-mode/",
+      "permanent": true
+    },
+    {
+      "source": "/compile-mode",
+      "destination": "/docs/compile-mode/",
+      "permanent": true
+    },
+    {
+      "source": "/dashboard/",
+      "destination": "/docs/dashboard/",
+      "permanent": true
+    },
+    {
+      "source": "/dashboard",
+      "destination": "/docs/dashboard/",
+      "permanent": true
+    },
+    {
+      "source": "/decisions/",
+      "destination": "/docs/decisions/",
+      "permanent": true
+    },
+    {
+      "source": "/decisions",
+      "destination": "/docs/decisions/",
+      "permanent": true
+    },
+    {
+      "source": "/directive_spec/",
+      "destination": "/docs/directive_spec/",
+      "permanent": true
+    },
+    {
+      "source": "/directive_spec",
+      "destination": "/docs/directive_spec/",
+      "permanent": true
+    },
+    {
+      "source": "/documentation/",
+      "destination": "/docs/documentation/",
+      "permanent": true
+    },
+    {
+      "source": "/documentation",
+      "destination": "/docs/documentation/",
+      "permanent": true
+    },
+    {
+      "source": "/ledger/",
+      "destination": "/docs/ledger/",
+      "permanent": true
+    },
+    {
+      "source": "/ledger",
+      "destination": "/docs/ledger/",
+      "permanent": true
+    },
+    {
+      "source": "/mesh/",
+      "destination": "/docs/mesh/",
+      "permanent": true
+    },
+    {
+      "source": "/mesh",
+      "destination": "/docs/mesh/",
+      "permanent": true
+    },
+    {
+      "source": "/overhead/",
+      "destination": "/docs/overhead/",
+      "permanent": true
+    },
+    {
+      "source": "/overhead",
+      "destination": "/docs/overhead/",
+      "permanent": true
+    },
+    {
+      "source": "/plan/",
+      "destination": "/docs/plan/",
+      "permanent": true
+    },
+    {
+      "source": "/plan",
+      "destination": "/docs/plan/",
+      "permanent": true
+    },
+    {
+      "source": "/plugin/",
+      "destination": "/docs/plugin/",
+      "permanent": true
+    },
+    {
+      "source": "/plugin",
+      "destination": "/docs/plugin/",
+      "permanent": true
+    },
+    {
+      "source": "/reference/configuration/",
+      "destination": "/docs/reference/configuration/",
+      "permanent": true
+    },
+    {
+      "source": "/reference/configuration",
+      "destination": "/docs/reference/configuration/",
+      "permanent": true
+    },
+    {
+      "source": "/reference/mcp-tools/",
+      "destination": "/docs/reference/mcp-tools/",
+      "permanent": true
+    },
+    {
+      "source": "/reference/mcp-tools",
+      "destination": "/docs/reference/mcp-tools/",
+      "permanent": true
+    },
+    {
+      "source": "/reference/rest/",
+      "destination": "/docs/reference/rest/",
+      "permanent": true
+    },
+    {
+      "source": "/reference/rest",
+      "destination": "/docs/reference/rest/",
+      "permanent": true
+    },
+    {
+      "source": "/spec/",
+      "destination": "/docs/spec/",
+      "permanent": true
+    },
+    {
+      "source": "/spec",
+      "destination": "/docs/spec/",
+      "permanent": true
+    },
+    {
+      "source": "/usage/",
+      "destination": "/docs/usage/",
+      "permanent": true
+    },
+    {
+      "source": "/usage",
+      "destination": "/docs/usage/",
+      "permanent": true
+    },
+    {
+      "source": "/reference/",
+      "destination": "/docs/reference/rest/",
+      "permanent": true
+    }
+  ],
   "headers": [
     {
       "source": "/sandbox/data/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=300" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300"
+        }
+      ]
     }
   ]
 }

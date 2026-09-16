@@ -77,18 +77,18 @@ Each of these has a page in the [docs](https://artel.run); this is the map.
 
 | | |
 |---|---|
-| **[The plugin](https://artel.run/plugin/)** | The half that speaks up — injects the right note at session start, on each prompt, and before you edit a file. |
-| **[Capture](https://artel.run/capture/)** | Sessions become notes on their own, spooled in ~10 ms so writing never slows an agent down. |
-| **[Archivist](https://artel.run/archivist/)** | The part that learns: merges duplicates, resolves contradictions, decays what stopped being true, promotes what held up. |
-| **[Compile mode](https://artel.run/compile-mode/)** | Notes about code pinned to the code, so they re-derive instead of rotting. |
-| **[Blueprints](https://artel.run/blueprints/)** | A procedure compiled into a self-expanding task DAG, with contracts the server checks before a run advances. |
-| **[Decisions](https://artel.run/decisions/)** | Append-only record of what you chose and why — never merged, never decayed. |
-| **[Mesh and feeds](https://artel.run/mesh/)** | Several machines converging as CRDTs, plus RSS/Atom subscriptions from the outside world. |
-| **[Dashboard](https://artel.run/dashboard/)** | Browse, search, and watch the fleet from a browser. |
+| **[The plugin](https://artel.run/docs/plugin/)** | The half that speaks up — injects the right note at session start, on each prompt, and before you edit a file. |
+| **[Capture](https://artel.run/docs/capture/)** | Sessions become notes on their own, spooled in ~10 ms so writing never slows an agent down. |
+| **[Archivist](https://artel.run/docs/archivist/)** | The part that learns: merges duplicates, resolves contradictions, decays what stopped being true, promotes what held up. |
+| **[Compile mode](https://artel.run/docs/compile-mode/)** | Notes about code pinned to the code, so they re-derive instead of rotting. |
+| **[Blueprints](https://artel.run/docs/blueprints/)** | A procedure compiled into a self-expanding task DAG, with contracts the server checks before a run advances. |
+| **[Decisions](https://artel.run/docs/decisions/)** | Append-only record of what you chose and why — never merged, never decayed. |
+| **[Mesh and feeds](https://artel.run/docs/mesh/)** | Several machines converging as CRDTs, plus RSS/Atom subscriptions from the outside world. |
+| **[Dashboard](https://artel.run/docs/dashboard/)** | Browse, search, and watch the fleet from a browser. |
 
 Five kinds of note, with different lifespans: `memory` (fades if it stops being true), `doc` (settled reference), `directive` (standing instruction, never fades), `skill` (how to do a thing), `compiled` (pinned to source).
 
-Any agent that speaks HTTP or MCP joins — Claude Code, OpenCode, Zed, a raw `httpx` script. See [connecting clients](https://artel.run/clients/).
+Any agent that speaks HTTP or MCP joins — Claude Code, OpenCode, Zed, a raw `httpx` script. See [connecting clients](https://artel.run/docs/clients/).
 
 ---
 
@@ -96,8 +96,8 @@ Any agent that speaks HTTP or MCP joins — Claude Code, OpenCode, Zed, a raw `h
 
 All requests require `X-Agent-ID` and `X-API-Key` headers (except `/agents/self-register` and `/onboard`).
 
-**[Full REST reference →](https://artel.run/reference/rest/)** — every endpoint, generated from the OpenAPI schema.
-**[MCP tool reference →](https://artel.run/reference/mcp-tools/)** — all 47 tools an agent can call.
+**[Full REST reference →](https://artel.run/docs/reference/rest/)** — every endpoint, generated from the OpenAPI schema.
+**[MCP tool reference →](https://artel.run/docs/reference/mcp-tools/)** — all 47 tools an agent can call.
 
 A running server also serves interactive docs at `/docs` and the raw schema at [`openapi.json`](openapi.json).
 
@@ -115,7 +115,7 @@ Configured entirely through environment variables (or a `.env` file). The essent
 | `REGISTRATION_KEY` | Required by `/agents/self-register`. Unset disables open registration. |
 | `PUBLIC_URL` | Externally reachable base URL, used in OAuth metadata and onboarding. |
 
-**[Full configuration reference →](https://artel.run/reference/configuration/)** — all 56 settings across the server, MCP adapter, and archivist, generated from the settings classes.
+**[Full configuration reference →](https://artel.run/docs/reference/configuration/)** — all 56 settings across the server, MCP adapter, and archivist, generated from the settings classes.
 
 ---
 

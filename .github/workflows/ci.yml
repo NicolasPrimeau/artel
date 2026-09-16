@@ -139,11 +139,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -168,15 +163,24 @@ jobs:
             echo "::warning title=Documentation is stale::A prose page describes code that has changed. Run scripts/check_docs.py for detail."
           fi
 
-      - name: Build site
-        run: uv run mkdocs build --strict
+      # artel.run serves the landing page at the root and the docs under /docs,
+      # so the docs build targets web/docs and the whole of web/ is deployed.
+      - name: Build docs into the site
+        run: uv run mkdocs build --strict -f mkdocs.web.yml
 
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
-      - id: deploy
-        uses: actions/deploy-pages@v4
+      - name: Build the sandbox
+        run: uv run python scripts/build_sandbox.py
+
+      # Redirects are derived from the pages that exist, so a page added or
+      # renamed never leaves its old URL dangling.
+      - name: Generate redirects
+        run: uv run python scripts/gen_vercel_config.py
+
+      - name: Deploy to Vercel
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: npx --yes vercel@latest deploy --prod --yes --token "${{ secrets.VERCEL_TOKEN }}"
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')

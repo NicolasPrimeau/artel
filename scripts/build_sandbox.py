@@ -16,6 +16,18 @@ TOIL_DAYS = 90
 # The page talks to /api/*. Rather than edit it -- and risk the static copy drifting
 # from the app -- this shim answers those calls from the bundles. page.html ships
 # byte-identical to what the server serves.
+# Analytics belong to the public sandbox only. page.html is served by every
+# self-hosted instance, so a tag committed there would have other people's
+# dashboards reporting to this property.
+GA = """<script async src="https://www.googletagmanager.com/gtag/js?id=G-CYMPQ0NXJN"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments)}
+gtag("js", new Date());
+gtag("config", "G-CYMPQ0NXJN");
+</script>
+"""
+
 SHIM = """<script>
 (function () {
   const real = window.fetch.bind(window);
@@ -95,7 +107,7 @@ def main() -> int:
         print("page.html has no <script> to anchor the shim before", file=sys.stderr)
         return 1
     at = page.index(marker)
-    (out / "index.html").write_text(page[:at] + SHIM + page[at:])
+    (out / "index.html").write_text(page[:at] + GA + SHIM + page[at:])
 
     shutil.rmtree(tmp.parent, ignore_errors=True)
 
