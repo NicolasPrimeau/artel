@@ -1,0 +1,6 @@
+# The docs live at artel.run/docs on Vercel. Kept separate from mkdocs.yml so the
+# GitHub Pages build (which serves them at the root) keeps working until the
+# domain is cut over, and so neither config has to be edited to switch.
+INHERIT: ./mkdocs.yml
+site_url: https://artel.run/docs/
+site_dir: web/docs

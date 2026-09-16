@@ -40,3 +40,6 @@ site/sandbox/
 
 # Generated sandbox bundles -- rebuilt by scripts/build_sandbox.py
 web/sandbox/
+.vercel
+# Generated docs build for the Vercel site -- rebuilt by mkdocs.web.yml
+web/docs/
