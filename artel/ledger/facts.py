@@ -190,25 +190,77 @@ def totals(days: int = 7) -> dict:
 # someone deciding where to spend a week. Every candidate here quotes the note it came
 # from and links to it.
 _REDO = r"(?:run|apply|applied|generate[d]?|create[d]?|sync(?:ed)?|deploy(?:ed)?|build|built|fresh(?:ed)?|do|done|import(?:ed)?)"
-_TOIL = re.compile(
-    r"[^.\n]*\b("
-    r"manually|by hand|every time|each time|forget to|"
+
+# Strong triggers name the labour directly. Weak ones only describe an invariant
+# ("keep X in sync") that an automated job satisfies just as often as a human does,
+# so they count only when the same sentence also names the labour.
+_STRONG = (
+    r"manually|by hand|forget to|"
     rf"(?:have to|need to|must be|has to) re-?{_REDO}|"
-    rf"re-?{_REDO} (?:it|them|this|each|every|by hand|manually)|"
-    r"keeps? in sync|kept in sync|must be kept"
-    r")\b[^.\n]*",
+    rf"re-?{_REDO} (?:it|them|this|each|every|by hand|manually)"
+)
+_WEAK = r"keeps? in sync|kept in sync|must be kept|every time|each time"
+_TOIL = re.compile(rf"[^.\n]*\b({_STRONG}|{_WEAK})\b[^.\n]*", re.I)
+_STRONG_RE = re.compile(rf"\b({_STRONG})\b", re.I)
+
+# A sentence can name manual work and still be evidence that nobody does it by hand:
+# "do not manually edit coverage" is an instruction not to. Only a negation attached
+# to the trigger itself disqualifies. An earlier version also disqualified any mention
+# of automation, which threw away the best evidence in the corpus -- "migrations must
+# be applied manually" and "will stay stale until this is done manually" both name
+# automation in the same breath as the labour it fails to cover.
+_ANTI = re.compile(
+    r"(?:do(?:es)? not|don'?t|never|no longer|without|cannot|can'?t|avoid)\s+"
+    r"(?:\w+\s+){0,2}(?:manual|by hand)"
+    r"|(?:instead of|rather than)\s+(?:\w+\s+){0,3}(?:manual|by hand)"
+    r"|no (?:need|longer needs?) to\s+(?:\w+\s+){0,2}(?:manual|by hand)"
+    # Doing something by hand on purpose is a strategy, not a backlog item:
+    # "sell manually first, automate after first customer" is the playbook working.
+    r"|\bsell\w*\s+(?:\w+\s+){0,2}(?:manual|by hand)"
+    r"|\b(?:playbook|thesis|arbitrage)\b"
+    # Someone else's labour. A subscriber reconstructing a map by hand is a UX
+    # finding; it is not work this fleet can automate away.
+    r"|\b(?:users?|subscribers?|customers?|contractors?|vendors?)\b[^.]{0,40}(?:manual|by hand)",
     re.I,
 )
 
+
+def _is_toil(snippet: str) -> bool:
+    if not _STRONG_RE.search(snippet):
+        return False
+    return not _ANTI.search(snippet)
+
+
 # What the sentence is about, so twelve one-off quotes become a handful of themes.
 _THEMES = (
-    ("deploy / migrate", r"\b(deploy|migration|alembic|upgrade head|release)\b"),
-    ("data refresh", r"\b(refresh|backfill|reprocess|regenerate|rebuild|ingest)\b"),
-    ("credentials / login", r"\b(2fa|login|oauth|sso|token|verification|consent)\b"),
-    ("cross-copy in sync", r"\b(sync|copy|mirror|duplicate|keep.{0,12}in sync)\b"),
-    ("provisioning", r"\b(share|view|grant|schedule|eventbridge|api|endpoint)\b"),
-    ("content / i18n", r"\b(copy|email|translation|html|wording|page|nav)\b"),
-    ("scripts / tooling", r"\b(script|command|cli|makefile|hook|pipeline)\b"),
+    ("deploy / migrate", r"\b(deploy\w*|migrat\w+|alembic|upgrade head|release\w*|rollout)\b"),
+    (
+        "data refresh",
+        r"\b(refresh\w*|backfill\w*|reprocess\w*|regenerat\w+|rebuild\w*|ingest\w*)\b",
+    ),
+    (
+        "monitoring / alerts",
+        r"\b(alert\w*|alarm\w*|baseline|monitor\w*|false alarm|stale\w*|drift)\b",
+    ),
+    ("credentials / login", r"\b(2fa|login|oauth|sso|token\w*|verification|consent|api key)\b"),
+    (
+        "billing / accounts",
+        r"\b(stripe|subscription\w*|trial|invoice\w*|reactivat\w+|refund\w*|billing)\b",
+    ),
+    ("cross-copy in sync", r"\b(sync\w*|cop(?:y|ied|ies)|mirror\w*|duplicat\w+|splice\w*)\b"),
+    (
+        "provisioning",
+        r"\b(share\w*|view\w*|grant\w*|schedul\w+|eventbridge|api|endpoint\w*|queue|sqs|whitelist)\b",
+    ),
+    (
+        "content / i18n",
+        r"\b(copy|email\w*|translation\w*|html|wording|page\w*|nav|sitemap|markup)\b",
+    ),
+    (
+        "scripts / tooling",
+        r"\b(script\w*|command\w*|cli|makefile|hook\w*|pipeline\w*|workflow\w*)\b",
+    ),
+    ("ops / restart", r"\b(restart\w*|crash\w*|reboot\w*|failover|recover\w*)\b"),
 )
 
 
@@ -229,6 +281,8 @@ def toil(days: int = 90, project: str | None = None, limit: int = 25) -> list[di
         for m in _TOIL.finditer(r["content"] or ""):
             snippet = " ".join(m.group(0).split())
             if len(snippet) < 40:
+                continue
+            if not _is_toil(snippet):
                 continue
             key = snippet.lower()[:60]
             if key in seen:

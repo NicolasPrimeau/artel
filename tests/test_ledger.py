@@ -105,3 +105,95 @@ class TestToil:
         themes = [t["theme"] for t in facts.toil_themes(30, "p1")]
         if "other" in themes:
             assert themes[-1] == "other"
+
+    def test_instruction_not_to_do_it_by_hand_is_not_toil(self, ledger):
+        # "do not manually edit coverage" was counted as evidence of manual work.
+        # It is the opposite: a rule saying a script owns the file.
+        facts, db = ledger
+        with db:
+            db.execute(
+                """INSERT INTO memory (id, type, agent_id, project, content, confidence)
+                   VALUES ('m5','memory','a','p1',
+                   'scripts/coverage --check verifies sync; do not manually edit coverage.',1.0)"""
+            )
+        assert not [r for r in facts.toil(30, "p1") if r["entry_id"] == "m5"]
+
+    def test_describing_working_automation_is_not_toil(self, ledger):
+        facts, db = ledger
+        with db:
+            db.execute(
+                """INSERT INTO memory (id, type, agent_id, project, content, confidence)
+                   VALUES ('m6','memory','a','p1',
+                   'The FTS index is kept in sync at every write path, with backfill on startup.',1.0)"""
+            )
+        assert not [r for r in facts.toil(30, "p1") if r["entry_id"] == "m6"]
+
+    def test_labour_still_counts_when_the_sentence_also_names_automation(self, ledger):
+        # Suppressing any mention of automation threw away the strongest evidence in
+        # the corpus. These sentences name automation precisely to say it does not
+        # cover the case -- which is what makes them worth automating.
+        facts, db = ledger
+        with db:
+            db.execute(
+                """INSERT INTO memory (id, type, agent_id, project, content, confidence)
+                   VALUES ('m7','memory','a','p1',
+                   'Deployments do not run migrations automatically; they must be applied manually.',1.0)"""
+            )
+            db.execute(
+                """INSERT INTO memory (id, type, agent_id, project, content, confidence)
+                   VALUES ('m8','memory','a','p1',
+                   'Registries that auto-discover stay stale until this is done manually.',1.0)"""
+            )
+        found = {r["entry_id"] for r in facts.toil(30, "p1")}
+        assert {"m7", "m8"} <= found
+
+    def test_repetition_alone_is_not_labour(self, ledger):
+        # "every time" describes any recurrence, not hand-work: it was dragging in
+        # prose like "equal-weight won every time".
+        facts, db = ledger
+        with db:
+            db.execute(
+                """INSERT INTO memory (id, type, agent_id, project, content, confidence)
+                   VALUES ('m9','memory','a','p1',
+                   'In crypto and stock-momentum baskets, equal-weight won every time.',1.0)"""
+            )
+        assert not [r for r in facts.toil(30, "p1") if r["entry_id"] == "m9"]
+
+    def test_somebody_elses_hand_work_is_not_our_backlog(self, ledger):
+        facts, db = ledger
+        with db:
+            db.execute(
+                """INSERT INTO memory (id, type, agent_id, project, content, confidence)
+                   VALUES ('m10','memory','a','p1',
+                   'Multi-city subscribers manually reconstructed the geography by hand.',1.0)"""
+            )
+        assert not [r for r in facts.toil(30, "p1") if r["entry_id"] == "m10"]
+
+    def test_deliberate_manual_strategy_is_not_toil(self, ledger):
+        facts, db = ledger
+        with db:
+            db.execute(
+                """INSERT INTO memory (id, type, agent_id, project, content, confidence)
+                   VALUES ('m11','memory','a','p1',
+                   'Core playbook: charge before building, sell manually first, automate later.',1.0)"""
+            )
+        assert not [r for r in facts.toil(30, "p1") if r["entry_id"] == "m11"]
+
+    def test_themes_match_inflected_words(self, ledger):
+        # \bsync\b never matched "synced" and \bmigration\b never matched
+        # "migrations", so themed work was landing in the "other" bucket.
+        facts, db = ledger
+        with db:
+            db.execute(
+                """INSERT INTO memory (id, type, agent_id, project, content, confidence)
+                   VALUES ('m12','memory','a','p1',
+                   'Those changes must be manually synced into the recall bundle.',1.0)"""
+            )
+            db.execute(
+                """INSERT INTO memory (id, type, agent_id, project, content, confidence)
+                   VALUES ('m13','memory','a','p1',
+                   'Heavy migrations must be executed manually as a separate task.',1.0)"""
+            )
+        theme = {r["entry_id"]: r["theme"] for r in facts.toil(30, "p1")}
+        assert theme["m12"] == "cross-copy in sync"
+        assert theme["m13"] == "deploy / migrate"
