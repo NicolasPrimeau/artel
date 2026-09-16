@@ -1,7 +1,7 @@
 <!doctype html><meta charset=utf-8>
 <meta name=viewport content="width=device-width,initial-scale=1">
 <title>Artel ledger</title>
-<link rel=icon href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='5' fill='%2314120f'/><path d='M7 9h18M7 16h18M7 23h11' stroke='%23e0a458' stroke-width='2.4' stroke-linecap='round'/></svg>">
+<link rel=icon href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='5' fill='%23101316'/><path d='M7 9h18M7 16h18M7 23h11' stroke='%235cb8ae' stroke-width='2.4' stroke-linecap='round'/></svg>">
 <style>
 /* Instrument panel. Full-bleed, dense, monospace throughout — this is a readout, not
    a document. Warm-dark rather than the usual cold slate; amber for money because it
@@ -9,9 +9,9 @@
    Every table scrolls inside its own gutter: the failure before was a 76ch column
    with 7-column tables in it. */
 :root{
-  --bg:#14120f; --panel:#1b1815; --row:#1f1c18;
-  --fg:#e8e2d8; --dim:#9a9086; --rule:#332e28; --edge:#6d6357;
-  --money:#e0a458; --warn:#d1705a; --ok:#8bab6d;
+  --bg:#101316; --panel:#171b1f; --row:#1c2126;
+  --fg:#e0e5e9; --dim:#939ca4; --rule:#252c33; --edge:#3a444d;
+  --money:#5cb8ae; --warn:#d98a72; --ok:#9ab973;
   --mono:"SF Mono",ui-monospace,"JetBrains Mono","Roboto Mono",Menlo,monospace;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -31,7 +31,7 @@ body{background:var(--bg);color:var(--fg);font:13px/1.4 var(--mono);
   color:var(--dim);font:11px/1 var(--mono);padding:6px 10px;cursor:pointer;
   letter-spacing:.08em}
 .seg button:last-child{border-right:0}
-.seg button.on{background:var(--money);color:#14120f;font-weight:700}
+.seg button.on{background:var(--money);color:#101316;font-weight:700}
 .stamp{font-size:10px;color:var(--dim);letter-spacing:.06em}
 
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
@@ -60,13 +60,13 @@ th{position:sticky;top:0;text-align:left;font-weight:400;font-size:10px;
   padding:7px 12px;background:var(--panel);border-bottom:1px solid var(--rule)}
 td{padding:6px 12px;border-bottom:1px solid var(--rule)}
 tbody tr:nth-child(even){background:var(--row)}
-tbody tr:hover{background:#26221d}
+tbody tr:hover{background:#232a31}
 td.n,th.n{text-align:right}
 td.money{color:var(--money)}
 td.dim,.dim{color:var(--dim)}
 td.name{cursor:pointer}
 td.name:hover{color:var(--money)}
-tr.sel td{background:#2b2620;box-shadow:inset 2px 0 0 var(--money)}
+tr.sel td{background:#232a31;box-shadow:inset 2px 0 0 var(--money)}
 .bar-cell{display:block;height:3px;background:var(--money);opacity:.55;margin-top:4px}
 
 /* ---- decisions: list, not prose ---- */

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Artel — the ledger for your agent fleet</title>
 <meta name="description" content="A shared notepad for you and every agent you run. It reads back what the fleet learned, and keeps the ledger: what each session and decision cost, and the work you keep doing by hand.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='5' fill='%2314120f'/><path d='M7 9h18M7 16h18M7 23h11' stroke='%23e0a458' stroke-width='2.4' stroke-linecap='round'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='5' fill='%23101316'/><path d='M7 9h18M7 16h18M7 23h11' stroke='%235cb8ae' stroke-width='2.4' stroke-linecap='round'/></svg>">
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-CYMPQ0NXJN"></script>
 <script>
 window.dataLayer = window.dataLayer || [];
@@ -15,10 +15,10 @@ gtag("config", "G-CYMPQ0NXJN");
 </script>
 <style>
 :root{
-  --bg:#14120f; --panel:#1b1815; --row:#1f1c18; --row-hi:#26221d;
-  --fg:#e8e2d8; --dim:#9a9086; --faint:#6d6357;
-  --rule:#332e28; --edge:#453e36;
-  --money:#e0a458; --manual:#d1705a; --auto:#8bab6d;
+  --bg:#101316; --panel:#171b1f; --row:#1c2126; --row-hi:#232a31;
+  --fg:#e0e5e9; --dim:#939ca4; --faint:#3a444d;
+  --rule:#252c33; --edge:#3a444d;
+  --money:#5cb8ae; --manual:#d98a72; --auto:#9ab973;
   --mono:ui-monospace,"SF Mono","JetBrains Mono","Roboto Mono",Menlo,Consolas,monospace;
   --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Inter,Roboto,sans-serif;
   --gut:clamp(18px,5vw,40px);
@@ -34,15 +34,15 @@ body{
 /* Ruled paper, but for an instrument: faint horizontal rules and one amber margin. */
 body::before{
   content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
-  background:repeating-linear-gradient(to bottom,transparent 0 31px,rgba(109,99,87,.06) 31px 32px);
+  background:repeating-linear-gradient(to bottom,transparent 0 31px,rgba(58,68,77,.07) 31px 32px);
 }
 .wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:0 var(--gut)}
-a{color:var(--money);text-decoration:none;border-bottom:1px solid rgba(224,164,88,.3)}
+a{color:var(--money);text-decoration:none;border-bottom:1px solid rgba(92,184,174,.32)}
 a:hover{border-bottom-color:var(--money)}
 code,.mono{font-family:var(--mono);font-size:.92em}
 
 /* ---------- chrome ---------- */
-header{border-bottom:1px solid var(--rule);background:rgba(20,18,15,.92);backdrop-filter:blur(6px);
+header{border-bottom:1px solid var(--rule);background:rgba(16,19,22,.92);backdrop-filter:blur(6px);
   position:sticky;top:0;z-index:5}
 .bar{display:flex;align-items:center;gap:14px;height:52px}
 .mark{font-family:var(--mono);font-weight:700;letter-spacing:.22em;font-size:13px;color:var(--fg);
@@ -64,8 +64,8 @@ h1 em{font-style:normal;color:var(--money)}
 .cta{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-family:var(--mono);font-size:13px}
 .btn{border:1px solid var(--edge);padding:9px 15px;border-radius:2px;color:var(--fg);background:var(--panel)}
 .btn:hover{background:var(--row-hi);border-color:var(--faint)}
-.btn.key{background:var(--money);color:#14120f;border-color:var(--money);font-weight:700}
-.btn.key:hover{background:#eab36d}
+.btn.key{background:var(--money);color:#101316;border-color:var(--money);font-weight:700}
+.btn.key:hover{background:#6fc9bf}
 
 /* ---------- panels ---------- */
 section{padding:clamp(34px,6vw,62px) 0;border-top:1px solid var(--rule)}
@@ -81,7 +81,7 @@ h2{font-size:clamp(21px,2.9vw,27px);margin:0 0 12px;letter-spacing:-.015em;font-
   font-family:var(--mono);font-size:11.5px;color:var(--dim);letter-spacing:.06em;flex-wrap:wrap}
 .phead b{color:var(--fg);font-weight:600}
 .dot{width:6px;height:6px;border-radius:50%;background:var(--auto);flex:none;
-  box-shadow:0 0 0 3px rgba(139,171,109,.14)}
+  box-shadow:0 0 0 3px rgba(154,185,115,.16)}
 .scroll{overflow-x:auto}
 
 /* toil rows */
@@ -175,7 +175,7 @@ footer a:hover{color:var(--money)}
     <a href="#how">How</a>
     <a href="#inside">Inside</a>
     <a href="/docs/">Docs</a>
-    <a href="#ask">Talk</a>
+    <a href="#ask">Contact</a>
     <a href="https://github.com/NicolasPrimeau/artel">GitHub</a>
   </nav>
 </div></header>
@@ -358,11 +358,11 @@ docker compose up -d</pre>
   </section>
 
   <section id="ask">
-    <p class="eyebrow">Tell me</p>
-    <h2>What would you want it to tell you?</h2>
-    <p class="say">Artel is one person's tool that turned out to be useful. I would rather build
-    the next part for someone specific than guess. Say what you run, what you wish you could see,
-    and I will tell you whether it already does it.</p>
+    <p class="eyebrow">Contact</p>
+    <h2>Get in touch.</h2>
+    <p class="say">Questions about whether it fits what you run, features that are missing, or
+    problems getting it going. Say what your setup looks like and what you are trying to see, and
+    you will get a straight answer about whether Artel already does it.</p>
 
     <form class="form" id="ask-form" action="https://formspree.io/f/xreyoaaw" method="POST">
       <div class="row two">
@@ -371,7 +371,7 @@ docker compose up -d</pre>
         <div class="f"><label for="q-fleet">What do you run?</label>
           <input id="q-fleet" type="text" name="fleet" placeholder="Claude Code, 3 machines, solo"></div>
       </div>
-      <div class="f"><label>What drew you here</label>
+      <div class="f"><label>What brought you here</label>
         <div class="chips">
           <label><input type="checkbox" name="interest" value="toil"><span>the toil panel</span></label>
           <label><input type="checkbox" name="interest" value="cost"><span>cost per decision</span></label>
@@ -381,9 +381,9 @@ docker compose up -d</pre>
           <label><input type="checkbox" name="interest" value="other"><span>something else</span></label>
         </div>
       </div>
-      <div class="f"><label for="q-msg">What would you want it to tell you?</label>
+      <div class="f"><label for="q-msg">Message</label>
         <textarea id="q-msg" name="message" rows="3"
-          placeholder="The thing you wish you could ask about your own fleet."></textarea></div>
+          placeholder="What you are trying to do, or what is in the way."></textarea></div>
       <input type="hidden" name="product" value="artel">
       <input type="hidden" name="_subject" value="Artel — landing page">
       <input type="hidden" name="referrer" id="q-ref">
@@ -393,8 +393,7 @@ docker compose up -d</pre>
         <span class="msg" id="ask-msg"></span>
       </div>
     </form>
-    <p class="note">Goes to an inbox, not a mailing list. No sequence, no drip, and I answer them
-    myself.</p>
+    <p class="note">Goes to an inbox, not a mailing list. No sequence, no drip.</p>
   </section>
 
 </div>
@@ -501,11 +500,11 @@ docker compose up -d</pre>
         form.querySelectorAll("input:not([type=hidden]), textarea").forEach((i) => {
           if (i.type === "checkbox") i.checked = false; else i.value = "";
         });
-        msg.textContent = "got it — I'll reply myself.";
+        msg.textContent = "message received.";
         ev("lead_submit", { saw: saw.join(">") });
       } catch (err) {
         msg.className = "msg err";
-        msg.innerHTML = 'that failed. mail me instead: <a href="mailto:nicolas.primeau@gmail.com">nicolas.primeau@gmail.com</a>';
+        msg.innerHTML = 'could not send. email instead: <a href="mailto:nicolas.primeau@gmail.com">nicolas.primeau@gmail.com</a>';
       } finally {
         btn.disabled = false;
       }
