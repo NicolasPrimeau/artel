@@ -177,9 +177,9 @@ footer a:hover{color:var(--money)}
   <div class="hero">
     <p class="kicker">Self-hosted · MIT · your machine</p>
     <h1>Your agents already wrote down what you keep doing <em>by hand</em>.</h1>
-    <p class="lede">Artel is a shared notepad for you and every agent you run. It hands back what
-    the fleet learned when it matters, and it keeps the <strong>ledger</strong>: what each session
-    and each decision cost, and which work keeps coming back.</p>
+    <p class="lede">One notepad for you and every agent you run. What one of them learns, all of
+    them know by the next prompt, and the <strong>ledger</strong> shows what every decision cost
+    and which chores keep coming back.</p>
     <div class="cta">
       <a class="btn key" href="/ledger/">Open the ledger →</a>
       <a class="btn" href="#run">Run it yourself</a>
@@ -190,10 +190,9 @@ footer a:hover{color:var(--money)}
   <section id="toil">
     <p class="eyebrow">Toil</p>
     <h2>Nobody files a ticket for the thing they redo every Monday.</h2>
-    <p class="say">They mention it, once, in passing, in a note meant for something else, and it
-    is never seen again. Artel reads every note the fleet has written and pulls out the sentences
-    where somebody admits to doing work by hand, groups them, and <strong>quotes the note it came
-    from</strong> so you can check it.</p>
+    <p class="say">It gets mentioned once, in passing, in a note about something else, and then
+    it is gone. Artel finds those confessions across everything your fleet has written and hands
+    them back, <strong>quoted from the source</strong>.</p>
 
     <div class="panel" id="toil-panel">
       <div class="phead"><span class="dot"></span> <b>toil</b> · mined from 4 projects · last 14 days</div>
@@ -230,20 +229,15 @@ footer a:hover{color:var(--money)}
       </div>
     </div>
 
-    <p class="note">It is a deterministic read of your own notes, not a model asked what to
-    automate. A model will answer that question whether or not the evidence exists, and an
-    unfalsifiable answer is worth nothing to someone deciding where to spend a week. Every row
-    here links to the note it came from, including the ones it <em>declined</em> to flag, like
-    “do not manually edit this file, it is generated”.</p>
+    <p class="note">No model guessing at what to automate. Every row traces back to the note that said it.</p>
   </section>
 
   <section id="ledger">
     <p class="eyebrow">Ledger</p>
     <h2>What did that decision actually cost?</h2>
-    <p class="say">Token dashboards tell you a number for the month. Artel knows which session
-    produced which decision, so it can put a price on <strong>the work that contained the
-    choice</strong>, and show you the cheap call you agonised over next to the expensive one you
-    made in four minutes.</p>
+    <p class="say">Your token bill gives you one number a month. Artel prices <strong>each
+    decision</strong>, so the cheap call you agonised over sits right beside the
+    expensive one you barely noticed.</p>
 
     <div class="panel">
       <div class="phead"><span class="dot"></span> <b>cost per decision</b> · 14 days · list-price equivalent</div>
@@ -269,26 +263,17 @@ footer a:hover{color:var(--money)}
         <div class="stat"><b>4</b><span>projects</span></div>
       </div>
     </div>
-
-    <p class="note">Attribution is by shared session, not causation: a session that produced three
-    decisions spent its tokens on all three and on everything else it did. Artel does not divide
-    the total between them, because dividing would invent a precision the data has not got. On a
-    subscription the same figure is shown as what the work <em>would</em> have cost metered,
-    labelled as an equivalent, never as an invoice.</p>
   </section>
 
   <section id="how">
     <p class="eyebrow">How</p>
-    <h2>It can tell you this because everything already goes through the pad.</h2>
-    <p class="say">One notepad that you and every agent you run write into. Whatever any of you
-    works out is written once and handed back the moment it matters: the gotcha about
-    <em>this</em> file right before you edit it, where you stopped on Friday, the thing another
-    agent already learned the hard way. Nothing to file, nothing to tag, nothing to look up.</p>
-    <p class="say">It runs on <strong>hooks, not instructions</strong>. Nothing depends on an agent
-    remembering to call a tool: sessions are captured as they happen, and a background archivist
-    works the pile while you are gone, merging duplicates, retiring what stopped being true,
-    promoting what held up. The ledger and the toil panel are just what you can see once that
-    record exists.</p>
+    <h2>It knows because everything passes through it.</h2>
+    <p class="say">Every agent writes to the same pad, and the right note surfaces on its own: the
+    gotcha about <em>this</em> file just before you touch it, where you left off on Friday, the
+    lesson another agent already paid for.</p>
+    <p class="say">It runs on <strong>hooks, not instructions</strong>, so nothing hinges on an
+    agent remembering. While you are away, an archivist tends the pile, and the pad gets sharper
+    the more it holds.</p>
 
     <div class="panel"><pre><span class="c">  you · Claude Code · opencode · Codex · AutoGen · a raw httpx script</span>
         │   <span class="p">hooks</span> push notes in  ┄  sessions captured out
@@ -305,7 +290,7 @@ footer a:hover{color:var(--money)}
   <section id="inside">
     <p class="eyebrow">Inside</p>
     <h2>Everything in the box.</h2>
-    <p class="say">One container. Each of these has a page in the <a href="/docs/">docs</a>.</p>
+    <p class="say">One container. Every piece has its own page in the <a href="/docs/">docs</a>.</p>
     <div class="grid">
       <div class="cell"><h3><a href="/docs/plugin/">The plugin</a></h3>
         <p>The half that speaks up. Injects the right note at session start, on each prompt, and before you edit a file.</p></div>
@@ -326,35 +311,27 @@ footer a:hover{color:var(--money)}
       <div class="cell"><h3><a href="/docs/adaptive-control/">Adaptive decay</a></h3>
         <p>A control loop tunes how fast confidence fades, measured against notes you actually reach for.</p></div>
     </div>
-    <p class="note">Five kinds of note, with different lifespans:
-      <span class="kind">memory</span> fades if it stops being true ·
-      <span class="kind">doc</span> settled reference ·
-      <span class="kind">directive</span> standing instruction, never fades ·
-      <span class="kind">skill</span> how to do a thing ·
-      <span class="kind">compiled</span> pinned to source.
-      Any agent that speaks HTTP or MCP joins, using 47 MCP tools or the plain
+    <p class="note">Any agent that speaks HTTP or MCP can join, through 47 MCP tools or the plain
       <a href="/docs/reference/rest/">REST API</a>.</p>
   </section>
 
   <section id="run">
     <p class="eyebrow">Run it</p>
-    <h2>There is no public instance. This is your notepad.</h2>
-    <p class="say">Artel holds your fleet's memory, so you host it. One container, one port.</p>
+    <h2>Your fleet's memory stays on your machine.</h2>
+    <p class="say">One container, one port, running in a minute.</p>
     <pre><span class="c">curl -O https://raw.githubusercontent.com/NicolasPrimeau/artel/master/docker-compose.yml</span>
 <span class="c">curl -O https://raw.githubusercontent.com/NicolasPrimeau/artel/master/.env.example</span>
 cp .env.example .env
 docker compose up -d</pre>
-    <p class="note">API, dashboard, ledger and MCP on a single port. Then point an agent at it with
-      <code>curl -fsSL http://&lt;host&gt;:8000/onboard | sh</code>. Full walkthrough in the
-      <a href="/docs/">docs</a>.</p>
+    <p class="note">Then point an agent at it with
+      <code>curl -fsSL http://&lt;host&gt;:8000/onboard | sh</code>.</p>
   </section>
 
   <section id="ask">
     <p class="eyebrow">Contact</p>
     <h2>Get in touch.</h2>
-    <p class="say">Questions about whether it fits what you run, features that are missing, or
-    problems getting it going. Say what your setup looks like and what you are trying to see, and
-    you will get a straight answer about whether Artel already does it.</p>
+    <p class="say">Wondering whether it fits your setup, or missing something you need? Say
+    what you run and you will get a straight answer.</p>
 
     <form class="form" id="ask-form" action="https://formspree.io/f/xreyoaaw" method="POST">
       <div class="row two">
@@ -375,7 +352,7 @@ docker compose up -d</pre>
         <span class="msg" id="ask-msg"></span>
       </div>
     </form>
-    <p class="note">Goes to an inbox, not a mailing list. No sequence, no drip.</p>
+    <p class="note">Goes to an inbox, not a mailing list.</p>
   </section>
 
 </div>
