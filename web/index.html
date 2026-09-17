@@ -44,13 +44,33 @@ code,.mono{font-family:var(--mono);font-size:.92em}
 /* ---------- chrome ---------- */
 header{border-bottom:1px solid var(--rule);background:rgba(16,19,22,.92);backdrop-filter:blur(6px);
   position:sticky;top:0;z-index:5}
-.bar{display:flex;align-items:center;gap:14px;height:52px}
+.bar{display:flex;align-items:center;gap:14px;height:58px}
 .mark{font-family:var(--mono);font-weight:700;letter-spacing:.22em;font-size:13px;color:var(--fg);
   border:0;display:flex;align-items:center;gap:9px}
 .mark i{width:9px;height:9px;background:var(--money);display:block;border-radius:1px;font-style:normal}
-nav{margin-left:auto;display:flex;gap:2px;font-family:var(--mono);font-size:12px;flex-wrap:wrap}
-nav a{color:var(--dim);border:0;padding:5px 9px;border-radius:2px}
-nav a:hover{color:var(--fg);background:var(--row)}
+.nav{margin-left:auto;display:flex;align-items:center;gap:22px;font-family:var(--mono);font-size:12.5px}
+.nav a{color:var(--dim);border:0;display:flex;align-items:center;gap:7px;white-space:nowrap}
+.nav a:hover{color:var(--fg)}
+.nav a svg{width:15px;height:15px;fill:currentColor;flex:none}
+.nav .ext::after{content:"\2197";font-size:10px;color:var(--faint);margin-left:-3px}
+.nav .run{color:#101316;background:var(--money);padding:7px 13px;border-radius:2px;font-weight:700;margin-left:4px}
+.nav .run:hover{color:#101316;background:#6fc9bf}
+.menu{display:none;margin-left:auto;position:relative}
+.menu summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;
+  font-family:var(--mono);font-size:12px;color:var(--fg);border:1px solid var(--edge);border-radius:2px;padding:7px 11px}
+.menu summary::-webkit-details-marker{display:none}
+.menu summary i{display:block;width:14px;height:10px;font-style:normal;
+  background:linear-gradient(var(--fg) 0 0) top/100% 1.5px no-repeat,linear-gradient(var(--fg) 0 0) center/100% 1.5px no-repeat,linear-gradient(var(--fg) 0 0) bottom/100% 1.5px no-repeat}
+.menu[open] summary{border-color:var(--money)}
+.menu .sheet{position:absolute;right:0;top:calc(100% + 10px);min-width:220px;background:var(--panel);
+  border:1px solid var(--edge);border-radius:3px;padding:6px;box-shadow:0 12px 30px rgba(0,0,0,.45);
+  display:flex;flex-direction:column}
+.menu .sheet a{color:var(--fg);border:0;padding:11px 12px;border-radius:2px;font-family:var(--mono);font-size:13px;
+  display:flex;justify-content:space-between;align-items:center}
+.menu .sheet a:hover{background:var(--row)}
+.menu .sheet a span{color:var(--faint);font-size:11px}
+.menu .sheet .run{background:var(--money);color:#101316;font-weight:700;margin-top:6px;justify-content:center}
+@media (max-width:720px){.nav{display:none}.menu{display:block}}
 
 /* ---------- hero ---------- */
 .hero{padding:clamp(44px,8vw,86px) 0 34px}
@@ -161,16 +181,24 @@ footer a:hover{color:var(--money)}
 
 <header><div class="wrap bar">
   <a class="mark" href="/"><i></i>ARTEL</a>
-  <nav>
-    <a href="#toil">Toil</a>
-    <a href="#ledger">Ledger</a>
-    <a href="#how">How</a>
-    <a href="#inside">Inside</a>
-    <a href="https://artel-sandbox.fly.dev/ui">Sandbox</a>
+  <nav class="nav" aria-label="Main">
+    <a href="/ledger/">Ledger</a>
+    <a class="ext" href="https://artel-sandbox.fly.dev/ui">Sandbox</a>
     <a href="/docs/">Docs</a>
-    <a href="#ask">Contact</a>
-    <a href="https://github.com/NicolasPrimeau/artel">GitHub</a>
+    <a href="https://github.com/NicolasPrimeau/artel"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38v-1.33c-2.23.48-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.8.06 1.23.83 1.23.83.71 1.22 1.87.87 2.33.66.07-.52.28-.87.5-1.07-1.78-.2-3.65-.89-3.65-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>GitHub</a>
+    <a class="run" href="#run">Run it</a>
   </nav>
+  <details class="menu">
+    <summary aria-label="Menu"><i></i>Menu</summary>
+    <div class="sheet">
+      <a href="/ledger/">Ledger <span>demo</span></a>
+      <a href="https://artel-sandbox.fly.dev/ui">Sandbox <span>&#8599;</span></a>
+      <a href="/docs/">Docs</a>
+      <a href="https://github.com/NicolasPrimeau/artel">GitHub <span>&#8599;</span></a>
+      <a href="#ask">Contact</a>
+      <a class="run" href="#run">Run it yourself</a>
+    </div>
+  </details>
 </div></header>
 
 <div class="wrap">
@@ -421,6 +449,8 @@ docker compose up -d</pre>
     a.addEventListener("click", () => ev("ledger_open", { from: a.closest("section")?.id || "hero" })));
   document.querySelectorAll('a[href^="/docs"]').forEach((a) =>
     a.addEventListener("click", () => ev("docs_click", { to: a.getAttribute("href") })));
+  const menu = document.querySelector(".menu");
+  if (menu) menu.querySelectorAll("a").forEach((a) => a.addEventListener("click", () => menu.removeAttribute("open")));
   const pre = document.querySelector("#run pre");
   if (pre) pre.addEventListener("copy", () => ev("install_copy"));
   // What each visitor actually reached, in order. Submitted with the form, so a
