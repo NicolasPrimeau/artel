@@ -146,14 +146,6 @@ pre .p{color:var(--auto)}
   color:var(--fg);font:14px/1.5 var(--sans);padding:9px 11px;resize:vertical}
 .f input:focus,.f textarea:focus{outline:0;border-color:var(--edge);background:var(--row)}
 .f input::placeholder,.f textarea::placeholder{color:var(--faint)}
-.chips{display:flex;flex-wrap:wrap;gap:7px}
-.chips label{display:inline-flex;align-items:center;gap:6px;margin:0;cursor:pointer;
-  border:1px solid var(--rule);border-radius:2px;padding:6px 10px;background:var(--panel);
-  font-family:var(--mono);font-size:11.5px;letter-spacing:.04em;text-transform:none;color:var(--dim)}
-.chips label:hover{border-color:var(--edge);color:var(--fg)}
-.chips input{position:absolute;opacity:0;width:0;height:0}
-.chips input:checked + span{color:var(--money)}
-.chips label:has(input:checked){border-color:var(--money);background:var(--row-hi)}
 .submit{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .msg{font-family:var(--mono);font-size:12px;color:var(--auto)}
 .msg.err{color:var(--manual)}
@@ -370,16 +362,6 @@ docker compose up -d</pre>
           <input id="q-email" type="email" name="email" placeholder="you@wherever" required></div>
         <div class="f"><label for="q-fleet">What do you run?</label>
           <input id="q-fleet" type="text" name="fleet" placeholder="Claude Code, 3 machines, solo"></div>
-      </div>
-      <div class="f"><label>What brought you here</label>
-        <div class="chips">
-          <label><input type="checkbox" name="interest" value="toil"><span>the toil panel</span></label>
-          <label><input type="checkbox" name="interest" value="cost"><span>cost per decision</span></label>
-          <label><input type="checkbox" name="interest" value="memory"><span>shared memory</span></label>
-          <label><input type="checkbox" name="interest" value="decisions"><span>decision record</span></label>
-          <label><input type="checkbox" name="interest" value="mesh"><span>multi-machine mesh</span></label>
-          <label><input type="checkbox" name="interest" value="other"><span>something else</span></label>
-        </div>
       </div>
       <div class="f"><label for="q-msg">Message</label>
         <textarea id="q-msg" name="message" rows="3"
