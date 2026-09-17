@@ -104,7 +104,9 @@ cmd_seed() {
     echo "uploading seed…"
     flyctl ssh console -a "$APP" -C "rm -f /data/seed.db"
     flyctl ssh sftp put -a "$APP" "$tmp/seed.db" /data/seed.db
-    flyctl ssh console -a "$APP" -C "sh -c 'cp /data/artel.db /data/artel.db.pre-seed-$stamp 2>/dev/null; mv /data/seed.db /data/artel.db && rm -f /data/artel.db-wal /data/artel.db-shm'"
+    # ssh runs as root, the server as artel: without the chown the swapped-in database
+    # is read-only to it and startup fails.
+    flyctl ssh console -a "$APP" -C "sh -c 'cp /data/artel.db /data/artel.db.pre-seed-$stamp 2>/dev/null; mv /data/seed.db /data/artel.db && rm -f /data/artel.db-wal /data/artel.db-shm && chown artel:artel /data/artel.db'"
     rm -rf "$tmp"
     for id in $(machine_ids); do flyctl machine restart "$id" -a "$APP"; done
     echo "verifying $URL…"
