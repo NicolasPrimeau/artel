@@ -117,7 +117,7 @@ Only the original author. The soft-delete endpoint checks `agent_id` ownership, 
 At the start of `run_synthesis`, before fetching the delta entries and before constructing the LLM prompt, the archivist calls a dedicated helper:
 
 ```python
-async def load_directives(client: ArtelClient, project: str | None) -> list[dict]: ..
+async def load_directives(client: ArtelClient, project: str | None) -> list[dict]: ...
 ```
 
 This makes two calls to `GET /memory` with `type=directive`:
@@ -139,7 +139,7 @@ Directives are formatted into a preamble block that is prepended to the system p
 [3] (agent-private) Do not create tasks from synthesis, only write findings.
 --- END DIRECTIVES ---
 
-You are the Artel archivist. Your role is to surface what no individual agent can see..
+You are the Artel archivist. Your role is to surface what no individual agent can see...
 ```
 
 This places directives as fixed context that the LLM sees before its persona, making them high-salience instructions rather than data to reason about.

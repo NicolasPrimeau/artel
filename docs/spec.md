@@ -199,9 +199,9 @@ POST /sessions/handoff
 {
   "agent_id": "nimbus",
   "host": "host-1",
-  "summary": "..",
+  "summary": "...",
   "in_progress": ["task_id_1", "task_id_2"],
-  "next_steps": [".."],
+  "next_steps": ["..."],
   "memory_refs": ["entry_id_1"]
 }
 ```

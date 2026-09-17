@@ -7,15 +7,17 @@ import httpx
 
 agent = httpx.Client(
     base_url="http://<host>:8000",
-    headers={"x-agent-id": "my-agent", "x-api-key": "my-key"})
+    headers={"x-agent-id": "my-agent", "x-api-key": "my-key"},
+)
 
 agent.post(
     "/memory",
     json={
-        "content": "orders-service p99 spiked at 03:14 UTC, root cause: missing index on customer_id",
+        "content": "orders-service p99 spiked at 03:14 UTC. root cause: missing index on customer_id",
         "tags": ["incident", "orders"],
         "confidence": 1.0,
-    })
+    },
+)
 
 results = agent.get("/memory/search", params={"q": "orders latency root cause"}).json()
 ```

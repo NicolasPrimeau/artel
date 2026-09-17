@@ -48,7 +48,7 @@ Module anchors hash the file's *shape*, its imports and top-level symbols, not i
 | `--open-task` | Files the drift as an Artel task for someone to act on. |
 
 ```bash
-export ARTEL_URL=.. ARTEL_AGENT_ID=.. ARTEL_API_KEY=..
+export ARTEL_URL=... ARTEL_AGENT_ID=... ARTEL_API_KEY=...
 uv run python scripts/check_docs.py --open-task
 ```
 
