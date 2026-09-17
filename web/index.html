@@ -166,6 +166,7 @@ footer a:hover{color:var(--money)}
     <a href="#ledger">Ledger</a>
     <a href="#how">How</a>
     <a href="#inside">Inside</a>
+    <a href="https://artel-sandbox.fly.dev/ui">Sandbox</a>
     <a href="/docs/">Docs</a>
     <a href="#ask">Contact</a>
     <a href="https://github.com/NicolasPrimeau/artel">GitHub</a>
@@ -195,31 +196,26 @@ footer a:hover{color:var(--money)}
     them back, <strong>quoted from the source</strong>.</p>
 
     <div class="panel" id="toil-panel">
-      <div class="phead"><span class="dot"></span> <b>toil</b> · mined from 4 projects · last 14 days</div>
+      <div class="phead"><span class="dot"></span> <b>toil</b> <span id="toil-head">· mined from 7 projects · last 90 days</span></div>
 
       <div class="toil">
-        <div class="tag">deploy / migrate<s>harbor-infra</s></div>
-        <div class="ev"><q>Production deploys do not run migrations automatically. After each release
-          someone has to apply them manually with <code>alembic upgrade head</code>, and the release
-          is silently half-live until they do.</q></div>
-        <div class="freq">×3 notes</div>
+        <div class="tag">data refresh<s>quill</s></div>
+        <div class="ev"><q>Interview generation must be dispatched through the message-queue worker rather than generated locally, and existing interviews are skipped rather than regenerated every run</q></div>
+        <div class="freq">×9 in theme</div>
       </div>
 
       <div class="toil">
-        <div class="tag">cross-copy in sync<s>harbor-web</s></div>
-        <div class="ev"><q>The pricing table in <code>marketing/plans.html</code> must be manually
-          kept in sync with <code>billing/plans.py</code>. They have drifted twice this quarter and
-          both times a customer found it before we did.</q></div>
-        <div class="freq">×2 notes</div>
+        <div class="tag">deploy / migrate<s>quill</s></div>
+        <div class="ev"><q>Alembic `env.py` in Quill is configured to refuse autogenerating table drops to prevent accidental schema destruction; table drop migrations must be written by hand</q></div>
+        <div class="freq">×8 in theme</div>
       </div>
 
       <div class="toil">
-        <div class="tag">credentials / login<s>harbor-api</s></div>
-        <div class="ev"><q>The carrier portal 2FA token expires every 30 days and has to be
-          re-entered manually before the nightly scrape. Nothing warns us; we find out from the
-          empty-result alert the next morning.</q></div>
-        <div class="freq">×4 notes</div>
+        <div class="tag">cross-copy in sync<s>atlas</s></div>
+        <div class="ev"><q>MOBILE OAUTH TIP: build the consent URL manually (no PKCE) so the code can be exchanged in a separate process — the provider's oauth auth endpoint with `client_id=$SC_CLIENT_ID&amp;redirect_uri=http://localhost&amp;response_type</q></div>
+        <div class="freq">×7 in theme</div>
       </div>
+
 
       <div class="stats" id="toil-stats">
         <div class="stat"><b>12</b><span>candidates</span></div>
@@ -240,27 +236,25 @@ footer a:hover{color:var(--money)}
     expensive one you barely noticed.</p>
 
     <div class="panel">
-      <div class="phead"><span class="dot"></span> <b>cost per decision</b> · 14 days · list-price equivalent</div>
+      <div class="phead"><span class="dot"></span> <b>cost per decision</b> · 30 days · list-price equivalent</div>
       <div class="scroll"><table>
         <thead><tr><th>Decision</th><th>Project</th><th class="num">Output</th><th class="num">Cost</th></tr></thead>
         <tbody id="dec-rows">
-          <tr><td>Dedupe shipments on (shipment_id, leg, quoted_at)<div class="sub">read as a caching problem for two weeks</div></td>
-              <td class="mono sub">harbor-etl</td><td class="num">56,144</td><td class="num">$12.05</td></tr>
-          <tr><td>Treat carrier schema drift as a data incident<div class="sub">gets it a runbook and an owner</div></td>
-              <td class="mono sub">harbor-etl</td><td class="num">78,293</td><td class="num">$6.44</td></tr>
-          <tr><td>Cache carrier rates for 15 minutes<div class="sub">staleness costs less than throttling did</div></td>
-              <td class="mono sub">harbor-api</td><td class="num">26,135</td><td class="num">$1.44</td></tr>
-          <tr><td>Keep SQLite with WAL rather than Postgres<div class="sub">revisit above 500/s sustained</div></td>
-              <td class="mono sub">harbor-infra</td><td class="num">9,130</td><td class="num">$0.48</td></tr>
-          <tr><td>Rebuild the customs step before the rest of the funnel<div class="sub">60% of drop-off is one step</div></td>
-              <td class="mono sub">harbor-web</td><td class="num">4,324</td><td class="num">$0.18</td></tr>
+          <tr><td>Rename the static read-only demo route from `/sandbox/` to `/ledger/`.</td>
+              <td class="mono sub"></td><td class="num">2,316,618</td><td class="num">$793.66</td></tr>
+          <tr><td>Bundle all procurement datasets (tenders, recompetes, standing offers, awards) into a single $49 multi-sheet feed workbook instead of selling separate niche feeds or workbooks.</td>
+              <td class="mono sub">atlas</td><td class="num">2,158,334</td><td class="num">$723.93</td></tr>
+          <tr><td>Rejected adding a daily digest tier/cadence for permit feeds.</td>
+              <td class="mono sub">atlas</td><td class="num">1,568,793</td><td class="num">$569.32</td></tr>
+          <tr><td>Allow em dashes (—) in page titles</td>
+              <td class="mono sub">quill</td><td class="num">244,068</td><td class="num">$34.86</td></tr>
         </tbody>
       </table></div>
       <div class="stats" id="led-stats">
-        <div class="stat"><b>$81.46</b><span>14 days</span></div>
-        <div class="stat"><b>22</b><span>sessions</span></div>
-        <div class="stat"><b>8</b><span>decisions</span></div>
-        <div class="stat"><b>4</b><span>projects</span></div>
+        <div class="stat"><b>$15,872.51</b><span>30 days</span></div>
+        <div class="stat"><b>20</b><span>sessions</span></div>
+        <div class="stat"><b>239</b><span>decisions</span></div>
+        <div class="stat"><b>7</b><span>projects</span></div>
       </div>
     </div>
   </section>
@@ -362,7 +356,7 @@ docker compose up -d</pre>
   <a href="https://github.com/NicolasPrimeau/artel">GitHub</a>
   <a href="/docs/">Docs</a>
   <a href="/ledger/">Ledger</a>
-  <span style="margin-left:auto;color:var(--faint)">Ledger demo data is fictional.</span>
+  <span style="margin-left:auto;color:var(--faint)">Ledger and sandbox data: our own fleet, anonymized.</span>
 </div></footer>
 
 
@@ -378,8 +372,14 @@ docker compose up -d</pre>
     const d = await (await fetch("/ledger/data/d30.json")).json();
     const t = d.projects.totals;
 
-    const toil = d.toil.rows;
     const themes = d.toil.themes;
+    const toil = [];
+    for (const r of [...d.toil.rows].sort((a, b) => !a.project - !b.project)) {
+      if (!toil.some((x) => x.theme === r.theme)) toil.push(r);
+    }
+    const projects = new Set(d.toil.rows.map((r) => r.project).filter(Boolean));
+    document.getElementById("toil-head").textContent =
+      `\u00b7 mined from ${projects.size} projects \u00b7 last ${d.toil.days} days`;
     document.getElementById("toil-panel").querySelectorAll(".toil").forEach((el, i) => {
       const r = toil[i];
       if (!r) return el.remove();
@@ -389,11 +389,15 @@ docker compose up -d</pre>
       el.querySelector(".freq").textContent = n ? `\u00d7${n.count} in theme` : "";
     });
     document.getElementById("toil-stats").innerHTML =
-      stat(toil.length, "candidates") + stat(themes.length, "themes") +
+      stat(d.toil.rows.length, "candidates") + stat(themes.length, "themes") +
       stat(d.projects.rows.length, "projects") + stat(0, "false positives");
 
-    const dec = d.decisions.rows.filter((r) => r.session_cost != null)
-      .sort((a, b) => b.session_cost - a.session_cost).slice(0, 5);
+    const dec = [];
+    for (const r of d.decisions.rows.filter((r) => r.session_cost != null)
+      .sort((a, b) => b.session_cost - a.session_cost)) {
+      if (!dec.some((x) => x.session_id === r.session_id)) dec.push(r);
+      if (dec.length === 5) break;
+    }
     if (dec.length) {
       document.getElementById("dec-rows").innerHTML = dec.map((r) => `<tr>
         <td>${esc(r.decision)}</td>
