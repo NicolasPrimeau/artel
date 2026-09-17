@@ -75,7 +75,7 @@ a `agents` table lookup. Either match authenticates.
    `Settings.ui_password` is unset (open instance = open owner UI), matching
    the pre-redesign behavior.
 
-Any successful authentication calls `presence.update_seen(agent_id, ..)` and
+Any successful authentication calls `presence.update_seen(agent_id, ...)` and
 returns the resolved `agent_id`. Any failure raises `401 invalid credentials`
 (or `401 invalid or expired session` for the UI-session path). A bad/expired
 JWT never falls through to header auth, it 401s.
@@ -124,7 +124,7 @@ Authorization for *which rows* a caller sees is separate from role.
 - `project_filter(agent_id)` turns that into a SQL `WHERE` fragment:
   - unrestricted → no filter
   - no memberships → `(project IS NULL)` (only global rows)
-  - else → `(project IS NULL OR project IN (..))`
+  - else → `(project IS NULL OR project IN (...))`
 
 Routes that return collections apply `project_filter`; single-entry routes
 re-check membership against the row's `project` and return `403 not a member of

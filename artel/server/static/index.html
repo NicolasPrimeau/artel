@@ -1476,7 +1476,7 @@ pre{
     <div style="margin-top:16px;border-top:1px solid var(--s3);padding-top:12px">
       <div class="modal-title" style="margin-bottom:8px">comments</div>
       <div id="et-comments" style="max-height:240px;overflow-y:auto;margin-bottom:8px;font-size:12px"></div>
-      <textarea id="et-cmtbody" placeholder="add a comment.." rows="2" style="width:100%;margin-bottom:6px"></textarea>
+      <textarea id="et-cmtbody" placeholder="add a comment..." rows="2" style="width:100%;margin-bottom:6px"></textarea>
       <div class="write-row">
         <div class="spacer"></div>
         <button class="p sm" onclick="postTaskComment()">add comment</button>
@@ -1706,7 +1706,7 @@ async function init(){
   await Promise.all([loadProjectsHeader(),loadAgentsGlobal()]);
   // deep link: /ui?project=<name>#<tab> lands with that project pre-selected
   const dlp=new URLSearchParams(location.search).get('project');
-  if(dlp&&[..$('h-project').options].some(o=>o.value===dlp)){$('h-project').value=dlp;}
+  if(dlp&&[...$('h-project').options].some(o=>o.value===dlp)){$('h-project').value=dlp;}
   _restoreTab();checkInbox();setInterval(checkInbox,30000);
   loadProjects();renderThemePickers();startLive();
   // on the dashboard, a deep-linked project opens its drill-down directly
@@ -1798,7 +1798,7 @@ function renderMem(es,isSearch=false){
   hdr.style.display='flex';
   hdr.querySelector('.section-label').textContent=isSearch?'results':'entries';
   cnt.textContent=es.length;
-  const sorted=[..es].sort((a,b)=>_typeOrder(a.type)-_typeOrder(b.type));
+  const sorted=[...es].sort((a,b)=>_typeOrder(a.type)-_typeOrder(b.type));
   $('mlist').innerHTML=sorted.map(e=>{
     const pct=Math.round(e.confidence*100);
     const cc=confClass(e.confidence);
@@ -1951,7 +1951,7 @@ function openTaskEdit(id){
   $('et-pri').value=d.pri||'normal';
   $('et-tags').value=(d.tags||[]).join(', ');
   $('et-cmtbody').value='';
-  $('et-comments').innerHTML='<span style="color:var(--t4)">loading..</span>';
+  $('et-comments').innerHTML='<span style="color:var(--t4)">loading...</span>';
   $('task-modal').classList.add('open');
   loadTaskComments(id);
 }
@@ -2176,7 +2176,7 @@ async function loadAgents(){
       $('alist').innerHTML=emptyState('◎',proj?`no agents in ${esc(proj)}`:'no agents registered');return;
     }
     const now=Date.now();
-    const sorted=[..list].sort((a,b)=>{
+    const sorted=[...list].sort((a,b)=>{
       return (b.last_seen?Date.parse(b.last_seen):0)-(a.last_seen?Date.parse(a.last_seen):0);
     });
     const activeCount=sorted.filter(p=>p.last_seen&&(now-Date.parse(p.last_seen))<300000).length;
@@ -2229,7 +2229,7 @@ async function loadProjects(){
       req('GET','/projects/mine').catch(()=>[]),
     ]);
     _myProjects=new Set(mine.map(p=>p.project_id));
-    const rows=[..new Set([..mine.map(p=>p.project_id),..ps.map(p=>p.name)])];
+    const rows=[...new Set([...mine.map(p=>p.project_id),...ps.map(p=>p.name)])];
     const html=rows.length?rows.map(name=>{
       const isMine=_myProjects.has(name);
       return `<div class="nav-pj${isMine?' mine':''}">
@@ -2552,7 +2552,7 @@ function drawPulseGraph(g){
     ctx.fillText('No graph yet, edges appear as the archivist links memories and agents co-retrieve them.',W/2,H/2);
     _pulseNodes=[];return;
   }
-  const nodes=g.nodes.map((n,i)=>({..n,
+  const nodes=g.nodes.map((n,i)=>({...n,
     x:W/2+Math.cos(i*2.399963)*Math.sqrt(i+1)*14,
     y:H/2+Math.sin(i*2.399963)*Math.sqrt(i+1)*14,vx:0,vy:0}));
   const idx={};nodes.forEach((n,i)=>idx[n.id]=i);
@@ -2641,7 +2641,7 @@ async function loadDashboard(){
       const ua=t.updated_at||t.created_at;
       if(!p.last||ua>p.last)p.last=ua;
     });
-    const cards=[..projMap.values()].sort((a,b)=>{
+    const cards=[...projMap.values()].sort((a,b)=>{
       if(a.name===null&&b.name!==null)return 1;
       if(b.name===null&&a.name!==null)return -1;
       return(b.open+b.claimed)-(a.open+a.claimed)||(a.name||'').localeCompare(b.name||'');
