@@ -10,6 +10,7 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
 :root{
+  --fs:.9;
   --bg:     #1d2021;
   --s1:     #282828;
   --s2:     #32302f;
@@ -52,7 +53,7 @@
 
 html{height:100%}
 body{
-  font:13px/1.6 var(--mono);
+  font:calc(13px*var(--fs))/1.6 var(--mono);
   background:var(--bg);
   color:var(--t1);
   min-height:100%;
@@ -72,7 +73,7 @@ header{
 }
 .logo{
   display:none;
-  font:600 15px var(--mono);
+  font:600 calc(15px*var(--fs)) var(--mono);
   color:var(--t1);
   letter-spacing:-.5px;
   flex-shrink:0;
@@ -85,7 +86,7 @@ header{
   background:transparent;
   border:1px solid var(--b1);
   color:var(--t3);
-  font:12px var(--mono);
+  font:calc(12px*var(--fs)) var(--mono);
   padding:3px 7px;
   border-radius:var(--r);
   min-width:100px;max-width:220px;
@@ -103,13 +104,13 @@ header{
 #h-agent-sel,.h-select{background-color:transparent}
 .spacer{flex:1}
 .h-stat{
-  font:11px var(--mono);color:var(--t4);
+  font:calc(11px*var(--fs)) var(--mono);color:var(--t4);
   flex-shrink:0;
   display:flex;align-items:center;gap:5px;
 }
 .h-stat-val{color:var(--t3)}
 .h-logout{
-  color:var(--t4);font:12px var(--mono);
+  color:var(--t4);font:calc(12px*var(--fs)) var(--mono);
   text-decoration:none;flex-shrink:0;
   padding:4px 8px;border-radius:var(--r);
   border:1px solid transparent;
@@ -126,7 +127,7 @@ header{
 .h-connect{position:relative;flex-shrink:0}
 .h-connect-btn{
   background:transparent;border:1px solid var(--b2);color:var(--t3);
-  font:11px var(--mono);padding:4px 10px;border-radius:var(--r);
+  font:calc(11px*var(--fs)) var(--mono);padding:4px 10px;border-radius:var(--r);
   cursor:pointer;letter-spacing:.4px;
   transition:color .15s,border-color .15s,background .15s;
 }
@@ -138,16 +139,16 @@ header{
   box-shadow:0 8px 32px rgba(0,0,0,.6);
 }
 .h-connect-drop.open{display:block;animation:fadeDown .15s ease}
-.h-connect-lbl{font:10px var(--mono);color:var(--t4);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px}
+.h-connect-lbl{font:calc(10px*var(--fs)) var(--mono);color:var(--t4);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px}
 .h-connect-row{display:flex;align-items:center;gap:8px}
 .h-connect-code{
-  flex:1;font:12px var(--mono);color:var(--t1);
+  flex:1;font:calc(12px*var(--fs)) var(--mono);color:var(--t1);
   background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);
   padding:8px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .h-copy-btn{
   flex-shrink:0;background:transparent;border:1px solid var(--b2);
-  color:var(--t3);font:11px var(--mono);padding:7px 12px;border-radius:var(--r);
+  color:var(--t3);font:calc(11px*var(--fs)) var(--mono);padding:7px 12px;border-radius:var(--r);
   cursor:pointer;transition:color .15s,border-color .15s,background .15s;white-space:nowrap;
 }
 .h-copy-btn:hover{color:var(--accent);border-color:var(--accent);background:var(--a-bg)}
@@ -169,27 +170,27 @@ nav{
 .panel-section{padding:12px 0;border-top:1px solid var(--b1)}
 .panel-section-lbl{
   display:flex;align-items:center;justify-content:space-between;
-  font:10px var(--mono);color:var(--t4);
+  font:calc(10px*var(--fs)) var(--mono);color:var(--t4);
   text-transform:uppercase;letter-spacing:.5px;
   padding:0 18px;margin-bottom:8px;
   cursor:pointer;user-select:none;width:100%;
   transition:color .15s;
 }
 .panel-section-lbl:hover{color:var(--t2)}
-.panel-section-lbl::after{content:'▾';font-size:9px;transition:transform .2s}
+.panel-section-lbl::after{content:'▾';font-size:calc(9px*var(--fs));transition:transform .2s}
 .panel-section.collapsed .panel-section-lbl::after{transform:rotate(-90deg)}
 .panel-section.collapsed .panel-section-body{display:none}
 .panel-proj-row{display:flex;gap:4px;padding:0 12px;margin-bottom:6px}
-.panel-proj-row input{flex:1;min-width:0;height:28px;padding:0 8px;font-size:11px}
+.panel-proj-row input{flex:1;min-width:0;height:28px;padding:0 8px;font-size:calc(11px*var(--fs))}
 .panel-proj-row button{height:28px;padding:0 8px}
 .nav-pj{
   display:flex;align-items:center;gap:4px;
-  padding:4px 12px;font:11px var(--mono);color:var(--t4);
+  padding:4px 12px;font:calc(11px*var(--fs)) var(--mono);color:var(--t4);
 }
 .nav-pj.mine{color:var(--t2)}
 .nav-pj-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
 .nav-pj-name:hover{color:var(--accent)}
-.nav-pj-btn{height:20px;padding:0 6px;font-size:10px;flex-shrink:0}
+.nav-pj-btn{height:20px;padding:0 6px;font-size:calc(10px*var(--fs));flex-shrink:0}
 .panel-theme-grid{
   display:grid;grid-template-columns:repeat(3,1fr);
   gap:6px;padding:0 14px;
@@ -200,7 +201,7 @@ nav{
 .nav-logo{
   display:flex;align-items:center;gap:8px;
   padding:0 18px;height:var(--hh);
-  font:600 14px var(--mono);color:var(--t1);letter-spacing:-.5px;
+  font:600 calc(14px*var(--fs)) var(--mono);color:var(--t1);letter-spacing:-.5px;
   border-bottom:1px solid var(--b1);flex-shrink:0;
 }
 .nav-logo svg{color:var(--accent);width:18px;height:18px;flex-shrink:0}
@@ -208,7 +209,7 @@ nav{
 .nav-btn{
   display:block;width:100%;border:none;background:none;
   padding:10px 18px;height:auto;
-  font:500 11px var(--mono);
+  font:500 calc(11px*var(--fs)) var(--mono);
   color:var(--t4);
   letter-spacing:.6px;text-transform:uppercase;
   cursor:pointer;white-space:nowrap;text-align:left;
@@ -221,7 +222,7 @@ nav{
 .badge{
   position:absolute;top:5px;right:2px;
   background:var(--red);color:#fff;
-  font:700 9px var(--mono);
+  font:700 calc(9px*var(--fs)) var(--mono);
   border-radius:99px;padding:0 4px;line-height:14px;min-width:14px;text-align:center;
 }
 
@@ -236,7 +237,7 @@ nav{
 }
 .toolbar-search{flex:1;min-width:120px}
 .toolbar-label{
-  font:500 11px var(--mono);color:var(--t4);
+  font:500 calc(11px*var(--fs)) var(--mono);color:var(--t4);
   letter-spacing:.4px;margin-left:auto;
 }
 
@@ -246,7 +247,7 @@ input,select,textarea{
   color:var(--t1);
   border:1px solid var(--b1);
   padding:6px 10px;
-  font:13px var(--mono);
+  font:calc(13px*var(--fs)) var(--mono);
   border-radius:var(--r);
   outline:none;
   transition:border-color .15s,box-shadow .15s;
@@ -278,7 +279,7 @@ button{
   background:var(--s2);color:var(--t3);
   border:1px solid var(--b1);
   padding:0 12px;height:30px;
-  font:500 11px var(--mono);letter-spacing:.4px;text-transform:uppercase;
+  font:500 calc(11px*var(--fs)) var(--mono);letter-spacing:.4px;text-transform:uppercase;
   border-radius:var(--r);cursor:pointer;white-space:nowrap;
   transition:background .15s,border-color .15s,color .15s,box-shadow .15s;
 }
@@ -292,8 +293,8 @@ button.p{
 button.p:hover{background:var(--a-bg);border-color:var(--accent);box-shadow:0 0 0 3px var(--a-bord)}
 button.danger{color:var(--t4)}
 button.danger:hover{background:var(--r-bg);color:var(--red);border-color:var(--r-bord)}
-button.sm{height:24px;font-size:10px;padding:0 8px}
-button.icon-btn{width:24px;height:24px;padding:0;font-size:12px}
+button.sm{height:24px;font-size:calc(10px*var(--fs));padding:0 8px}
+button.icon-btn{width:24px;height:24px;padding:0;font-size:calc(12px*var(--fs))}
 
 /* ── Write box ────────────────────────── */
 .write-box{
@@ -342,16 +343,16 @@ button.icon-btn{width:24px;height:24px;padding:0;font-size:12px}
 /* ── Meta row ─────────────────────────── */
 .meta{
   display:flex;gap:6px;align-items:center;flex-wrap:wrap;
-  margin-bottom:7px;font:11px var(--mono);color:var(--t4);
+  margin-bottom:7px;font:calc(11px*var(--fs)) var(--mono);color:var(--t4);
 }
 .meta-agent{color:var(--accent);font-weight:600}
 .meta-time{color:var(--t4);margin-left:auto;flex-shrink:0;white-space:nowrap}
-.meta-id{color:var(--t4);font-size:10px;letter-spacing:.5px}
+.meta-id{color:var(--t4);font-size:calc(10px*var(--fs));letter-spacing:.5px}
 
 /* ── Pills ────────────────────────────── */
 .pill{
   padding:2px 7px;border-radius:3px;
-  font:600 10px var(--mono);letter-spacing:.3px;
+  font:600 calc(10px*var(--fs)) var(--mono);letter-spacing:.3px;
   text-transform:uppercase;flex-shrink:0;
 }
 .pill.memory   {background:var(--a-bg);color:var(--accent);border:1px solid var(--a-bord)}
@@ -364,7 +365,7 @@ button.icon-btn{width:24px;height:24px;padding:0;font-size:12px}
 .pill.owner    {background:var(--a-bg);color:var(--accent);border:1px solid var(--a-bord)}
 .tag{
   padding:2px 7px;border-radius:3px;
-  font:11px var(--mono);color:var(--t3);
+  font:calc(11px*var(--fs)) var(--mono);color:var(--t3);
   background:var(--s3);border:1px solid var(--b2);
 }
 
@@ -384,11 +385,11 @@ button.icon-btn{width:24px;height:24px;padding:0;font-size:12px}
 }
 .conf-fill.low{background:linear-gradient(90deg,var(--orange),rgba(255,170,44,.6))}
 .conf-fill.very-low{background:linear-gradient(90deg,var(--red),rgba(255,77,106,.6))}
-.conf-label{font:10px var(--mono);color:var(--t4)}
+.conf-label{font:calc(10px*var(--fs)) var(--mono);color:var(--t4)}
 
 pre{
   white-space:pre-wrap;word-break:break-word;
-  font:12px/1.65 var(--mono);color:var(--t2);
+  font:calc(12px*var(--fs))/1.65 var(--mono);color:var(--t2);
   margin:0;
 }
 .mem-pre.trunc{max-height:130px;overflow:hidden;position:relative}
@@ -403,19 +404,19 @@ pre{
 .card.editing .conf-row{display:none}
 
 /* ── Status / priority ────────────────── */
-.s{padding:2px 7px;border-radius:3px;font:600 10px var(--mono);text-transform:uppercase;flex-shrink:0}
+.s{padding:2px 7px;border-radius:3px;font:600 calc(10px*var(--fs)) var(--mono);text-transform:uppercase;flex-shrink:0}
 .s.open     {background:var(--o-bg);color:var(--orange);border:1px solid var(--o-bord)}
 .s.claimed  {background:var(--a-bg);color:var(--accent);border:1px solid var(--a-bord)}
 .s.completed{background:var(--g-bg);color:var(--green);border:1px solid var(--g-bord)}
 .s.failed   {background:var(--r-bg);color:var(--red);border:1px solid var(--r-bord)}
-.pri{font:600 10px var(--mono);text-transform:uppercase}
+.pri{font:600 calc(10px*var(--fs)) var(--mono);text-transform:uppercase}
 .pri.high{color:var(--red)}
 .pri.low {color:var(--t4)}
 
 /* ── Events log ───────────────────────── */
 #ev-log{
   height:420px;overflow-y:auto;
-  font:11px/1.5 var(--mono);
+  font:calc(11px*var(--fs))/1.5 var(--mono);
   border:1px solid var(--b1);
   border-radius:var(--r);
   background:var(--bg);
@@ -435,17 +436,17 @@ pre{
   .el{grid-template-columns:60px 180px 110px 1fr;grid-template-areas:"time type agent payload"}
   .el-type,.el-agent{display:block}
 }
-.el-time   {color:var(--t4);grid-area:time;font-size:10px}
+.el-time   {color:var(--t4);grid-area:time;font-size:calc(10px*var(--fs))}
 .el-type   {color:var(--accent);grid-area:type;display:none}
 .el-agent  {color:var(--t3);grid-area:agent;display:none}
-.el-payload{color:var(--t3);grid-area:payload;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
+.el-payload{color:var(--t3);grid-area:payload;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:calc(11px*var(--fs))}
 .sse-dot{
   width:7px;height:7px;border-radius:50%;
   display:inline-block;background:var(--t4);flex-shrink:0;
   transition:background .2s,box-shadow .2s;
 }
 .sse-dot.on{background:var(--green);box-shadow:0 0 7px var(--green);animation:pulse 2s infinite}
-.sse-label{font:11px var(--mono);color:var(--t3)}
+.sse-label{font:calc(11px*var(--fs)) var(--mono);color:var(--t3)}
 
 /* ── Agent grid ───────────────────────── */
 .agent-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
@@ -459,7 +460,7 @@ pre{
 .ac.active{border-left-color:var(--green)}
 .ac.active:hover{box-shadow:0 2px 12px rgba(0,232,122,.1)}
 .ac-name{
-  font:500 13px var(--mono);color:var(--t3);
+  font:500 calc(13px*var(--fs)) var(--mono);color:var(--t3);
   margin-bottom:6px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;
 }
 .dot{
@@ -469,7 +470,7 @@ pre{
 }
 .ac.active .dot{background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite}
 .ac.active .ac-name{color:var(--t1)}
-.ac-meta{font:11px var(--mono);color:var(--t4);display:flex;flex-direction:column;gap:3px;margin-bottom:10px}
+.ac-meta{font:calc(11px*var(--fs)) var(--mono);color:var(--t4);display:flex;flex-direction:column;gap:3px;margin-bottom:10px}
 
 /* ── Project grid ─────────────────────── */
 .proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:8px}
@@ -482,9 +483,9 @@ pre{
 .pj:hover{border-color:var(--b2);box-shadow:var(--shadow)}
 .pj.mine{border-left-color:var(--accent)}
 .pj.mine:hover{box-shadow:0 2px 12px rgba(0,212,255,.1)}
-.pj-name{font:600 13px var(--mono);color:var(--t1);margin-bottom:5px;display:flex;align-items:center;gap:6px}
-.pj-agents{font:11px var(--mono);color:var(--t4);margin-bottom:8px}
-.pj-stats{font:11px var(--mono);color:var(--t4);display:flex;gap:12px;flex-wrap:wrap}
+.pj-name{font:600 calc(13px*var(--fs)) var(--mono);color:var(--t1);margin-bottom:5px;display:flex;align-items:center;gap:6px}
+.pj-agents{font:calc(11px*var(--fs)) var(--mono);color:var(--t4);margin-bottom:8px}
+.pj-stats{font:calc(11px*var(--fs)) var(--mono);color:var(--t4);display:flex;gap:12px;flex-wrap:wrap}
 .pj-stat-val{color:var(--t3)}
 
 /* ── Dashboard ────────────────────────── */
@@ -495,7 +496,7 @@ pre{
   display:flex;flex-direction:column;gap:3px;
 }
 .dash-stat-val{font:600 22px var(--mono);color:var(--t1)}
-.dash-stat-lbl{font:10px var(--mono);color:var(--t4);text-transform:uppercase;letter-spacing:.5px}
+.dash-stat-lbl{font:calc(10px*var(--fs)) var(--mono);color:var(--t4);text-transform:uppercase;letter-spacing:.5px}
 .dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
 .dash-card{
   background:var(--s1);border:1px solid var(--b1);border-left:3px solid var(--b2);
@@ -503,36 +504,36 @@ pre{
   transition:border-color .15s,box-shadow .15s,border-left-color .15s;
 }
 .dash-card:hover{border-left-color:var(--accent);box-shadow:var(--shadow)}
-.dash-card-name{font:600 13px var(--mono);color:var(--t1);margin-bottom:6px}
-.dash-card-stats{font:11px var(--mono);color:var(--t4);display:flex;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.dash-card-name{font:600 calc(13px*var(--fs)) var(--mono);color:var(--t1);margin-bottom:6px}
+.dash-card-stats{font:calc(11px*var(--fs)) var(--mono);color:var(--t4);display:flex;gap:12px;flex-wrap:wrap;margin-bottom:6px}
 .dash-card-stat-val{color:var(--t3)}
-.dash-card-time{font:10px var(--mono);color:var(--t4)}
+.dash-card-time{font:calc(10px*var(--fs)) var(--mono);color:var(--t4)}
 .dash-back{display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--b1)}
-.dash-proj-title{font:600 14px var(--mono);color:var(--t1)}
+.dash-proj-title{font:600 calc(14px*var(--fs)) var(--mono);color:var(--t1)}
 .dash-section{margin-bottom:20px}
 .dash-section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.dash-section-hdr-lbl{font:500 10px var(--mono);color:var(--t4);text-transform:uppercase;letter-spacing:.8px}
-.dash-hdr-counts{font:500 10px var(--mono);color:var(--t3);text-transform:none;letter-spacing:.3px;margin-left:6px}
-.dash-link{background:none;border:none;color:var(--accent);cursor:pointer;font:11px var(--mono);padding:0}
+.dash-section-hdr-lbl{font:500 calc(10px*var(--fs)) var(--mono);color:var(--t4);text-transform:uppercase;letter-spacing:.8px}
+.dash-hdr-counts{font:500 calc(10px*var(--fs)) var(--mono);color:var(--t3);text-transform:none;letter-spacing:.3px;margin-left:6px}
+.dash-link{background:none;border:none;color:var(--accent);cursor:pointer;font:calc(11px*var(--fs)) var(--mono);padding:0}
 .dash-link:hover{text-decoration:underline}
 .dash-row{
   background:var(--s2);border:1px solid var(--b1);border-radius:var(--r);
-  padding:9px 12px;margin-bottom:4px;font:12px var(--mono);color:var(--t2);
+  padding:9px 12px;margin-bottom:4px;font:calc(12px*var(--fs)) var(--mono);color:var(--t2);
   display:flex;flex-direction:column;gap:4px;
 }
-.dash-row-meta{font:10px var(--mono);color:var(--t4);display:flex;gap:10px;flex-wrap:wrap}
+.dash-row-meta{font:calc(10px*var(--fs)) var(--mono);color:var(--t4);display:flex;gap:10px;flex-wrap:wrap}
 .dash-quick-links{display:flex;gap:8px;flex-wrap:wrap}
 
 /* ── Section label ────────────────────── */
 .section-label{
-  font:500 10px var(--mono);color:var(--t4);
+  font:500 calc(10px*var(--fs)) var(--mono);color:var(--t4);
   text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;
 }
 .section-header{
   display:flex;align-items:center;gap:8px;margin-bottom:8px;
 }
 .section-count{
-  font:11px var(--mono);color:var(--t4);
+  font:calc(11px*var(--fs)) var(--mono);color:var(--t4);
   background:var(--s3);border:1px solid var(--b2);
   padding:0 6px;border-radius:99px;
   line-height:18px;
@@ -540,7 +541,7 @@ pre{
 
 /* ── Empty state ──────────────────────── */
 .empty{
-  color:var(--t4);padding:48px 0;text-align:center;font:12px var(--mono);
+  color:var(--t4);padding:48px 0;text-align:center;font:calc(12px*var(--fs)) var(--mono);
   display:flex;flex-direction:column;align-items:center;gap:8px;
 }
 .empty-icon{font-size:24px;opacity:.4}
@@ -561,7 +562,7 @@ pre{
   z-index:1000;display:flex;flex-direction:column;gap:8px;align-items:flex-end;
 }
 .toast{
-  font:12px var(--mono);
+  font:calc(12px*var(--fs)) var(--mono);
   padding:8px 14px;border-radius:5px;
   border:1px solid;
   box-shadow:0 4px 20px rgba(0,0,0,.5);
@@ -577,7 +578,7 @@ pre{
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
 
 /* ── Flash (inline) ───────────────────── */
-.flash{color:var(--green);font:11px var(--mono);margin-left:4px;opacity:0;transition:opacity .3s}
+.flash{color:var(--green);font:calc(11px*var(--fs)) var(--mono);margin-left:4px;opacity:0;transition:opacity .3s}
 .flash.show{opacity:1}
 
 /* ── Log rows ─────────────────────────── */
@@ -588,17 +589,17 @@ pre{
   align-items:baseline;
   padding:6px 10px;
   border-bottom:1px solid var(--s2);
-  font:12px var(--mono);
+  font:calc(12px*var(--fs)) var(--mono);
 }
 .log-row:hover{background:var(--s1)}
-.log-ts{color:var(--t4);white-space:nowrap;font-size:11px}
-.log-level{font-weight:600;font-size:11px;text-transform:uppercase}
-.log-source{color:var(--blue);font-size:11px}
-.log-action{color:var(--accent);font-size:11px}
+.log-ts{color:var(--t4);white-space:nowrap;font-size:calc(11px*var(--fs))}
+.log-level{font-weight:600;font-size:calc(11px*var(--fs));text-transform:uppercase}
+.log-source{color:var(--blue);font-size:calc(11px*var(--fs))}
+.log-action{color:var(--accent);font-size:calc(11px*var(--fs))}
 .log-msg{color:var(--t2);word-break:break-word}
 .log-details{
   grid-column:2/-1;
-  color:var(--t4);font-size:11px;
+  color:var(--t4);font-size:calc(11px*var(--fs));
   background:var(--s1);border-radius:var(--r);
   padding:3px 6px;margin-top:3px;word-break:break-all;
 }
@@ -620,7 +621,7 @@ pre{
   display:flex;align-items:center;justify-content:space-between;
   margin-bottom:14px;
 }
-.modal-title{font:600 12px var(--mono);color:var(--t2);letter-spacing:.5px;text-transform:uppercase}
+.modal-title{font:600 calc(12px*var(--fs)) var(--mono);color:var(--t2);letter-spacing:.5px;text-transform:uppercase}
 .modal-close{
   background:none;border:none;color:var(--t4);cursor:pointer;
   font:16px var(--mono);padding:0;width:24px;height:24px;
@@ -652,13 +653,13 @@ pre{
 .drawer.open{transform:translateX(0)}
 .drawer-header{
   padding:16px 20px;border-bottom:1px solid var(--b1);
-  font:600 14px var(--mono);color:var(--t2);
+  font:600 calc(14px*var(--fs)) var(--mono);color:var(--t2);
 }
 .drawer-nav{flex:1;padding:8px 0;overflow-y:auto}
 .drawer-item{
   display:flex;align-items:center;
   width:100%;padding:14px 20px;
-  font:500 12px var(--mono);color:var(--t3);
+  font:500 calc(12px*var(--fs)) var(--mono);color:var(--t3);
   background:none;border:none;border-radius:0;
   text-align:left;cursor:pointer;height:auto;
   text-transform:uppercase;letter-spacing:.6px;
@@ -1024,9 +1025,9 @@ pre{
 .theme-swatch.active{background:var(--a-bg);border-color:var(--a-bord)}
 .swatch-dots{display:flex;gap:3px;justify-content:center;margin-bottom:2px}
 .sd{width:11px;height:11px;border-radius:50%;border:2px solid;flex-shrink:0}
-.swatch-label{font:10px var(--mono);color:var(--t3);white-space:nowrap;letter-spacing:0;text-align:center;overflow:hidden;text-overflow:ellipsis;width:100%}
+.swatch-label{font:calc(10px*var(--fs)) var(--mono);color:var(--t3);white-space:nowrap;letter-spacing:0;text-align:center;overflow:hidden;text-overflow:ellipsis;width:100%}
 .mode-toggle{display:flex;gap:4px;margin-bottom:10px}
-.mode-btn{flex:1;padding:4px 0;font:11px var(--mono);border:1px solid var(--b1);border-radius:var(--r);background:transparent;color:var(--t3);cursor:pointer;transition:all .15s;height:auto;min-height:auto}
+.mode-btn{flex:1;padding:4px 0;font:calc(11px*var(--fs)) var(--mono);border:1px solid var(--b1);border-radius:var(--r);background:transparent;color:var(--t3);cursor:pointer;transition:all .15s;height:auto;min-height:auto}
 .mode-btn.on{background:var(--a-bg);color:var(--accent);border-color:var(--a-bord)}
 .mode-btn:hover:not(.on){color:var(--t1);border-color:var(--b2)}
 
@@ -1052,10 +1053,10 @@ pre{
   #h-project{order:7;flex:1;min-width:0;max-width:none}
   .spacer{display:none}
   .agent-grid,.proj-grid{grid-template-columns:1fr}
-  body{font-size:12px}
+  body{font-size:calc(12px*var(--fs))}
   /* 16px prevents iOS auto-zoom on input focus */
   input,select,textarea{font-size:16px}
-  button{font-size:12px;height:36px}
+  button{font-size:calc(12px*var(--fs));height:36px}
   button.sm{height:28px;min-width:36px}
   button.icon-btn{width:36px;height:36px}
   .h-icon-btn{min-width:44px;min-height:44px}
@@ -1066,7 +1067,7 @@ pre{
   .toast{max-width:100%}
   .toolbar-search{flex-basis:100%;min-width:0}
   .write-row > input,.write-row > select{min-width:0}
-  pre{overflow-x:auto;font-size:13px}
+  pre{overflow-x:auto;font-size:calc(13px*var(--fs))}
 }
 </style>
 </head>
@@ -1294,7 +1295,7 @@ pre{
   </div>
   <div class="toolbar" style="margin-bottom:0;padding:8px 0 0">
     <div class="spacer"></div>
-    <label style="font-size:12px;color:var(--t3);cursor:pointer">
+    <label style="font-size:calc(12px*var(--fs));color:var(--t3);cursor:pointer">
       <input type="checkbox" id="msg-show-all" onchange="loadInbox()" style="margin-right:4px">show all
     </label>
   </div>
@@ -1379,7 +1380,7 @@ pre{
 
 <div id="panel-mesh" class="panel">
   <div class="toolbar" style="margin-bottom:16px">
-    <span style="font-size:13px;font-weight:600">Mesh Network</span>
+    <span style="font-size:calc(13px*var(--fs));font-weight:600">Mesh Network</span>
     <div class="spacer"></div>
     <button onclick="loadMesh()">refresh</button>
   </div>
@@ -1395,7 +1396,7 @@ pre{
 
   <!-- manual link (collapsed by default) -->
   <details style="margin-bottom:20px">
-    <summary style="font:500 11px var(--mono);color:var(--t3);text-transform:uppercase;letter-spacing:.8px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px">
+    <summary style="font:500 calc(11px*var(--fs)) var(--mono);color:var(--t3);text-transform:uppercase;letter-spacing:.8px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px">
       <span>▸</span> link manually
     </summary>
     <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px">
@@ -1409,46 +1410,46 @@ pre{
   <!-- inbound tokens -->
   <div class="section-header">
     <span class="section-label">my tokens</span>
-    <span style="font-size:11px;color:var(--t4)"> share with peers so they can pull from you</span>
+    <span style="font-size:calc(11px*var(--fs));color:var(--t4)"> share with peers so they can pull from you</span>
   </div>
   <div id="mesh-token-section"></div>
 </div>
 
 <div id="panel-pulse" class="panel">
   <div class="toolbar" style="margin-bottom:16px">
-    <span style="font-size:13px;font-weight:600">Fleet Pulse</span>
-    <span id="pulse-counts" style="font-size:11px;color:var(--t4)"></span>
+    <span style="font-size:calc(13px*var(--fs));font-weight:600">Fleet Pulse</span>
+    <span id="pulse-counts" style="font-size:calc(11px*var(--fs));color:var(--t4)"></span>
     <div class="spacer"></div>
     <button onclick="loadPulse()">refresh</button>
   </div>
 
   <div class="section-header"><span class="section-label">knowledge graph</span>
-    <span style="font-size:11px;color:var(--t4)"> solid: archivist-asserted · dashed: learned from co-retrieval · red: contradicts</span>
+    <span style="font-size:calc(11px*var(--fs));color:var(--t4)"> solid: archivist-asserted · dashed: learned from co-retrieval · red: contradicts</span>
   </div>
   <div style="position:relative;margin-bottom:20px">
     <canvas id="pulse-canvas" style="width:100%;height:380px;border:1px solid var(--b1);border-radius:6px;background:var(--s1);display:block"></canvas>
-    <div id="pulse-tip" style="position:absolute;display:none;pointer-events:none;background:var(--s2);border:1px solid var(--b1);border-radius:4px;padding:4px 8px;font-size:11px;max-width:320px;z-index:5"></div>
+    <div id="pulse-tip" style="position:absolute;display:none;pointer-events:none;background:var(--s2);border:1px solid var(--b1);border-radius:4px;padding:4px 8px;font-size:calc(11px*var(--fs));max-width:320px;z-index:5"></div>
   </div>
 
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px">
     <div>
       <div class="section-header"><span class="section-label">hottest trails</span>
-        <span style="font-size:11px;color:var(--t4)"> what the fleet keeps reaching for</span></div>
+        <span style="font-size:calc(11px*var(--fs));color:var(--t4)"> what the fleet keeps reaching for</span></div>
       <div id="pulse-trails"></div>
     </div>
     <div>
       <div class="section-header"><span class="section-label">most central knowledge</span>
-        <span style="font-size:11px;color:var(--t4)"> pagerank over support edges</span></div>
+        <span style="font-size:calc(11px*var(--fs));color:var(--t4)"> pagerank over support edges</span></div>
       <div id="pulse-central"></div>
     </div>
     <div>
       <div class="section-header"><span class="section-label">agent specializations</span>
-        <span style="font-size:11px;color:var(--t4)"> earned from completed tasks</span></div>
+        <span style="font-size:calc(11px*var(--fs));color:var(--t4)"> earned from completed tasks</span></div>
       <div id="pulse-affinity"></div>
     </div>
     <div>
       <div class="section-header"><span class="section-label">sync conflicts</span>
-        <span style="font-size:11px;color:var(--t4)"> preserved losers awaiting resolution</span></div>
+        <span style="font-size:calc(11px*var(--fs));color:var(--t4)"> preserved losers awaiting resolution</span></div>
       <div id="pulse-conflicts"></div>
     </div>
   </div>
@@ -1475,7 +1476,7 @@ pre{
     </div>
     <div style="margin-top:16px;border-top:1px solid var(--s3);padding-top:12px">
       <div class="modal-title" style="margin-bottom:8px">comments</div>
-      <div id="et-comments" style="max-height:240px;overflow-y:auto;margin-bottom:8px;font-size:12px"></div>
+      <div id="et-comments" style="max-height:240px;overflow-y:auto;margin-bottom:8px;font-size:calc(12px*var(--fs))"></div>
       <textarea id="et-cmtbody" placeholder="add a comment..." rows="2" style="width:100%;margin-bottom:6px"></textarea>
       <div class="write-row">
         <div class="spacer"></div>
@@ -1906,9 +1907,9 @@ async function loadTasks(){
           ${t.assigned_to?`<span style="color:var(--t3)">→ <span style="color:var(--accent)">${esc(t.assigned_to)}</span></span>`:''}
           <span class="meta-time" title="${t.created_at}">${relTime(t.created_at)}</span>
         </div>
-        <div style="font:500 13px var(--mono);color:var(--t1)">${esc(t.title)}</div>
-        ${t.description?`<div style="color:var(--t3);font-size:12px;margin-top:3px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical">${esc(t.description)}</div>`:''}
-        ${t.expected_outcome?`<div style="color:var(--t4);font-size:11px;margin-top:3px">→ ${esc(t.expected_outcome)}</div>`:''}
+        <div style="font:500 calc(13px*var(--fs)) var(--mono);color:var(--t1)">${esc(t.title)}</div>
+        ${t.description?`<div style="color:var(--t3);font-size:calc(12px*var(--fs));margin-top:3px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical">${esc(t.description)}</div>`:''}
+        ${t.expected_outcome?`<div style="color:var(--t4);font-size:calc(11px*var(--fs));margin-top:3px">→ ${esc(t.expected_outcome)}</div>`:''}
         <div class="card-actions">
           ${t.status==='open'?`<button class="sm p" onclick="taskAction('${t.id}','claim')">claim</button>`:''}
           ${t.status==='claimed'?`<button class="sm p" onclick="taskAction('${t.id}','complete')">complete</button><button class="sm" onclick="taskActionWithReason('${t.id}','unclaim','Release this claim back to the open queue. Optional reason:')">unclaim</button><button class="sm danger" onclick="taskActionWithReason('${t.id}','fail','Mark this task as failed. Reason (recommended):')">fail</button>`:''}
@@ -1975,7 +1976,7 @@ async function loadTaskComments(id){
     if(!cs.length){$('et-comments').innerHTML='<span style="color:var(--t4)">no comments yet</span>';return;}
     $('et-comments').innerHTML=cs.map(c=>`
       <div style="border-left:2px solid ${_kindColor[c.kind]||'var(--s3)'};padding:4px 8px;margin-bottom:6px">
-        <div style="color:var(--t4);font-size:11px;margin-bottom:2px">
+        <div style="color:var(--t4);font-size:calc(11px*var(--fs));margin-bottom:2px">
           <span style="color:${_kindColor[c.kind]||'var(--t2)'}">${_kindGlyph[c.kind]||'•'} ${c.kind}</span>
           <span> · </span>
           <span class="meta-agent">${esc(c.agent_id)}</span>
@@ -2020,7 +2021,7 @@ async function loadInbox(){
           <span class="meta-agent">${esc(m.from_agent)}</span>
           ${m.to_agent&&m.to_agent!==window._aid?`<span style="color:var(--t4)">→ ${esc(m.to_agent)}</span>`:''}
           ${m.subject?`<span style="color:var(--t3)">${esc(m.subject)}</span>`:''}
-          ${m.read?`<span style="color:var(--t4);font-size:11px">read</span>`:''}
+          ${m.read?`<span style="color:var(--t4);font-size:calc(11px*var(--fs))">read</span>`:''}
           <span class="meta-time" title="${m.created_at}">${relTime(m.created_at)}</span>
         </div>
         <pre>${esc(m.body)}</pre>
@@ -2189,7 +2190,7 @@ async function loadAgents(){
       const isSelf=p.agent_id===window._aid;
       const ownerPill=p.role==='owner'?` <span class="pill owner">owner</span>`:'';
       return `<div class="ac${active?' active':''}">
-        <div class="ac-name"><span class="dot"></span>${esc(p.agent_id)}${ownerPill}${isSelf?` <span style="color:var(--t4);font-size:10px">(you)</span>`:''}</div>
+        <div class="ac-name"><span class="dot"></span>${esc(p.agent_id)}${ownerPill}${isSelf?` <span style="color:var(--t4);font-size:calc(10px*var(--fs))">(you)</span>`:''}</div>
         <div class="ac-meta">
           <span title="${p.last_seen||''}">last seen ${relTime(p.last_seen)}</span>
           ${projs?`<span style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap">${projs}</span>`:''}
@@ -2238,9 +2239,9 @@ async function loadProjects(){
           ?`<button class="nav-pj-btn sm danger" onclick="leaveProject('${esc(name)}')">×</button>`
           :`<button class="nav-pj-btn sm p" onclick="joinProject('${esc(name)}')">join</button>`}
       </div>`;
-    }).join(''):`<div style="padding:2px 18px;font:10px var(--mono);color:var(--t4)">none yet</div>`;
+    }).join(''):`<div style="padding:2px 18px;font:calc(10px*var(--fs)) var(--mono);color:var(--t4)">none yet</div>`;
     ['sidebar-pjlist','drawer-pjlist'].forEach(id=>{if($(id))$(id).innerHTML=html;});
-  }catch(e){['sidebar-pjlist','drawer-pjlist'].forEach(id=>{if($(id))$(id).innerHTML=`<div style="padding:2px 18px;font:10px var(--mono);color:var(--red)">${esc(e.message)}</div>`;});}
+  }catch(e){['sidebar-pjlist','drawer-pjlist'].forEach(id=>{if($(id))$(id).innerHTML=`<div style="padding:2px 18px;font:calc(10px*var(--fs)) var(--mono);color:var(--red)">${esc(e.message)}</div>`;});}
 }
 
 function selectProject(name){$('h-project').value=name;onProjectChange()}
@@ -2285,7 +2286,7 @@ async function loadSession(){
         <pre>${esc(h.summary)}</pre>`;
       if(h.next_steps?.length){
         html+=`<div style="margin-top:10px"><div class="section-label" style="margin-bottom:5px">next steps</div>`;
-        html+=h.next_steps.map(s=>`<div style="padding:3px 0;color:var(--t3);font-size:12px">→ ${esc(s)}</div>`).join('');
+        html+=h.next_steps.map(s=>`<div style="padding:3px 0;color:var(--t3);font-size:calc(12px*var(--fs))">→ ${esc(s)}</div>`).join('');
         html+='</div>';
       }
       if(h.in_progress?.length){
@@ -2377,7 +2378,7 @@ async function loadMesh(){
           <span class="section-label" style="margin-bottom:0">discovered on LAN</span>
         </div>`+
         discovered.map(p=>`<div class="card green" style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-          <span style="flex:1;font-size:12px;font-family:var(--mono)">${esc(p.url)}</span>
+          <span style="flex:1;font-size:calc(12px*var(--fs));font-family:var(--mono)">${esc(p.url)}</span>
           <button class="p sm" onclick="linkDiscovered('${esc(p.instance_id)}')">link</button>
         </div>`).join('')+`<div style="margin-bottom:16px"></div>`;
     } else {
@@ -2385,7 +2386,7 @@ async function loadMesh(){
     }
     if(!tokens.length){
       $('mesh-token-section').innerHTML=`
-        <div style="color:var(--t4);font-size:12px;margin-bottom:8px">No tokens yet. Generate one to let another Artel pull your notes.</div>
+        <div style="color:var(--t4);font-size:calc(12px*var(--fs));margin-bottom:8px">No tokens yet. Generate one to let another Artel pull your notes.</div>
         <button class="p sm" onclick="createMeshToken()">generate token</button>`;
     } else {
       $('mesh-token-section').innerHTML=tokens.map(t=>{
@@ -2393,19 +2394,19 @@ async function loadMesh(){
         const feedUrl=`${base}/memory/feed.json?mesh_token=${encodeURIComponent(t.token)}${t.project?'&project='+encodeURIComponent(t.project):''}`;
         return `<div class="card accent">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
-            <span style="font-size:12px;font-weight:600">${esc(t.label||'token')}</span>
+            <span style="font-size:calc(12px*var(--fs));font-weight:600">${esc(t.label||'token')}</span>
             <span class="tag">${scope}</span>
             <div class="spacer"></div>
             <button class="sm" onclick="revokeMeshToken('${esc(t.id)}')">revoke</button>
           </div>
-          <div style="font-size:11px;color:var(--t3);margin-bottom:3px">token</div>
+          <div style="font-size:calc(11px*var(--fs));color:var(--t3);margin-bottom:3px">token</div>
           <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
-            <code style="font-size:11px;word-break:break-all;flex:1;color:var(--accent);opacity:.85">${esc(t.token)}</code>
+            <code style="font-size:calc(11px*var(--fs));word-break:break-all;flex:1;color:var(--accent);opacity:.85">${esc(t.token)}</code>
             <button class="sm" onclick="navigator.clipboard.writeText('${esc(t.token)}').then(()=>toast('copied','info'))">copy</button>
           </div>
-          <div style="font-size:11px;color:var(--t3);margin-bottom:3px">feed URL</div>
+          <div style="font-size:calc(11px*var(--fs));color:var(--t3);margin-bottom:3px">feed URL</div>
           <div style="display:flex;gap:6px;align-items:center">
-            <code style="font-size:11px;word-break:break-all;flex:1;color:var(--t3)">${esc(feedUrl)}</code>
+            <code style="font-size:calc(11px*var(--fs));word-break:break-all;flex:1;color:var(--t3)">${esc(feedUrl)}</code>
             <button class="sm" onclick="navigator.clipboard.writeText('${esc(feedUrl)}').then(()=>toast('URL copied','info'))">copy</button>
           </div>
         </div>`;
@@ -2416,7 +2417,7 @@ async function loadMesh(){
       const synced=r.last_fetched_at?'synced '+relTime(r.last_fetched_at):'never synced';
       return `<div class="card blue">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-          <span style="font-size:12px;font-weight:600;font-family:var(--mono);flex:1;word-break:break-all">${esc(r.peer_url)}</span>
+          <span style="font-size:calc(12px*var(--fs));font-weight:600;font-family:var(--mono);flex:1;word-break:break-all">${esc(r.peer_url)}</span>
           <button class="sm p" onclick="syncPeer('${esc(r.id)}')">sync</button>
           <button class="sm" onclick="detachPeer('${esc(r.id)}')">detach</button>
         </div>
@@ -2505,31 +2506,31 @@ async function loadPulse(){
     drawPulseGraph(d.graph);
     $('pulse-trails').innerHTML=d.trails.length?d.trails.map(t=>{
       const heat=Math.min(1,t.trail/8);
-      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--b1);font-size:12px">
+      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--b1);font-size:calc(12px*var(--fs))">
         <span style="width:${Math.max(6,Math.round(heat*46))}px;height:6px;border-radius:3px;background:var(--accent);opacity:${(0.35+heat*0.65).toFixed(2)};flex-shrink:0"></span>
         <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.label)}</span>
-        <span style="color:var(--t4);font-family:var(--mono);font-size:10px">${t.trail}</span>
+        <span style="color:var(--t4);font-family:var(--mono);font-size:calc(10px*var(--fs))">${t.trail}</span>
       </div>`;
-    }).join(''):'<div style="color:var(--t4);font-size:12px">No trails yet, trails form as agents retrieve memories.</div>';
+    }).join(''):'<div style="color:var(--t4);font-size:calc(12px*var(--fs))">No trails yet, trails form as agents retrieve memories.</div>';
     $('pulse-central').innerHTML=d.central.length?d.central.map((c,i)=>`
-      <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--b1);font-size:12px">
-        <span style="color:var(--t4);font-family:var(--mono);font-size:10px;width:14px">${i+1}</span>
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--b1);font-size:calc(12px*var(--fs))">
+        <span style="color:var(--t4);font-family:var(--mono);font-size:calc(10px*var(--fs));width:14px">${i+1}</span>
         <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.label)}</span>
-      </div>`).join(''):'<div style="color:var(--t4);font-size:12px">No support edges yet, the archivist links corroborating memories as it synthesizes.</div>';
+      </div>`).join(''):'<div style="color:var(--t4);font-size:calc(12px*var(--fs))">No support edges yet, the archivist links corroborating memories as it synthesizes.</div>';
     const byAgent={};
     d.affinities.forEach(a=>{(byAgent[a.agent_id]=byAgent[a.agent_id]||[]).push(a)});
     $('pulse-affinity').innerHTML=Object.keys(byAgent).length?Object.entries(byAgent).map(([ag,rows])=>`
-      <div style="padding:5px 0;border-bottom:1px solid var(--b1);font-size:12px">
+      <div style="padding:5px 0;border-bottom:1px solid var(--b1);font-size:calc(12px*var(--fs))">
         <span style="font-family:var(--mono);color:var(--t2)">${esc(ag)}</span>
         <span style="margin-left:6px">${rows.slice(0,5).map(r=>`<span class="tag" title="${r.weight}">${esc(r.tag)}</span>`).join(' ')}</span>
-      </div>`).join(''):'<div style="color:var(--t4);font-size:12px">No specializations yet, agents earn tag affinity by completing tasks.</div>';
+      </div>`).join(''):'<div style="color:var(--t4);font-size:calc(12px*var(--fs))">No specializations yet, agents earn tag affinity by completing tasks.</div>';
     $('pulse-conflicts').innerHTML=d.conflicts.length?d.conflicts.map(c=>`
-      <div class="card" style="border-left:2px solid var(--red,#e06c75);margin-bottom:6px;font-size:12px">
+      <div class="card" style="border-left:2px solid var(--red,#e06c75);margin-bottom:6px;font-size:calc(12px*var(--fs))">
         <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.label)}</div>
-        <div style="color:var(--t4);font-size:10px;font-family:var(--mono)">contradicts ${esc((c.parents[0]||'').slice(0,8))} · ${ago(c.created_at)}</div>
-      </div>`).join(''):'<div style="color:var(--t4);font-size:12px">None, the mesh has no unresolved concurrent edits.</div>';
+        <div style="color:var(--t4);font-size:calc(10px*var(--fs));font-family:var(--mono)">contradicts ${esc((c.parents[0]||'').slice(0,8))} · ${ago(c.created_at)}</div>
+      </div>`).join(''):'<div style="color:var(--t4);font-size:calc(12px*var(--fs))">None, the mesh has no unresolved concurrent edits.</div>';
   }catch(e){
-    $('pulse-trails').innerHTML=`<div style="color:var(--red,#e06c75);font-size:12px">${esc(e.message)}</div>`;
+    $('pulse-trails').innerHTML=`<div style="color:var(--red,#e06c75);font-size:calc(12px*var(--fs))">${esc(e.message)}</div>`;
     $('pulse-central').innerHTML='';$('pulse-affinity').innerHTML='';$('pulse-conflicts').innerHTML='';
   }
 }
