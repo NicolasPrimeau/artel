@@ -28,6 +28,10 @@ gtag("config", "G-CYMPQ0NXJN");
 </script>
 """
 
+SEO = """<meta name="description" content="A live Artel ledger: what an agent fleet's work was worth, what each decision cost, and the work it keeps doing by hand. Real figures, anonymized.">
+<link rel="canonical" href="https://artel.run/ledger/">
+"""
+
 SHIM = """<script>
 (function () {
   const real = window.fetch.bind(window);
@@ -107,7 +111,7 @@ def main() -> int:
         print("page.html has no <script> to anchor the shim before", file=sys.stderr)
         return 1
     at = page.index(marker)
-    (out / "index.html").write_text(page[:at] + GA + SHIM + page[at:])
+    (out / "index.html").write_text(page[:at] + SEO + GA + SHIM + page[at:])
 
     shutil.rmtree(tmp.parent, ignore_errors=True)
 

@@ -185,6 +185,14 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: npx --yes vercel@latest deploy --prod --yes --token "${{ secrets.VERCEL_TOKEN }}"
 
+      # Bing, Yandex and the other IndexNow engines hear about every page on each
+      # deploy instead of waiting for a crawl. Google does not take IndexNow; it
+      # reads the sitemap through Search Console. A rejected ping should show up,
+      # but it must not mark a successful deploy as failed.
+      - name: Notify IndexNow
+        continue-on-error: true
+        run: python3 scripts/indexnow.py
+
   release:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
