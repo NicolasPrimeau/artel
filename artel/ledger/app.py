@@ -29,6 +29,11 @@ async def projects(days: int = 7) -> dict:
     return {"days": days, "rows": rows, "totals": facts.totals(days)}
 
 
+@app.get("/api/daily")
+async def daily(days: int = 30) -> dict:
+    return {"days": days, "rows": facts.daily(days)}
+
+
 @app.get("/api/sessions")
 async def sessions(days: int = 7, limit: int = 40) -> dict:
     return {"days": days, "rows": facts.by_session(days, limit)}

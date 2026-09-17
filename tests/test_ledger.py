@@ -40,6 +40,15 @@ class TestLedgerFacts:
         assert rows[0]["billed"] == 0.0
         assert rows[0]["decisions"] == 1
 
+    def test_daily_splits_spend_by_day_and_project(self, ledger):
+        facts, _ = ledger
+        rows = facts.daily(30)
+        assert len(rows) == 1
+        assert rows[0]["project"] == "p1"
+        assert len(rows[0]["day"]) == 10
+        assert rows[0]["equivalent"] == pytest.approx(0.002)
+        assert rows[0]["billed"] == 0.0
+
     def test_decision_carries_the_cost_of_its_session(self, ledger):
         facts, _ = ledger
         rows = facts.by_decision(30)

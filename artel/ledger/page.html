@@ -3,203 +3,356 @@
 <title>Artel ledger</title>
 <link rel=icon href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='5' fill='%23101316'/><path d='M7 9h18M7 16h18M7 23h11' stroke='%235cb8ae' stroke-width='2.4' stroke-linecap='round'/></svg>">
 <style>
-/* Instrument panel. Full-bleed, dense, monospace throughout. This is a readout, not
-   a document. Warm-dark rather than the usual cold slate; amber for money because it
-   is the only hue that appears, so a figure never has to be labelled to be found.
-   Every table scrolls inside its own gutter: the failure before was a 76ch column
-   with 7-column tables in it. */
 :root{
-  --bg:#101316; --panel:#171b1f; --row:#1c2126;
-  --fg:#e0e5e9; --dim:#939ca4; --rule:#252c33; --edge:#3a444d;
-  --faint:#818b94; --money:#5cb8ae; --warn:#d98a72; --ok:#9ab973;
-  --mono:"SF Mono",ui-monospace,"JetBrains Mono","Roboto Mono",Menlo,monospace;
+  --bg:#101316; --panel:#171b1f; --row:#1c2126; --hi:#232a31;
+  --fg:#e0e5e9; --dim:#939ca4; --faint:#6f7982; --rule:#252c33; --edge:#3a444d;
+  --money:#5cb8ae; --manual:#d98a72;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#9085e9; --s7:#e66767;
+  --other:#5d666e;
+  --mono:ui-monospace,"SF Mono","JetBrains Mono","Roboto Mono",Menlo,Consolas,monospace;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Inter,Roboto,sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%}
-body{background:var(--bg);color:var(--fg);font:13px/1.4 var(--mono);
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font:13px/1.45 var(--sans);
   font-variant-numeric:tabular-nums lining-nums;overflow-y:scroll}
+.num,.mono{font-family:var(--mono)}
 
-/* ---- top bar: identity left, window control right, KPIs beneath ---- */
-.bar{display:flex;align-items:center;gap:16px;padding:10px 16px;
-  border-bottom:1px solid var(--rule);background:var(--panel);
+.bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 20px;
+  border-bottom:1px solid var(--rule);background:rgba(23,27,31,.94);backdrop-filter:blur(6px);
   position:sticky;top:0;z-index:5}
-.brand{font-weight:600;letter-spacing:.14em;text-transform:uppercase;font-size:11px}
-.brand i{color:var(--money);font-style:normal}
+.brand{font:600 12px var(--mono);letter-spacing:.2em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.brand i{width:9px;height:9px;background:var(--money);border-radius:1px;display:block}
+.brand span{color:var(--money)}
+.filter{font:11px var(--mono);color:var(--dim);display:flex;align-items:center;gap:8px}
+.filter b{color:var(--fg);font-weight:600}
+.filter button{background:none;border:1px solid var(--edge);color:var(--dim);font:11px var(--mono);
+  padding:2px 7px;border-radius:2px;cursor:pointer}
 .spacer{flex:1}
-.seg{display:flex;border:1px solid var(--edge)}
-.seg button{background:transparent;border:0;border-right:1px solid var(--edge);
-  color:var(--dim);font:11px/1 var(--mono);padding:6px 10px;cursor:pointer;
-  letter-spacing:.08em}
+.stamp{font:10px var(--mono);color:var(--faint);letter-spacing:.06em}
+.seg{display:flex;border:1px solid var(--edge);border-radius:2px;overflow:hidden}
+.seg button{background:transparent;border:0;border-right:1px solid var(--edge);color:var(--dim);
+  font:11px/1 var(--mono);padding:6px 11px;cursor:pointer;letter-spacing:.06em}
 .seg button:last-child{border-right:0}
 .seg button.on{background:var(--money);color:#101316;font-weight:700}
-.stamp{font-size:10px;color:var(--dim);letter-spacing:.06em}
 
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
-  border-bottom:1px solid var(--rule)}
-.kpi{padding:12px 16px;border-right:1px solid var(--rule)}
-.kpi:last-child{border-right:0}
-.kpi .k{font-size:10px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase}
-.kpi .v{font-size:22px;line-height:1.15;margin-top:3px}
+.wrap{padding:18px 20px 28px;max-width:1500px;margin:0 auto}
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:10px}
+.kpi{background:var(--panel);border:1px solid var(--rule);border-radius:4px;padding:13px 15px 12px}
+.kpi .k{font:10px var(--mono);color:var(--dim);letter-spacing:.12em;text-transform:uppercase}
+.kpi .v{font:600 26px/1.15 var(--mono);margin-top:6px;letter-spacing:-.02em}
 .kpi .v.money{color:var(--money)}
-.kpi .sub{font-size:10px;color:var(--dim);margin-top:2px}
+.kpi .v.manual{color:var(--manual)}
+.kpi .sub{font-size:11px;color:var(--dim);margin-top:3px}
+.kpi.lead{border-color:#2e4a47;background:linear-gradient(180deg,#18242a,var(--panel))}
 
-/* ---- panels ---- */
-main{display:grid;grid-template-columns:1fr;gap:0}
-section{border-bottom:1px solid var(--rule)}
-h2{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);
-  font-weight:400;padding:9px 16px;border-bottom:1px solid var(--rule);
-  display:flex;align-items:center;gap:10px;background:var(--panel)}
-h2 .count{color:var(--faint)}
-h2 .clear{margin-left:auto;color:var(--money);cursor:pointer;text-transform:none;
-  letter-spacing:0}
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:10px}
+.card{background:var(--panel);border:1px solid var(--rule);border-radius:4px;min-width:0;display:flex;flex-direction:column}
+.c8{grid-column:span 8}.c4{grid-column:span 4}.c12{grid-column:span 12}.c7{grid-column:span 7}.c5{grid-column:span 5}
+.card header{display:flex;align-items:baseline;gap:10px;padding:12px 15px 10px;border-bottom:1px solid var(--rule)}
+.card h2{font-size:13px;font-weight:620;letter-spacing:-.005em}
+.card header p{font-size:11px;color:var(--dim)}
+.card header .tag{margin-left:auto;font:10px var(--mono);color:var(--faint);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+.body{padding:6px 0;flex:1;min-width:0}
+.empty{padding:18px 15px;color:var(--dim);font-size:12px}
+
+.dot{display:inline-block;width:8px;height:8px;border-radius:2px;flex:none}
+
+.dec{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:4px 14px;padding:8px 15px;border-bottom:1px solid var(--rule)}
+.dec:last-child{border-bottom:0}
+.dec .what{font-size:13px;overflow-wrap:anywhere;display:flex;gap:8px}
+.dec .what::before{content:"›";color:var(--faint);flex:none}
+.dec .what+.what{margin-top:3px}
+.dec .more{font:10.5px var(--mono);color:var(--dim);padding-left:14px;margin-top:2px}
+.dec .meta{grid-column:1;margin-bottom:4px;display:flex;gap:8px;align-items:center;font:10.5px var(--mono);color:var(--faint);flex-wrap:wrap}
+.dec .alt{color:var(--manual)}
+.dec .amt{grid-row:1/span 2;grid-column:2;text-align:right;font:600 14px var(--mono);color:var(--money)}
+.dec .amt small{display:block;font:10px var(--mono);color:var(--faint);font-weight:400}
+.track{grid-column:1/-1;height:4px;background:var(--row);border-radius:2px;overflow:hidden}
+.track i{display:block;height:100%;background:var(--money);border-radius:0 2px 2px 0;opacity:.8}
+
+.hrow{display:grid;grid-template-columns:110px minmax(0,1fr) 78px;gap:10px;align-items:center;
+  padding:7px 15px;cursor:pointer;border-radius:2px}
+.hrow:hover,.hrow.sel{background:var(--hi)}
+.hrow .lab{display:flex;align-items:center;gap:7px;min-width:0;font:12px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hrow .hb{height:14px;background:var(--row);border-radius:0 2px 2px 0}
+.hrow .hb i{display:block;height:100%;border-radius:0 4px 4px 0}
+.hrow .val{text-align:right;font:12px var(--mono);color:var(--fg)}
+.hrow .val small{display:block;color:var(--faint);font-size:10px}
+.hrow.dim{opacity:.35}
+
+.chart{position:relative;padding:8px 12px 4px}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart text{font:10px var(--mono);fill:var(--faint)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;padding:4px 15px 12px;font:11px var(--mono);color:var(--dim)}
+.legend span{display:flex;align-items:center;gap:6px}
+
+.theme{display:grid;grid-template-columns:130px minmax(0,1fr) 30px;gap:10px;align-items:center;padding:4px 15px}
+.theme .lab{font:11px var(--mono);color:var(--manual);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.theme .hb{height:8px;background:var(--row);border-radius:0 2px 2px 0}
+.theme .hb i{display:block;height:100%;background:var(--manual);border-radius:0 4px 4px 0;opacity:.85}
+.theme .n{text-align:right;font:11px var(--mono);color:var(--dim)}
+.quotes{border-top:1px solid var(--rule);margin-top:8px}
+.quote{padding:9px 15px;border-bottom:1px solid var(--rule);display:grid;grid-template-columns:3px minmax(0,1fr);gap:10px}
+.quote:last-child{border-bottom:0}
+.quote::before{content:"";background:var(--manual);border-radius:2px;opacity:.7}
+.quote q{font-style:italic;color:var(--fg);font-size:12.5px;quotes:"\201C" "\201D";overflow-wrap:anywhere}
+.quote .src{display:block;font:10px var(--mono);color:var(--faint);margin-top:4px}
 
 .scroll{overflow-x:auto}
-table{width:100%;border-collapse:collapse;white-space:nowrap;min-width:640px}
-th{position:sticky;top:0;text-align:left;font-weight:400;font-size:10px;
-  letter-spacing:.08em;text-transform:uppercase;color:var(--dim);
-  padding:7px 12px;background:var(--panel);border-bottom:1px solid var(--rule)}
-td{padding:6px 12px;border-bottom:1px solid var(--rule)}
-tbody tr:nth-child(even){background:var(--row)}
-tbody tr:hover{background:#232a31}
-td.n,th.n{text-align:right}
+table{width:100%;border-collapse:collapse;white-space:nowrap}
+th{text-align:left;font:10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);
+  padding:6px 15px;border-bottom:1px solid var(--rule);font-weight:400}
+td{padding:7px 15px;border-bottom:1px solid var(--rule);font:12px var(--mono)}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--hi)}
+.r{text-align:right}
 td.money{color:var(--money)}
-td.dim,.dim{color:var(--dim)}
-td.name{cursor:pointer}
-td.name:hover{color:var(--money)}
-tr.sel td{background:#232a31;box-shadow:inset 2px 0 0 var(--money)}
-.bar-cell{display:block;height:3px;background:var(--money);opacity:.55;margin-top:4px}
+td .p{display:inline-flex;align-items:center;gap:6px}
+.mini{display:inline-block;width:70px;height:4px;background:var(--row);border-radius:2px;vertical-align:middle;margin-left:8px}
+.mini i{display:block;height:100%;background:var(--money);border-radius:2px}
 
-/* ---- decisions: list, not prose ---- */
-.dec{padding:10px 16px;border-bottom:1px solid var(--rule);display:grid;
-  grid-template-columns:1fr 120px;gap:12px;align-items:start}
-.dec:nth-child(even){background:var(--row)}
-.dec .txt{min-width:0}
-.dec .what{font-size:13px;overflow-wrap:anywhere}
-.dec .why{color:var(--dim);font-size:11px;margin-top:3px;overflow-wrap:anywhere}
-.dec .meta{font-size:10px;color:var(--faint);margin-top:5px;letter-spacing:.05em}
-.dec .rej{color:var(--warn)}
-.dec .cost{text-align:right;color:var(--money);font-size:13px}
-.dec .cost small{display:block;color:var(--dim);font-size:10px;letter-spacing:.05em}
-.empty{padding:16px;color:var(--dim);font-size:11px}
-.themes{display:flex;flex-wrap:wrap;gap:6px;padding:10px 16px;border-bottom:1px solid var(--rule)}
-.chip{border:1px solid var(--edge);padding:3px 8px;font-size:10px;letter-spacing:.06em;
-  text-transform:uppercase;color:var(--dim)}
-.chip b{color:var(--money);font-weight:600}
-.toil{display:grid;grid-template-columns:150px 1fr 150px;gap:12px;padding:8px 16px;
-  border-bottom:1px solid var(--rule);align-items:start}
-.toil:nth-child(even){background:var(--row)}
-.toil .tag{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--money)}
-.toil .ev{overflow-wrap:anywhere;font-size:12px}
-.toil .src{text-align:right;font-size:10px;color:var(--faint)}
-footer{padding:10px 16px;color:var(--faint);font-size:10px;letter-spacing:.05em}
+.tip{position:fixed;pointer-events:none;z-index:9;background:#0b0e10;border:1px solid var(--edge);border-radius:3px;
+  padding:8px 10px;font:11px/1.5 var(--mono);color:var(--fg);min-width:150px;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+.tip .t{color:var(--dim);margin-bottom:3px}
+.tip .l{display:flex;align-items:center;gap:6px;justify-content:space-between}
+.tip .l span{display:flex;align-items:center;gap:6px}
+footer{padding:14px 20px 22px;color:var(--faint);font:10.5px var(--mono);letter-spacing:.03em;max-width:1500px;margin:0 auto}
+
+@media (max-width:1100px){
+  .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .c8,.c4,.c7,.c5{grid-column:span 12}
+}
+@media (max-width:560px){
+  .wrap{padding:12px}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpi .v{font-size:21px}
+  .hrow{grid-template-columns:86px minmax(0,1fr) 66px}
+  .theme{grid-template-columns:100px minmax(0,1fr) 26px}
+  .dec{grid-template-columns:minmax(0,1fr) 76px}
+}
 </style>
 
 <div class=bar>
-  <span class=brand>artel <i>ledger</i></span>
-  <span class=stamp id=stamp></span>
+  <span class=brand><i></i>artel <span>ledger</span></span>
+  <span class=filter id=filter hidden>project <b id=fname></b><button onclick="pick(null)">clear ×</button></span>
   <span class=spacer></span>
+  <span class=stamp id=stamp></span>
   <span class=seg id=seg></span>
 </div>
 
-<div class=kpis id=kpis></div>
-
-<main>
-  <section><h2>Projects <span class=count id=pc></span>
-    <span class=clear id=clr hidden onclick="pick(null)">clear filter ×</span></h2>
-    <div class=scroll id=projects></div></section>
-  <section><h2>Repeated by hand <span class=count id=tc></span>
-    <span class=clear style="margin-left:auto;color:var(--dim);text-transform:none;letter-spacing:0">automation candidates, from the fleet's own notes</span></h2>
-    <div id=toil></div></section>
-  <section><h2>Sessions <span class=count id=sc></span></h2>
-    <div class=scroll id=sessions></div></section>
-  <section><h2>Decisions <span class=count id=dc></span></h2>
-    <div id=decisions></div></section>
-</main>
+<div class=wrap>
+  <div class=kpis id=kpis></div>
+  <div class=grid>
+    <section class="card c8">
+      <header><h2>What the decisions cost</h2><p>each priced through the session that made it</p><span class=tag id=dc></span></header>
+      <div class=body id=decisions></div>
+    </section>
+    <section class="card c4">
+      <header><h2>Where the value went</h2><p>click to filter</p></header>
+      <div class=body id=projects></div>
+    </section>
+    <section class="card c12">
+      <header><h2>Daily spend</h2><p>list-price value of the work, by project</p><span class=tag id=dsum></span></header>
+      <div class=chart id=daily></div>
+      <div class=legend id=legend></div>
+    </section>
+    <section class="card c5">
+      <header><h2>Repeated by hand</h2><p>mined from the fleet's own notes</p><span class=tag id=tc></span></header>
+      <div class=body id=toil></div>
+    </section>
+    <section class="card c7">
+      <header><h2>Heaviest sessions</h2><p>what the work ran on</p><span class=tag id=sc></span></header>
+      <div class=body id=models></div>
+      <div class=scroll id=sessions></div>
+    </section>
+  </div>
+</div>
 <footer id=foot></footer>
+<div class=tip id=tip hidden></div>
 
 <script>
-let DAYS=30, SEL=null;
-const esc=t=>(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+let DAYS=30, SEL=null, DATA=null;
+const SLOTS=['--s1','--s2','--s3','--s4','--s5','--s6','--s7'];
+const $=id=>document.getElementById(id);
+const esc=t=>String(t??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
 const n=v=>(v||0).toLocaleString('en-US');
-const usd=v=>v==null?null:'$'+Math.round(v).toLocaleString('en-US');
+const usd=(v,d)=>v==null?'-':'$'+v.toLocaleString('en-US',{minimumFractionDigits:d??0,maximumFractionDigits:d??0});
+const money=v=>v==null?'-':v<10?usd(v,2):usd(v);
+const short=v=>v>=1e9?(v/1e9).toFixed(1)+'B':v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(0)+'k':String(v||0);
+const val=r=>(r.equivalent||0)+(r.billed||0);
+let COLORS={};
+const color=p=>COLORS[p]||'var(--other)';
 
-function seg(){document.getElementById('seg').innerHTML=[7,30,90]
-  .map(d=>`<button class="${d===DAYS?'on':''}" onclick="setDays(${d})">${d}d</button>`).join('')}
+function seg(){$('seg').innerHTML=[7,30,90].map(d=>`<button class="${d===DAYS?'on':''}" onclick="setDays(${d})">${d}d</button>`).join('')}
 function setDays(d){DAYS=d;seg();load()}
-function pick(p){SEL=(SEL===p?null:p);document.getElementById('clr').hidden=!SEL;load()}
+function pick(p){SEL=(SEL===p?null:p);$('filter').hidden=!SEL;$('fname').textContent=SEL||'';render()}
+
+const tip=$('tip');
+function showTip(e,html){tip.innerHTML=html;tip.hidden=false;
+  const w=tip.offsetWidth,h=tip.offsetHeight;
+  let x=e.clientX+14,y=e.clientY+14;
+  if(x+w>innerWidth-8)x=e.clientX-w-14;
+  if(y+h>innerHeight-8)y=e.clientY-h-14;
+  tip.style.left=x+'px';tip.style.top=y+'px'}
+function hideTip(){tip.hidden=true}
 
 async function load(){
-  const q=SEL?`&project=${encodeURIComponent(SEL)}`:'';
-  const [proj,sess,dec,toil]=await Promise.all([
-    fetch(`/api/projects?days=${DAYS}`).then(r=>r.json()),
-    fetch(`/api/sessions?days=${DAYS}&limit=60`).then(r=>r.json()),
-    fetch(`/api/decisions?days=${DAYS}&limit=60`).then(r=>r.json()),
-    fetch(`/api/toil?days=${Math.max(DAYS,90)}&limit=25${q}`).then(r=>r.json())]);
-  const t=proj.totals;
-
-  document.getElementById('kpis').innerHTML=`
-    <div class=kpi><div class=k>Value of work</div><div class="v money">${usd(t.equivalent)||'-'}</div>
-      <div class=sub>list-price equivalent</div></div>
-    <div class=kpi><div class=k>Billed</div><div class=v>${usd(t.billed)}</div>
-      <div class=sub>metered, actually invoiced</div></div>
-    <div class=kpi><div class=k>Sessions</div><div class=v>${n(t.sessions)}</div>
-      <div class=sub>${n(proj.rows.reduce((a,r)=>a+r.turns,0))} turns</div></div>
-    <div class=kpi><div class=k>Decisions</div><div class=v>${n(t.decisions)}</div>
-      <div class=sub>mined from captures</div></div>`;
-
-  const max=Math.max(...proj.rows.map(r=>r.equivalent||0),1);
-  document.getElementById('pc').textContent=proj.rows.length;
-  document.getElementById('projects').innerHTML=`<table><thead><tr>
-    <th>Project</th><th class=n>Sessions</th><th class=n>Turns</th><th class=n>Output</th>
-    <th class=n>Cache read</th><th class=n>Decisions</th><th class=n>Value</th></tr></thead><tbody>`+
-    proj.rows.map(r=>`<tr class="${SEL===r.project?'sel':''}">
-      <td class=name onclick="pick('${r.project}')">${esc(r.project)}</td>
-      <td class=n>${n(r.sessions)}</td><td class=n>${n(r.turns)}</td>
-      <td class=n>${n(r.output_tokens)}</td><td class="n dim">${n(r.cache_read)}</td>
-      <td class=n>${r.decisions||'<span class=dim>0</span>'}</td>
-      <td class="n money">${usd(r.equivalent||r.billed)}
-        <span class=bar-cell style="width:${Math.max(4,(r.equivalent/max)*100)}%"></span></td>
-    </tr>`).join('')+`</tbody></table>`;
-
-  const srows=sess.rows.filter(r=>!SEL||r.project===SEL);
-  document.getElementById('sc').textContent=srows.length;
-  document.getElementById('sessions').innerHTML=srows.length?`<table><thead><tr>
-    <th>Session</th><th>Project</th><th>Model</th><th class=n>Turns</th>
-    <th class=n>Output</th><th class=n>Cost</th></tr></thead><tbody>`+
-    srows.slice(0,40).map(r=>`<tr><td>${esc((r.session_id||'').slice(0,8))}</td>
-      <td>${esc(r.project)}</td><td class=dim>${esc(r.model)}</td>
-      <td class=n>${n(r.turns)}</td><td class=n>${n(r.output_tokens)}</td>
-      <td class="n ${r.cost?.amount!=null?'money':'dim'}">${usd(r.cost?.amount)||'not priced'}</td>
-    </tr>`).join('')+`</tbody></table>`:`<p class=empty>No sessions in window.</p>`;
-
-  document.getElementById('tc').textContent=toil.rows.length;
-  document.getElementById('toil').innerHTML = toil.rows.length ? `
-    <div class=themes>${toil.themes.map(t=>`<span class=chip>${esc(t.theme)} <b>${t.count}</b></span>`).join('')}</div>`
-    + toil.rows.map(r=>`<div class=toil>
-        <span class=tag>${esc(r.theme)}</span>
-        <span class=ev>${esc(r.evidence)}</span>
-        <span class=src>${esc(r.project||'-')} · ${esc(r.entry_id.slice(0,8))}</span>
-      </div>`).join('')
-    : `<p class=empty>Nothing found. This reads notes the fleet wrote about its own work.</p>`;
-
-  const drows=dec.rows.filter(r=>!SEL||r.project===SEL);
-  document.getElementById('dc').textContent=drows.length;
-  document.getElementById('decisions').innerHTML=drows.length?drows.map(r=>`
-    <div class=dec>
-      <div class=txt>
-        <div class=what>${esc(r.decision)}</div>
-        ${r.rationale?`<div class=why>${esc(r.rationale)}</div>`:''}
-        <div class=meta>${esc(r.project||'unscoped')} · ${esc((r.created_at||'').slice(0,10))}
-          · ${esc((r.session_id||'-').slice(0,8))}
-          ${r.alternatives?.length?`· <span class=rej>rejected ${r.alternatives.map(esc).join(', ')}</span>`:''}</div>
-      </div>
-      <div class=cost>${usd(r.session_cost)||'<span class=dim>-</span>'}<small>session total</small></div>
-    </div>`).join(''):`<p class=empty>Nothing on record. The archivist mines these from captures.</p>`;
-
-  document.getElementById('stamp').textContent=new Date().toLocaleTimeString('en-GB');
-  document.getElementById('foot').textContent=
-    `Figures computed from the store, never generated · decision cost is the whole session that produced it, not divided between decisions · refreshes every 30s`
-    + (t.unpriced.length?` · unpriced models: ${t.unpriced.join(', ')}`:'');
+  const get=(name,q)=>fetch(`/api/${name}?days=${DAYS}${q||''}`).then(r=>r.json());
+  const [projects,daily,sessions,decisions,toil]=await Promise.all([
+    get('projects'),get('daily'),get('sessions','&limit=60'),get('decisions','&limit=60'),
+    fetch(`/api/toil?days=${Math.max(DAYS,90)}&limit=25`).then(r=>r.json())]);
+  DATA={projects,daily,sessions,decisions,toil};
+  COLORS={};
+  projects.rows.map(r=>r.project).filter(p=>p!=='(unscoped)').sort()
+    .forEach((p,i)=>{if(i<SLOTS.length)COLORS[p]=`var(${SLOTS[i]})`});
+  $('stamp').textContent='updated '+new Date().toLocaleTimeString('en-GB');
+  render();
 }
-seg(); load(); setInterval(load,30000);
+
+function render(){
+  if(!DATA)return;
+  const {projects,daily,sessions,decisions,toil}=DATA;
+  const t=projects.totals;
+  const inSel=r=>!SEL||r.project===SEL||(SEL==='(unscoped)'&&!r.project);
+  const prow=SEL?projects.rows.find(r=>r.project===SEL):null;
+  const value=prow?prow.equivalent:t.equivalent, billed=prow?prow.billed:t.billed;
+  const decs=prow?prow.decisions:t.decisions, sess=prow?prow.sessions:t.sessions;
+  const turns=(prow?[prow]:projects.rows).reduce((a,r)=>a+r.turns,0);
+  const toilRows=toil.rows.filter(inSel);
+  const themes=[...new Set(toilRows.map(r=>r.theme))];
+
+  $('kpis').innerHTML=[
+    ['lead','Value of work',usd(value),'money','at list price'],
+    ['','Billed',money(billed),'','actually invoiced'],
+    ['','Per decision',decs?money(value/decs):'-','money',`across ${n(decs)} decisions`],
+    ['','Decisions',n(decs),'','append-only record'],
+    ['','Done by hand',n(toilRows.length),'manual',`in ${themes.length} themes`],
+    ['','Sessions',n(sess),'',`${short(turns)} turns`],
+  ].map(([c,k,v,vc,s])=>`<div class="kpi ${c}"><div class=k>${k}</div><div class="v ${vc}">${v}</div><div class=sub>${s}</div></div>`).join('');
+
+  const drows=decisions.rows.filter(inSel);
+  const groups=[];
+  for(const r of drows){
+    const k=r.session_id||r.id;
+    let g=groups.find(x=>x.k===k);
+    if(!g)groups.push(g={k,cost:r.session_cost,project:r.project,day:r.created_at,rows:[]});
+    g.rows.push(r);
+  }
+  groups.sort((a,b)=>(b.cost||0)-(a.cost||0));
+  const dmax=Math.max(...groups.map(g=>g.cost||0),1);
+  $('dc').textContent=`${drows.length} decisions · ${groups.length} sessions`;
+  $('decisions').innerHTML=groups.length?groups.slice(0,6).map(g=>{
+    const alts=g.rows.reduce((a,r)=>a+(r.alternatives||[]).length,0);
+    const per=g.cost!=null?money(g.cost/g.rows.length):'-';
+    return `<div class=dec>
+      <div class=meta><span class=dot style="background:${color(g.project||'(unscoped)')}"></span>${esc(g.project||'unscoped')}
+        · session ${esc(String(g.k).slice(0,8))} · ${g.rows.length} decision${g.rows.length>1?'s':''}${alts?` · <span class=alt>${alts} option${alts>1?'s':''} rejected</span>`:''}</div>
+      <div class=amt>${g.cost!=null?money(g.cost):'<span style="color:var(--faint)">unpriced</span>'}<small>${g.cost==null?'':g.rows.length>1?`${per} each`:'one decision'}</small></div>
+      <div>${g.rows.slice(0,3).map(r=>`<div class=what>${esc(r.decision)}</div>`).join('')}
+        ${g.rows.length>3?`<div class=more>+ ${g.rows.length-3} more from this session</div>`:''}</div>
+      <div class=track><i style="width:${Math.max(1,(g.cost||0)/dmax*100)}%"></i></div>
+    </div>`}).join(''):`<p class=empty>No decisions in this window.</p>`;
+
+  const pmax=Math.max(...projects.rows.map(val),1);
+  $('projects').innerHTML=[...projects.rows].sort((a,b)=>val(b)-val(a)).map(r=>`
+    <div class="hrow ${SEL===r.project?'sel':SEL?'dim':''}" onclick="pick('${esc(r.project)}')"
+      onmousemove="showTip(event,'<div class=t>${esc(r.project)}</div><div class=l><span>value</span>${usd(r.equivalent)}</div><div class=l><span>billed</span>${money(r.billed)}</div><div class=l><span>sessions</span>${n(r.sessions)}</div><div class=l><span>decisions</span>${n(r.decisions)}</div>')" onmouseleave="hideTip()">
+      <span class=lab><span class=dot style="background:${color(r.project)}"></span>${esc(r.project)}</span>
+      <span class=hb><i style="width:${Math.max(1,val(r)/pmax*100)}%;background:${color(r.project)}"></i></span>
+      <span class=val>${money(val(r))}<small>${n(r.decisions)} dec</small></span>
+    </div>`).join('')||`<p class=empty>No usage in this window.</p>`;
+
+  renderDaily(daily.rows.filter(inSel));
+
+  $('tc').textContent=`${toilRows.length} candidates`;
+  const tcount={};toilRows.forEach(r=>tcount[r.theme]=(tcount[r.theme]||0)+1);
+  const tl=Object.entries(tcount).sort((a,b)=>b[1]-a[1]);
+  const tmax=Math.max(...tl.map(x=>x[1]),1);
+  const seen=new Set(), quotes=[];
+  for(const r of toilRows){if(!seen.has(r.theme)){seen.add(r.theme);quotes.push(r)}}
+  $('toil').innerHTML=toilRows.length?
+    tl.map(([k,c])=>`<div class=theme><span class=lab>${esc(k)}</span><span class=hb><i style="width:${c/tmax*100}%"></i></span><span class=n>${c}</span></div>`).join('')
+    +`<div class=quotes>${quotes.slice(0,4).map(r=>`<div class=quote><div><q>${esc(r.evidence)}</q>
+      <span class=src>${esc(r.theme)} · ${esc(r.project||'unscoped')} · note ${esc(r.entry_id.slice(0,8))}</span></div></div>`).join('')}</div>`
+    :`<p class=empty>Nothing found in the notes for this window.</p>`;
+
+  const srows=sessions.rows.filter(inSel).map(r=>({...r,c:r.cost?.amount})).sort((a,b)=>(b.c||0)-(a.c||0));
+  const models={};srows.forEach(r=>models[r.model]=(models[r.model]||0)+(r.c||0));
+  const ml=Object.entries(models).sort((a,b)=>b[1]-a[1]);
+  const mmax=Math.max(...ml.map(x=>x[1]),1);
+  $('models').innerHTML=ml.slice(0,4).map(([m,v])=>`<div class=hrow style="cursor:default">
+    <span class=lab>${esc(m.replace(/^(claude-|google\/)/,''))}</span>
+    <span class=hb><i style="width:${Math.max(1,v/mmax*100)}%;background:var(--money);opacity:.7"></i></span>
+    <span class=val>${money(v)}</span></div>`).join('');
+  $('sc').textContent=`${srows.length} sessions`;
+  const smax=Math.max(...srows.map(r=>r.c||0),1);
+  $('sessions').innerHTML=srows.length?`<table><thead><tr><th>Session</th><th>Project</th><th>Model</th>
+    <th class=r>Turns</th><th class=r>Output</th><th class=r>Cost</th></tr></thead><tbody>`+
+    srows.slice(0,10).map(r=>`<tr><td>${esc((r.session_id||'').slice(0,8))}</td>
+      <td><span class=p><span class=dot style="background:${color(r.project)}"></span>${esc(r.project)}</span></td>
+      <td style="color:var(--dim)">${esc((r.model||'').replace(/^claude-/,''))}</td>
+      <td class=r>${short(r.turns)}</td><td class=r>${short(r.output_tokens)}</td>
+      <td class="r money">${r.c!=null?money(r.c):'<span style="color:var(--faint)">unpriced</span>'}<span class=mini><i style="width:${(r.c||0)/smax*100}%"></i></span></td>
+    </tr>`).join('')+`</tbody></table>`:`<p class=empty>No sessions in this window.</p>`;
+
+  $('foot').textContent='Every figure is arithmetic over the store; nothing here is generated.'
+    +(t.unpriced.length?` Unpriced models: ${t.unpriced.join(', ')}.`:'');
+}
+
+function renderDaily(rows){
+  const el=$('daily');
+  const end=new Date();end.setUTCHours(0,0,0,0);
+  const days=[];for(let i=DAYS-1;i>=0;i--){const d=new Date(end);d.setUTCDate(d.getUTCDate()-i);days.push(d.toISOString().slice(0,10))}
+  const by={};rows.forEach(r=>{(by[r.day]=by[r.day]||[]).push(r)});
+  const order=[...new Set(rows.map(r=>r.project))].sort((a,b)=>
+    rows.filter(r=>r.project===b).reduce((s,r)=>s+val(r),0)-rows.filter(r=>r.project===a).reduce((s,r)=>s+val(r),0));
+  const tot=d=>(by[d]||[]).reduce((s,r)=>s+val(r),0);
+  const sum=days.reduce((s,d)=>s+tot(d),0);
+  $('dsum').textContent=`${usd(sum)} · ${DAYS} days`;
+  if(!rows.length){el.innerHTML=`<p class=empty>No usage in this window.</p>`;$('legend').innerHTML='';return}
+  const W=Math.max(320,el.clientWidth-24), H=220, L=52, B=22, T=8;
+  const max=Math.max(...days.map(tot),1);
+  const step=Math.pow(10,Math.floor(Math.log10(max)));
+  const nice=[1,2,2.5,5,10].map(k=>k*step).find(s=>max/s<=4)||step*10;
+  const top=Math.ceil(max/nice)*nice;
+  const y=v=>T+(H-T-B)*(1-v/top);
+  const bw=(W-L)/days.length, gap=Math.min(4,bw*.25);
+  let g='';
+  for(let v=0;v<=top+1e-9;v+=nice){
+    g+=`<line x1=${L} x2=${W} y1=${y(v)} y2=${y(v)} stroke="var(--rule)" ${v?'':'stroke="var(--edge)"'}/>`+
+       `<text x=${L-8} y=${y(v)+3} text-anchor=end>${usd(v)}</text>`}
+  const every=Math.ceil(days.length/(W<600?5:10));
+  days.forEach((d,i)=>{
+    const x=L+i*bw+gap/2, w=bw-gap;
+    let acc=0;
+    const segs=order.map(p=>(by[d]||[]).find(r=>r.project===p)).filter(Boolean);
+    segs.forEach((r,j)=>{
+      const v=val(r), y1=y(acc+v), y0=y(acc);acc+=v;
+      const h=Math.max(0,y0-y1-(j?2:0));
+      if(h<=0)return;
+      const isTop=j===segs.length-1, rad=Math.min(4,w/2,h);
+      g+=isTop
+        ?`<path d="M${x},${y1+h}V${y1+rad}q0,-${rad} ${rad},-${rad}h${w-2*rad}q${rad},0 ${rad},${rad}V${y1+h}Z" fill="${color(r.project)}"/>`
+        :`<rect x=${x} y=${y1} width=${w} height=${h} fill="${color(r.project)}"/>`;
+    });
+    if(i%every===0||i===days.length-1)g+=`<text x=${x+w/2} y=${H-6} text-anchor=middle>${d.slice(5)}</text>`;
+    g+=`<rect class=hit data-d="${d}" x=${L+i*bw} y=${T} width=${bw} height=${H-T-B} fill=transparent />`;
+  });
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role=img aria-label="Daily spend by project">${g}<line id=cross x1=0 x2=0 y1=${T} y2=${H-B} stroke="var(--edge)" visibility=hidden /></svg>`;
+  const cross=el.querySelector('#cross');
+  el.querySelectorAll('.hit').forEach(h=>{
+    h.addEventListener('mousemove',e=>{
+      const d=h.dataset.d, list=(by[d]||[]).slice().sort((a,b)=>val(b)-val(a));
+      const cx=+h.getAttribute('x')+bw/2;cross.setAttribute('x1',cx);cross.setAttribute('x2',cx);cross.setAttribute('visibility','visible');
+      showTip(e,`<div class=t>${d} · ${usd(tot(d))}</div>`+(list.length?list.map(r=>
+        `<div class=l><span><span class=dot style="background:${color(r.project)}"></span>${esc(r.project)}</span>${money(val(r))}</div>`).join(''):'<div class=l>no usage</div>'));
+    });
+    h.addEventListener('mouseleave',()=>{hideTip();cross.setAttribute('visibility','hidden')});
+  });
+  $('legend').innerHTML=order.map(p=>`<span><span class=dot style="background:${color(p)}"></span>${esc(p)}</span>`).join('');
+}
+
+let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(render,120)});
+seg();load();setInterval(load,60000);
 </script>

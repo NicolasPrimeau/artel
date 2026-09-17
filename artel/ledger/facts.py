@@ -82,6 +82,35 @@ def by_project(days: int = 7) -> list[dict]:
     return sorted(out.values(), key=lambda r: -r["output_tokens"])
 
 
+def daily(days: int = 30) -> list[dict]:
+    db = get_db()
+    out: dict[tuple, dict] = {}
+    for r in db.execute(
+        f"""SELECT substr(COALESCE(window_end, created_at), 1, 10) d,
+                   COALESCE(project,'(unscoped)') p, model, billing_mode,
+                   SUM(input_tokens) i, SUM(output_tokens) o,
+                   SUM(cache_read) cr, SUM(cache_write) cw
+            FROM usage_events WHERE {_window(days)}
+            GROUP BY d, p, model, billing_mode"""
+    ):
+        row = out.setdefault(
+            (r["d"], r["p"]), {"day": r["d"], "project": r["p"], "billed": 0.0, "equivalent": 0.0}
+        )
+        c = pricing.cost_usd(
+            r["model"],
+            r["billing_mode"],
+            {
+                "input_tokens": r["i"],
+                "output_tokens": r["o"],
+                "cache_read": r["cr"],
+                "cache_write": r["cw"],
+            },
+        )
+        if c["amount"] is not None:
+            row["billed" if c.get("billed") else "equivalent"] += c["amount"]
+    return sorted(out.values(), key=lambda r: (r["day"], r["project"]))
+
+
 def by_session(days: int = 7, limit: int = 40) -> list[dict]:
     db = get_db()
     rows = []
