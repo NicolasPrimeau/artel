@@ -7,6 +7,7 @@
 # a laptop.
 #
 #   ./scripts/sandbox.sh up [version]   deploy and verify (default image: edge)
+#   ./scripts/sandbox.sh seed           replace the demo database with scripts/sandbox_seed.json
 #   ./scripts/sandbox.sh down           destroy the machine, keep the volume
 #   ./scripts/sandbox.sh status         what is running, what it costs to wake
 set -euo pipefail
@@ -91,6 +92,32 @@ cmd_up() {
     die "deploy finished but $URL never reported healthy${expect:+ on version $expect}. Check 'flyctl logs -a $APP'."
 }
 
+# The seed is anonymized from our own fleet (scripts/sandbox_export.py) and is the
+# same file the static ledger at artel.run/ledger/ is built from, so the two agree.
+# The previous database is kept beside it rather than deleted.
+cmd_seed() {
+    [[ -n "$(machine_ids)" ]] || die "the demo is down; run '$0 up' first"
+    local tmp stamp
+    tmp="$(mktemp -d)"
+    stamp="$(date +%Y%m%d-%H%M%S)"
+    (cd "$REPO_ROOT" && uv run python scripts/sandbox_seed.py "$tmp/seed.db")
+    echo "uploading seed…"
+    flyctl ssh console -a "$APP" -C "rm -f /data/seed.db"
+    flyctl ssh sftp put -a "$APP" "$tmp/seed.db" /data/seed.db
+    flyctl ssh console -a "$APP" -C "sh -c 'cp /data/artel.db /data/artel.db.pre-seed-$stamp 2>/dev/null; mv /data/seed.db /data/artel.db && rm -f /data/artel.db-wal /data/artel.db-shm'"
+    rm -rf "$tmp"
+    for id in $(machine_ids); do flyctl machine restart "$id" -a "$APP"; done
+    echo "verifying $URL…"
+    for _ in $(seq 1 30); do
+        if curl -fsS -m 10 "$URL/health" 2>/dev/null | grep -q '"status":"ok"'; then
+            echo "seeded; previous database kept as /data/artel.db.pre-seed-$stamp"
+            return 0
+        fi
+        sleep 5
+    done
+    die "seeded but $URL never came back healthy. Check 'flyctl logs -a $APP'."
+}
+
 cmd_down() {
     local ids
     ids="$(machine_ids)"
@@ -113,7 +140,8 @@ cmd_down() {
 
 case "${1:-status}" in
     up)     shift; cmd_up "$@" ;;
+    seed)   cmd_seed ;;
     down)   cmd_down ;;
     status) cmd_status ;;
-    *)      die "usage: $0 {up [version]|down|status}" ;;
+    *)      die "usage: $0 {up [version]|seed|down|status}" ;;
 esac

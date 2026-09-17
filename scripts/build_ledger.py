@@ -8,7 +8,7 @@ import tempfile
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
-import seed_demo  # noqa: E402
+import sandbox_seed  # noqa: E402
 
 DAY_RANGES = (7, 30, 90)
 TOIL_DAYS = 90
@@ -68,6 +68,7 @@ def _payloads(days: int) -> dict:
 
     return {
         "projects": {"days": days, "rows": facts.by_project(days), "totals": facts.totals(days)},
+        "daily": {"days": days, "rows": facts.daily(days)},
         "sessions": {"days": days, "rows": facts.by_session(days, 60)},
         "decisions": {"days": days, "rows": facts.by_decision(days, 60)},
         "toil": {
@@ -81,18 +82,17 @@ def _payloads(days: int) -> dict:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="web/ledger")
-    ap.add_argument("--days", type=int, default=14)
     args = ap.parse_args()
 
     out = pathlib.Path(args.out)
     data = out / "data"
     data.mkdir(parents=True, exist_ok=True)
 
-    tmp = pathlib.Path(tempfile.mkdtemp()) / "demo.db"
-    counts = seed_demo.build(tmp, args.days)
-
+    seed = sandbox_seed.load()
+    os.environ["MODEL_RATES"] = json.dumps(seed["rates"])
+    tmp = pathlib.Path(tempfile.mkdtemp()) / "sandbox.db"
     os.environ["DB_PATH"] = str(tmp)
-    os.environ["MODEL_RATES"] = json.dumps(seed_demo.DEMO_RATES)
+    counts = sandbox_seed.build(tmp, seed)
 
     totals = None
     for days in DAY_RANGES:
