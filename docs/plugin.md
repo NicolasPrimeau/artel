@@ -1,3 +1,7 @@
+---
+description: "The half that speaks up: it injects the right note at session start, on each prompt, and before an agent edits a file."
+---
+
 # The Claude Code plugin
 
 A notepad you have to remember to open is a notepad you stop opening. On its own, Artel is **pull**: tools you or an agent call when you think to, and you won't always think to.

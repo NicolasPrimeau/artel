@@ -50,6 +50,16 @@ def main() -> int:
     # /sandbox is left free for a live instance later.
     redirects.append({"source": "/sandbox/", "destination": "/ledger/", "permanent": False})
     redirects.append({"source": "/sandbox", "destination": "/ledger/", "permanent": False})
+    # One host serves the site. Without this, www.artel.run answers everything the
+    # apex does and the two compete for the same pages in search results.
+    redirects.append(
+        {
+            "source": "/(.*)",
+            "has": [{"type": "host", "value": "www.artel.run"}],
+            "destination": "https://artel.run/$1",
+            "permanent": True,
+        }
+    )
     cfg = dict(BASE)
     cfg["redirects"] = redirects
     cfg["headers"] = [

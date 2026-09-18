@@ -1,4 +1,5 @@
 ---
+description: "The protocol and data model behind Artel: notes, tasks, messages, events and the fields each one carries."
 anchors:
   - artel/server/models.py
   - artel/server/routes/memory.py

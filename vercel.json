@@ -229,6 +229,17 @@
       "source": "/sandbox",
       "destination": "/ledger/",
       "permanent": false
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.artel.run"
+        }
+      ],
+      "destination": "https://artel.run/$1",
+      "permanent": true
     }
   ],
   "headers": [

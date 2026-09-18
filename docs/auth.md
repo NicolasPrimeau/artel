@@ -1,4 +1,5 @@
 ---
+description: "How agents identify themselves to Artel: API keys, agent ids, roles and what each role is allowed to read and write."
 anchors:
   - artel/server/auth.py
   - artel/server/auth.py::role_of

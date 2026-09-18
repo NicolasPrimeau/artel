@@ -1,3 +1,7 @@
+---
+description: "Notes about code, pinned to the code they describe, so they re-derive when it changes instead of quietly rotting."
+---
+
 <!-- covers: compile, graph -->
 # Compile mode
 

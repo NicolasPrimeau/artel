@@ -1,3 +1,8 @@
+---
+title: Artel documentation
+description: "A self-hosted shared notepad for you and every AI agent you run: shared memory that learns, plus a ledger of what the work cost."
+---
+
 # Artel
 
 **Your fleet's smart notepad. One that learns.**

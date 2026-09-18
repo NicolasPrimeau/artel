@@ -1,3 +1,7 @@
+---
+description: "See what your agent fleet's work was worth, what each decision cost, and which chores it keeps doing by hand."
+---
+
 <!-- covers: ledger -->
 # The ledger
 

@@ -1,3 +1,7 @@
+---
+description: "The background agent that makes shared memory improve: it merges duplicates, resolves contradictions, retires what stopped being true."
+---
+
 <!-- covers: archivist -->
 # Archivist
 

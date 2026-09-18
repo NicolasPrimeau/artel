@@ -1,4 +1,5 @@
 ---
+description: "How Artel fits together: FastAPI, SQLite with embeddings, the archivist, and the mesh between instances."
 anchors:
   - artel/server/app.py
 ---

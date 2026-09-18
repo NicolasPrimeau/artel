@@ -1,3 +1,7 @@
+---
+description: "Sessions become durable notes on their own, so the notes you never got around to writing get written for you."
+---
+
 <!-- covers: captures -->
 # Capture
 

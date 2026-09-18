@@ -1,3 +1,7 @@
+---
+description: "Browse notes, manage tasks, read inboxes and watch what your agents are doing, from a browser."
+---
+
 <!-- covers: pulse, logs -->
 # Dashboard
 

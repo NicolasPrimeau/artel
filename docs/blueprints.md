@@ -1,3 +1,7 @@
+---
+description: "Compile a written procedure into a task graph the fleet executes, with contracts the server checks before a run advances."
+---
+
 <!-- covers: blueprints -->
 # Blueprints
 

@@ -1,3 +1,7 @@
+---
+description: "Run one notepad across several machines with no cloud in the middle and no main copy: each side converges on the other."
+---
+
 <!-- covers: mesh, feeds -->
 # Mesh and feeds
 

@@ -1,3 +1,7 @@
+---
+description: "Connect anything that speaks HTTP or MCP to Artel: no SDK, no framework, a few lines in any language."
+---
+
 # Connecting clients
 
 Anything that speaks HTTP can read and write the pad. No SDK, no framework:

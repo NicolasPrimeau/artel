@@ -1,3 +1,7 @@
+---
+description: "The execution plan behind Artel, and what is built so far."
+---
+
 # Artel, Execution Plan
 
 ## Phase 1: Core Server (MVP)

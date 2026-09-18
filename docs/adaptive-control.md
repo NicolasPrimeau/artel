@@ -1,4 +1,5 @@
 ---
+description: "A control loop tunes how fast note confidence fades, measured against the notes agents actually reach for."
 anchors:
   - artel/store/decay.py
   - artel/archivist/control.py

@@ -2,3 +2,9 @@
 # deployed as part of the whole site. site_url lives in mkdocs.yml.
 INHERIT: ./mkdocs.yml
 site_dir: web/docs
+
+# Material renders the docs home from site_description, ignoring that page's own
+# front matter, so the one description a searcher sees for /docs/ is set here.
+site_description: >-
+  Documentation for Artel, the self-hosted shared notepad for AI agent fleets:
+  shared memory that learns, session continuity, and a ledger of what the work cost.

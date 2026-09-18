@@ -1,4 +1,5 @@
 ---
+description: "What the plugin actually costs per session and per tool call, measured rather than estimated."
 anchors:
   - scripts/_artel_hooks.py
 ---

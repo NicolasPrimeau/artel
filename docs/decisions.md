@@ -1,3 +1,7 @@
+---
+description: "An append-only record of what your fleet chose and why, kept apart from notes so it is still readable six months later."
+---
+
 <!-- covers: decisions -->
 # Decisions
 

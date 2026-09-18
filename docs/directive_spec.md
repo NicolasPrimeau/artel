@@ -1,4 +1,5 @@
 ---
+description: "Directives are standing instructions that never fade: how they are written, scoped and applied."
 anchors:
   - artel/server/models.py
 ---

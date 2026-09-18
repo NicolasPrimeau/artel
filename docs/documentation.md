@@ -1,3 +1,7 @@
+---
+description: "How these docs stay true: generated reference from the code, and drift detection for the prose."
+---
+
 # How these docs stay true
 
 Documentation rots because it hand-duplicates things that already have a source of truth. Artel's docs are built so the parts that can be derived *are* derived, and the parts that can't are watched.
