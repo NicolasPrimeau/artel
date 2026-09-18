@@ -179,6 +179,12 @@ jobs:
       - name: Generate sitemap and robots
         run: uv run python scripts/gen_sitemap.py
 
+      # llms.txt points an agent at the pages worth reading; llms-full.txt is the
+      # whole set in one fetch. Both are generated so a new page cannot be missing
+      # from them.
+      - name: Generate llms.txt
+        run: uv run python scripts/gen_llms.py
+
       - name: Deploy to Vercel
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
