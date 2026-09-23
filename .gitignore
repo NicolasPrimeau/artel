@@ -43,3 +43,9 @@ web/ledger/
 .vercel
 # Generated docs build for the Vercel site -- rebuilt by mkdocs.web.yml
 web/docs/
+
+# Generated in CI by scripts/gen_llms.py and gen_sitemap.py
+web/llms.txt
+web/llms-full.txt
+web/sitemap.xml
+web/robots.txt
