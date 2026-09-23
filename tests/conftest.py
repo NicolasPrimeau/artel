@@ -12,6 +12,15 @@ HEADERS2 = {"x-agent-id": AGENT2, "x-api-key": KEY2}
 
 
 @pytest.fixture(autouse=True)
+def isolate_project_env(monkeypatch):
+    import artel.mcp.config as mcp_cfg
+
+    for var in ("MCP_PROJECT", "ARTEL_PROJECT", "CLAUDE_PLUGIN_OPTION_MCP_PROJECT"):
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setattr(mcp_cfg.settings, "mcp_project", "")
+
+
+@pytest.fixture(autouse=True)
 def mock_embed(monkeypatch):
     import artel.store.embeddings as emb
 
