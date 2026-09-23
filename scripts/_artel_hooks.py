@@ -24,6 +24,7 @@ import urllib.parse
 import urllib.request
 
 TIMEOUT = 3.0
+RECALL_CONFIDENCE_MIN = 0.1
 
 ACKS = {
     "yes",
@@ -153,7 +154,7 @@ def search(query, limit=6, project=""):
     params = {
         "q": query[:300],
         "limit": str(limit),
-        "confidence_min": "0.5",
+        "confidence_min": str(RECALL_CONFIDENCE_MIN),
         "max_content_length": "300",
         "diversify": "true",
         "context": "recall",

@@ -94,3 +94,19 @@ def test_related_helper_swallows_failure(monkeypatch):
     assert hooks.related("m1") == []
     monkeypatch.setattr(hooks, "get", lambda path: {"detail": "boom"})
     assert hooks.related("m1") == []
+
+
+def test_search_lets_pruned_but_relevant_entries_surface(monkeypatch):
+    from artel.archivist.config import settings as archivist_settings
+
+    sent = {}
+
+    def fake_get(path):
+        sent["params"] = dict(hooks.urllib.parse.parse_qsl(hooks.urllib.parse.urlsplit(path).query))
+        return []
+
+    monkeypatch.setattr(hooks, "get", fake_get)
+    hooks.search("how do we deploy the api")
+    floor = float(sent["params"]["confidence_min"])
+    assert floor > archivist_settings.decay_floor
+    assert floor < 0.7**3
