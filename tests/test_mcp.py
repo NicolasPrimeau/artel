@@ -1,6 +1,7 @@
 import asyncio
 
 import httpx
+import pytest
 import pytest_asyncio
 from httpx import ASGITransport
 
@@ -573,6 +574,31 @@ def test_resolve_project_precedence():
     finally:
         request_project.reset(tok)
     assert s.resolve_project() == "envproj"
+
+
+def test_resolve_project_rejects_unexpanded_placeholder():
+    from artel.mcp.config import MCPSettings, request_project
+
+    s = MCPSettings()
+    s.mcp_project = ""
+    tok = request_project.set("${MCP_PROJECT}")
+    try:
+        with pytest.raises(ValueError, match="unexpanded placeholder"):
+            s.resolve_project()
+    finally:
+        request_project.reset(tok)
+
+
+async def test_memory_search_fails_loudly_on_placeholder_project(mcp, monkeypatch):
+    from artel.mcp.config import request_project, settings
+
+    monkeypatch.setattr(settings, "mcp_project", "")
+    tok = request_project.set("${MCP_PROJECT}")
+    try:
+        with pytest.raises(ValueError, match="unexpanded placeholder"):
+            await mcp.memory_search("anything")
+    finally:
+        request_project.reset(tok)
 
 
 async def test_memory_write_defaults_project_from_request_context(mcp, monkeypatch):

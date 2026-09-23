@@ -1,9 +1,12 @@
 import contextvars
+import re
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _creds_file = Path.home() / ".config" / "artel" / "credentials"
+
+_UNEXPANDED = re.compile(r"\$\{[^}]*\}")
 
 request_project: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "request_project", default=None
@@ -41,6 +44,11 @@ class MCPSettings(BaseSettings):
         if raw is None:
             return None
         s = raw.strip().lower()
+        if _UNEXPANDED.search(s):
+            raise ValueError(
+                f"project {raw!r} is an unexpanded placeholder; set the variable it names"
+                " or drop the x-mcp-project header"
+            )
         return s or None
 
 
