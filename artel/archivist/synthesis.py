@@ -1327,7 +1327,10 @@ async def run_utilization_prune(client: ArtelClient) -> None:
         for e in all_entries
         if e.get("type") in ("memory", "skill")
         and (e.get("origin") is None or e.get("origin") == local_id)
-        and datetime.fromisoformat(e["created_at"].replace("Z", "+00:00")) < cutoff_30d
+        and datetime.fromisoformat(
+            (e.get("author_updated_at") or e["created_at"]).replace("Z", "+00:00")
+        )
+        < cutoff_30d
     ]
     if not candidates:
         return

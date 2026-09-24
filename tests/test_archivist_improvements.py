@@ -363,6 +363,20 @@ class TestRunUtilizationPrune:
             await run_utilization_prune(client)
         client.patch_memory.assert_not_called()
 
+    async def test_skips_old_entries_their_author_recently_edited(self):
+        entry = _make_entry(created_at=_ago(days=40))
+        entry["author_updated_at"] = _ago(days=5)
+        client = _make_client(list_entries=AsyncMock(return_value=[entry]))
+        with (
+            patch("artel.archivist.synthesis.get_db") as mock_db,
+            patch("artel.archivist.synthesis.instance_id", return_value="inst-1"),
+        ):
+            mock_db.return_value.execute.return_value.fetchall.return_value = [
+                {"id": entry["id"], "read_count": 0}
+            ]
+            await run_utilization_prune(client)
+        client.patch_memory.assert_not_called()
+
     async def test_skips_entries_with_reads(self):
         entry = _make_entry(created_at=_ago(days=40))
         client = _make_client(list_entries=AsyncMock(return_value=[entry]))
