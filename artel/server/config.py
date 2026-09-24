@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     # controller had nothing to act on. 0.85 sits inside the band recall actually
     # returns (~296 surfacings per fortnight against 8 below 0.7).
     regret_threshold: float = 0.85
+    regret_dedupe_seconds: int = 600
     # Repo that git done-checks read. Never supplied by a blueprint.
     blueprint_repo_root: str = ""
 

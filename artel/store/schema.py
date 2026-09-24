@@ -108,6 +108,7 @@ CREATE TABLE IF NOT EXISTS decay_regret_events (
 );
 
 CREATE INDEX IF NOT EXISTS idx_regret_events_time ON decay_regret_events(created_at);
+CREATE INDEX IF NOT EXISTS idx_regret_events_reader ON decay_regret_events(memory_id, agent_id, created_at);
 
 CREATE TABLE IF NOT EXISTS usage_events (
     id            TEXT PRIMARY KEY,

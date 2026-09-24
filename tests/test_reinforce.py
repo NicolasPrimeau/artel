@@ -97,3 +97,38 @@ async def test_get_by_id_does_not_reinforce(client):
     r = await client.get(f"/memory/{eid}", headers=HEADERS2)
     assert r.status_code == 200
     assert _confidence(eid) == pytest.approx(0.05)
+
+
+def _regret_events(eid):
+    from artel.store.db import get_db
+
+    return (
+        get_db()
+        .execute("SELECT COUNT(*) FROM decay_regret_events WHERE memory_id = ?", (eid,))
+        .fetchone()[0]
+    )
+
+
+@pytest.mark.asyncio
+async def test_search_then_get_of_a_decayed_entry_is_one_regret(client):
+    eid = await _write(client, "alpha topic decayed then opened")
+    _set_confidence(eid, 0.3)
+
+    hits = await _recall(client, headers=HEADERS2)
+    assert any(e["id"] == eid for e in hits)
+    r = await client.get(f"/memory/{eid}", headers=HEADERS2)
+    assert r.status_code == 200
+    assert _regret_events(eid) == 1
+
+
+@pytest.mark.asyncio
+async def test_regret_is_counted_again_after_the_window(client, monkeypatch):
+    import artel.server.config as cfg
+
+    monkeypatch.setattr(cfg.settings, "regret_dedupe_seconds", 0)
+    eid = await _write(client, "alpha topic wanted twice")
+    _set_confidence(eid, 0.3)
+
+    await client.get(f"/memory/{eid}", headers=HEADERS2)
+    await client.get(f"/memory/{eid}", headers=HEADERS2)
+    assert _regret_events(eid) == 2

@@ -140,6 +140,12 @@ def _record_regret(db, rows, hit_ids: list[str], agent_id: str) -> None:
         confidence = row["confidence"] if row["confidence"] is not None else 1.0
         if confidence >= settings.regret_threshold:
             continue
+        if db.execute(
+            """SELECT 1 FROM decay_regret_events WHERE memory_id=? AND agent_id=?
+               AND created_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', ?)""",
+            (hid, agent_id, f"-{settings.regret_dedupe_seconds} seconds"),
+        ).fetchone():
+            continue
         db.execute(
             """INSERT INTO decay_regret_events (id, memory_id, agent_id, project, confidence)
                VALUES (?,?,?,?,?)""",

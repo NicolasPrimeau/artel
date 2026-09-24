@@ -544,6 +544,7 @@ async def test_comprehensive_metrics_snapshot_reflects_known_state(arch):
 
     writer = await scenario.agent("metrics-writer")
     reader = await scenario.agent("metrics-reader")
+    readers = [await scenario.agent(f"metrics-reader-{n}") for n in range(5)]
 
     # The first two stand in for conflict merges. The archivist resolves a conflict by
     # writing ONE entry carrying both originals as parents — it never labels anything,
@@ -561,8 +562,9 @@ async def test_comprehensive_metrics_snapshot_reflects_known_state(arch):
     await writer.update_memory(active_entries[3]["id"], confidence=0.3, tags=["archivist-flagged"])
 
     for e in [active_entries[2], active_entries[3]]:
-        for _ in range(5):
-            await reader.get_memory(e["id"])
+        for r in readers:
+            await r.get_memory(e["id"])
+            await r.get_memory(e["id"])
 
     for e in active_entries[4:7]:
         await reader.get_memory(e["id"])
@@ -571,10 +573,10 @@ async def test_comprehensive_metrics_snapshot_reflects_known_state(arch):
 
     assert snap["total_entries"] == 8
     assert snap["contradiction_count"] == 2
-    # Two decayed entries, read five times each. The controller's sensor counts the
-    # ten READS, not the two entries: an entry wanted five times while decayed cost
-    # the fleet five times. The three reads of full-confidence entries cost nothing
-    # and are not counted.
+    # Two decayed entries, each wanted by five readers. The controller's sensor counts
+    # the ten USES, not the two entries: an entry wanted five times while decayed cost
+    # the fleet five times. A reader fetching the same entry again moments later is
+    # the same use, and the three reads of full-confidence entries cost nothing.
     assert snap["decay_regret_count"] == 10
     assert snap["prune_regret_count"] == 2, "the standing flagged population, tracked separately"
     assert snap["utilization_rate"] == pytest.approx(5 / 8, abs=1e-6)

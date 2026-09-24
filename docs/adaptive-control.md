@@ -69,6 +69,10 @@ The first closed loop, live in the archivist scheduler:
   sensor was blind: ranking and the recall floor mean sub-0.7 entries are almost never
   surfaced (8 of 7192 surfacings in a fortnight; lowest returned 0.6816), so it logged
   one event in three weeks. 0.85 sits inside the band recall actually returns.
+- **One use, one event.** A search that surfaces a decayed entry and the get that
+  opens it moments later are the same want, so a reader's repeat within
+  `regret_dedupe_seconds` (600) is not logged again. Before this, that pattern
+  counted twice.
 - **Ordering:** `capture_metrics` runs first each cycle (steps the controller), then
   `decay_confidence` applies the new rate, a one-cycle closed loop.
 - **Reversible:** `control_decay_enabled` (default on) falls back to the static rate.
