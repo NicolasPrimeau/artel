@@ -132,3 +132,17 @@ async def test_regret_is_counted_again_after_the_window(client, monkeypatch):
     await client.get(f"/memory/{eid}", headers=HEADERS2)
     await client.get(f"/memory/{eid}", headers=HEADERS2)
     assert _regret_events(eid) == 2
+
+
+@pytest.mark.asyncio
+async def test_max_distance_keeps_near_and_drops_far(client):
+    near = await _write(client, "alpha topic exact match")
+    far = await _write(client, "unrelated note about something else")
+    r = await client.get(
+        "/memory/search",
+        params={"q": "alpha topic", "limit": 5, "max_distance": 1.18},
+        headers=HEADERS2,
+    )
+    ids = {e["id"] for e in r.json()}
+    assert near in ids
+    assert far not in ids

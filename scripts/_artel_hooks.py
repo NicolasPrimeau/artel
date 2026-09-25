@@ -25,6 +25,7 @@ import urllib.request
 
 TIMEOUT = 3.0
 RECALL_CONFIDENCE_MIN = 0.1
+RECALL_MAX_DISTANCE = 1.18
 
 ACKS = {
     "yes",
@@ -150,7 +151,7 @@ def get(path):
         return None
 
 
-def search(query, limit=6, project=""):
+def search(query, limit=6, project="", max_distance=None):
     params = {
         "q": query[:300],
         "limit": str(limit),
@@ -161,6 +162,8 @@ def search(query, limit=6, project=""):
     }
     if project:
         params["project"] = project
+    if max_distance is not None:
+        params["max_distance"] = str(max_distance)
     result = get("/memory/search?" + urllib.parse.urlencode(params))
     return result if isinstance(result, list) else []
 
@@ -230,7 +233,11 @@ def cmd_recall():
     if len(prompt) < 12 or prompt.lower().strip(" .!?") in ACKS:
         return
     proj = resolve_project(data)
-    results = [e for e in search(prompt, limit=6, project=proj) if isinstance(e, dict)]
+    results = [
+        e
+        for e in search(prompt, limit=6, project=proj, max_distance=RECALL_MAX_DISTANCE)
+        if isinstance(e, dict)
+    ]
     if not results:
         return
     fresh = set(seen_filter(data.get("session_id", ""), "recall", [e.get("id") for e in results]))

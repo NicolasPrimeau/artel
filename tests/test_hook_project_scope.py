@@ -88,7 +88,7 @@ def test_recall_scopes_search_to_project(monkeypatch, capsys, tmp_path):
     )
     seen = {}
 
-    def fake_search(q, limit=6, project=""):
+    def fake_search(q, limit=6, project="", max_distance=None):
         seen["project"] = project
         return []
 

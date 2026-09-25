@@ -21,7 +21,9 @@ def _run_recall(monkeypatch, capsys, search_results, related_results, session_id
     monkeypatch.setattr(
         hooks, "payload", lambda: {"prompt": "how do we deploy the api", "session_id": session_id}
     )
-    monkeypatch.setattr(hooks, "search", lambda q, limit=6, project="": search_results)
+    monkeypatch.setattr(
+        hooks, "search", lambda q, limit=6, project="", max_distance=None: search_results
+    )
     monkeypatch.setattr(hooks, "related", lambda eid, limit=2: related_results)
     hooks.cmd_recall()
     out = capsys.readouterr().out
@@ -110,3 +112,29 @@ def test_search_lets_pruned_but_relevant_entries_surface(monkeypatch):
     floor = float(sent["params"]["confidence_min"])
     assert floor > archivist_settings.decay_floor
     assert floor < 0.7**3
+
+
+def _capture_params(monkeypatch):
+    sent = []
+
+    def fake_get(path):
+        sent.append(dict(hooks.urllib.parse.parse_qsl(hooks.urllib.parse.urlsplit(path).query)))
+        return []
+
+    monkeypatch.setattr(hooks, "get", fake_get)
+    return sent
+
+
+def test_prompt_recall_drops_distant_matches(monkeypatch):
+    sent = _capture_params(monkeypatch)
+    monkeypatch.setattr(
+        hooks, "payload", lambda: {"prompt": "how do we deploy the api", "session_id": "s-dist"}
+    )
+    hooks.cmd_recall()
+    assert float(sent[0]["max_distance"]) == hooks.RECALL_MAX_DISTANCE
+
+
+def test_file_gotcha_lookup_keeps_no_distance_cut(monkeypatch):
+    sent = _capture_params(monkeypatch)
+    hooks.search("auth.py auth", limit=4)
+    assert "max_distance" not in sent[0]
