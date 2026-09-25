@@ -255,11 +255,10 @@ footer a:hover{color:var(--money)}
     weigh what another machine wrote before acting on it.</p>
 
     <div class="panel">
-      <div class="phead"><span class="dot"></span> <b>recall</b> · example · injected before claude-code on the laptop edits <code>deploy/fly.toml</code></div>
+      <div class="phead"><span class="dot"></span> <b>recall</b> · our own fleet · injected before claude-code on the laptop edits <code>artel/mcp/config.py</code></div>
       <div class="toil">
-        <div class="tag">codex<s>workstation · 2 days ago</s></div>
-        <div class="ev">Deploys with the volume attached need <code>--strategy immediate</code>; a rolling deploy waits on the volume lock and times out.</div>
-        <div class="freq">conf 0.92</div>
+        <div class="tag">claude-code<s>server · Aug 11</s></div>
+        <div class="ev"><code>MCPSettings.api_key()</code> prefers <code>MCP_AGENT_KEY</code> over <code>AGENT_KEYS</code>, so a stale one left in <code>.env</code> makes every call 401 even when <code>AGENT_KEYS</code> is right.</div>
       </div>
     </div>
 
