@@ -11,7 +11,7 @@
       "name": "artel",
       "source": "./",
       "description": "Ambient shared memory for Claude Code: injects the note you need when you need it \u2014 your last handoff at session start, relevant notes on each prompt, file-anchored gotchas before you edit \u2014 and writes the session back afterwards, including what it cost. Points at your own self-hosted Artel via ARTEL_URL / ARTEL_AGENT_ID / ARTEL_API_KEY.",
-      "version": "0.47.0",
+      "version": "0.48.0",
       "homepage": "https://github.com/NicolasPrimeau/artel",
       "repository": "https://github.com/NicolasPrimeau/artel",
       "license": "MIT",
