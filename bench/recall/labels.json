@@ -1,0 +1,423 @@
+[
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "Why is CI so long?",
+  "relevant": []
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "Absence of a license is ok? As long as it's not strictly forbidden",
+  "relevant": [
+   "e01b5aae-464c-4722-95a1-bf546a021a99",
+   "a21f9cf5-2750-4c30-8a7e-c7c5d5fa5e07"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "Anything else in nova Scotia?",
+  "relevant": [
+   "9f6439a3-6194-4666-a5c1-3887a7f0e09a",
+   "62a6e3c8-ea30-40a2-8660-2171f47438aa",
+   "fe1b6ffb-772c-4f01-871e-6d61555dbc96"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "Can you generate me a feed for cape Breton? 100 rows max",
+  "relevant": [
+   "c5121438-9517-4bf7-bf5d-4636f2a8c11f",
+   "fe1b6ffb-772c-4f01-871e-6d61555dbc96",
+   "1c7770a2-fa3e-4350-9886-dbd8f8221667"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "Ok so cap breton is good? How many permits total, and per week?",
+  "relevant": [
+   "fe1b6ffb-772c-4f01-871e-6d61555dbc96"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "Through the API, how would I get cap breton permits, like what filters would I use? Are our API docs and open-api up to date?",
+  "relevant": [
+   "d55fa459-d3a9-436b-bbde-caab3ce443f8"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "Never put in in a sheet? It should be in the feed then? And it's returned by the API right?",
+  "relevant": []
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "Can you check zoning data, it makes sense? Is it all active or is zoning historical?",
+  "relevant": [
+   "f18b3d97-d3e8-42fb-81f3-697772354e03",
+   "e611048e-285b-4ede-a4ac-832d7dfa0e74",
+   "700e3e07-da2f-440d-9ca6-418cc15b27f6"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "Fix the alias, and then how will we know if zoning is updated if their all live? We do a diff check?",
+  "relevant": [
+   "51620374-60bb-4c4a-ace3-1a7ced4f3726",
+   "5dc29f7f-bc8a-414d-841d-1077f2392cb2",
+   "8ab029e9-ddb7-44ca-b170-63f51b64b015"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "Ok zoning is something we need to add as a column to every feed, and to the property report if it's not already there",
+  "relevant": [
+   "e611048e-285b-4ede-a4ac-832d7dfa0e74",
+   "f18b3d97-d3e8-42fb-81f3-697772354e03"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "Tests are creeping up. Anyway to speed them up or not really?",
+  "relevant": [
+   "7232a973-43de-4436-ac6d-578b68408c61"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "Calgary geocoding, what's going on?",
+  "relevant": [
+   "319b1898-e8e9-400f-a772-de265052ee70",
+   "98e69b2f-b55b-4471-942f-af9d02165cd8",
+   "9703e263-5546-4365-a1aa-6c1b79379a78"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "Ok lead feeds 2 and models. We just did a major improvement for zoning. Does that help? Also when are leads created? Explain that process",
+  "relevant": [
+   "ddec144b-73c3-4bb7-9ef6-76910a133d1a",
+   "cb628d1b-d88a-48e8-a3bb-a511c8de5e8b"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "For each lead, we'll need to give our package of evidence. Can that still be in excel? Maybe a big g sheet",
+  "relevant": [
+   "bde0dc5e-97c7-49ee-91d6-0dcef49f9f95",
+   "bc997b2d-326a-4bde-9c8a-5b66e200673a",
+   "c3abca10-84ae-4b25-b949-80d1dc2e1b9d"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "Nimbus Job Queue: Job Failed",
+  "relevant": [
+   "a2f7be40-5b20-4c47-b052-d1d239f7f279",
+   "0e17b3a7-344a-4929-b483-26ff003f767c",
+   "347c027c-9bd7-471e-8a1a-2f426104c970"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "Ok is local git clean now?",
+  "relevant": [
+   "672ad020-f6eb-4276-a102-fd9221d0a273",
+   "244cda57-9d3f-43b8-a427-009532a33888",
+   "60db1115-c372-4cf1-a2b7-eb3048cce1bb"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "Explain more concisely",
+  "relevant": [
+   "66ddb25f-7aae-4527-9f9f-5e9a396ebf13"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "But we can't infer the status either can we? Does Ottawa say how long a permit is valid until expired?",
+  "relevant": [
+   "727abe5a-2301-4b34-a259-b675349707b0",
+   "38c6fafa-1dbc-49e2-82f0-d52fb95b56d9",
+   "c3f6ed96-8f48-4e49-8ca2-c7545a7e312f",
+   "18e52713-936e-4fd2-bd23-b7ed57ea2901"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "Feeds download should take the API key. Make that happen. Can you retroactively make the feeds downloadable?",
+  "relevant": [
+   "33814d50-4195-4836-acd4-28d8ec879eb5",
+   "741932aa-4cdf-47fa-9b6d-1b56226101c6",
+   "2460751d-97d3-49d4-9277-a63c96ace4aa",
+   "297bf825-a4e2-49f8-8262-4a09f4013644",
+   "bc305014-1ad6-4d6c-a1be-fbfc0cf900b5",
+   "7eb836ae-96ee-4b6e-ae8b-06ddf8d4155a"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "Well there should be a raw status, which we don't touch, and a status we infer, and that's where unknown should be",
+  "relevant": [
+   "3839275b-ff4b-4fce-b5b4-ce0527961d48"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "Does zone accept municipality or other params?",
+  "relevant": [
+   "94f5e826-ab7b-4cc3-a299-154b62a7f50b",
+   "700e3e07-da2f-440d-9ca6-418cc15b27f6",
+   "d0fa2502-8508-499b-bff5-df3937eaffc3"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "Do we expose our geocoding also? And reverse geocoding? We should. Give an address, get geolocation?",
+  "relevant": [
+   "4ae35a5f-69a9-4c5c-b547-29711f8386b9"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "What do you think of feeds v2, the lead model and business profile model, and the matching engine?",
+  "relevant": [
+   "cb628d1b-d88a-48e8-a3bb-a511c8de5e8b",
+   "85e5edea-44a8-4f41-9296-36470e069e57"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "Yeah the contact coverage problem.... Any ideas?",
+  "relevant": [
+   "fb1a13e5-292f-4ae8-ab13-72034e990709",
+   "de47ef3b-39eb-4f38-a071-2ed2eeb9671b",
+   "22cde106-47f0-4668-9ead-04783e5c7e73",
+   "8b22f6b6-bb04-4316-b58c-d95ef2b688ac",
+   "4eff042f-f087-4685-b92b-713a675c85f7",
+   "ef2cfd29-10e7-430f-b828-84a5dc60eb98"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "Is there any dataset that would help find more contactable leads? The goal is contactable leads, not contactable permits",
+  "relevant": [
+   "8b22f6b6-bb04-4316-b58c-d95ef2b688ac",
+   "62d52a2d-e8bf-4444-a613-3a2d1d3c9fb0",
+   "6267d864-a78e-4d3e-8ab0-42b56db1eb8b",
+   "e66d6857-f438-45b6-a7bf-a5a16be79d03",
+   "22cde106-47f0-4668-9ead-04783e5c7e73"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "Is token as a url param ok to do?",
+  "relevant": [
+   "0f1a4b5a-d903-4457-8ced-ca81021c26c2"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "The contact information we gathered, is it ok to resell that?",
+  "relevant": []
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "Is the current feed columns structured correctly? Contact info should definitely be one of the first columns, even if mostly blank",
+  "relevant": [
+   "f0b57d5c-f802-4c42-aa60-0a313fcf9401",
+   "04119f03-dda5-4131-be1e-652e1a27b9bf",
+   "a299b727-fcb0-4a69-aa0e-668c16aed690",
+   "86603327-b9eb-4bbf-8de5-5f14f283ea85"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "ALARM: \"nimbus-api-widget-failure-rate\" in Canada (Central)",
+  "relevant": [
+   "ceda2949-e51d-4192-b251-36851ccfd204",
+   "9fef66bd-7b09-40e8-ae49-2cf451a2b621",
+   "42f2f85a-9b34-4e94-94a7-bdb855131ed4",
+   "b21e712a-2e03-43f9-a0a3-f3aa85fe038a"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "So feeds v2, is it ready?",
+  "relevant": [
+   "e41ac66f-186e-492a-bf1c-8ba089ba406a",
+   "cb628d1b-d88a-48e8-a3bb-a511c8de5e8b",
+   "29307c98-2171-47ab-837b-5fa7d986386a"
+  ]
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "How do we prevent an outage like this again",
+  "relevant": []
+ },
+ {
+  "project": "nimbus",
+  "agent": "poseidon",
+  "prompt": "Alright so where we at now",
+  "relevant": []
+ },
+ {
+  "project": "formulai",
+  "agent": "poseidon-formulai",
+  "prompt": "Did anyone use Formulai today? Any ga4 events?",
+  "relevant": [
+   "f1978f14-4f85-4542-83e6-9b3ffb9921ea",
+   "1d59c5a3-b1db-4837-a4dd-f47aa2da47d1",
+   "6a1dfb5f-fa2a-40a1-b4d5-659f1c8a8463",
+   "0f862e1e-768e-409b-bdbe-cc626e7e2d8a"
+  ]
+ },
+ {
+  "project": "formulai",
+  "agent": "poseidon-formulai",
+  "prompt": "Yes the mobile layout has been weak but it needs to be flawless for UX",
+  "relevant": [
+   "b1ee2569-c02c-43d1-91fa-106a2202b3bb",
+   "df61b13f-ecf1-4558-9f07-e5e96823a5e2",
+   "81219b12-db28-4b39-a531-26b1ce434da5"
+  ]
+ },
+ {
+  "project": "formulai",
+  "agent": "poseidon-formulai",
+  "prompt": "Can we make it so that when you fill in an address, it searches and auto fills? We can leverage builddata?",
+  "relevant": []
+ },
+ {
+  "project": "formulai",
+  "agent": "poseidon-formulai",
+  "prompt": "Also builddata has a geocoder, could we use that? Or really Google maps is the only way?",
+  "relevant": [
+   "c34ecee0-a5c9-4b68-9c36-c5121f97439c"
+  ]
+ },
+ {
+  "project": "formulai",
+  "agent": "poseidon-formulai",
+  "prompt": "For dates, it should be very easy, like a proper calendar library for picking a date",
+  "relevant": [
+   "00b3c100-ff99-434b-b901-358c2b62abc8"
+  ]
+ },
+ {
+  "project": "formulai",
+  "agent": "poseidon-formulai",
+  "prompt": "For SIN, what can we do really",
+  "relevant": [
+   "882fdcda-5841-4355-add7-aad879ad9519",
+   "6a5739e2-8c7b-4cc6-b0db-7b6344b2498b"
+  ]
+ },
+ {
+  "project": "formulai",
+  "agent": "poseidon-formulai",
+  "prompt": "Can you deploy manually like GitHub would?",
+  "relevant": [
+   "cb854f99-7391-4470-bf81-af8b19bb2311",
+   "d7d98c63-ee4e-4b6f-bee4-28509ea7887c"
+  ]
+ },
+ {
+  "project": "artel",
+  "agent": "poseidon-artel",
+  "prompt": "Could you check out GitHub threads for cool tasks we could answer that align with artel? I think there's a skill for this.",
+  "relevant": [
+   "4910358c-debd-422c-a765-a2907045d871"
+  ]
+ },
+ {
+  "project": "artel",
+  "agent": "poseidon-artel",
+  "prompt": "Also review https://artel.run/ Copy. It's just kind of bad and not selling what artel really is. Reads like an aggressive ad",
+  "relevant": [
+   "ca1e2699-0335-4562-9829-14e2cab56b87",
+   "49ecc4a2-9438-427d-a1b9-c473ea836f1d"
+  ]
+ },
+ {
+  "project": "artel",
+  "agent": "poseidon-artel",
+  "prompt": "This sounds kind of braggy too? What if we don't mention artel at all?",
+  "relevant": [
+   "a7a8b8ec-09c2-46ee-bdd0-79f9104ae8c2"
+  ]
+ },
+ {
+  "project": "artel",
+  "agent": "poseidon-artel",
+  "prompt": "It's kind of cringe though no?",
+  "relevant": []
+ },
+ {
+  "project": "artel",
+  "agent": "poseidon-artel",
+  "prompt": "Is artel actually doing anything?",
+  "relevant": []
+ },
+ {
+  "project": "artel",
+  "agent": "poseidon-artel",
+  "prompt": "Commit yes but Anything else to fix?",
+  "relevant": []
+ },
+ {
+  "project": "artel",
+  "agent": "poseidon-artel",
+  "prompt": "Yes this is much better.",
+  "relevant": []
+ },
+ {
+  "project": "artel",
+  "agent": "poseidon-artel",
+  "prompt": "Any other fixes to do?",
+  "relevant": []
+ },
+ {
+  "project": "artel",
+  "agent": "poseidon-artel",
+  "prompt": "Push and cut the release",
+  "relevant": [
+   "0c0c4615-d3d2-4c07-a07d-433f1a7c947d",
+   "05e9aab7-5ed8-47da-ac61-444b3b17244e",
+   "31983d1b-6178-4eb0-b5d3-77ccd662d546",
+   "5db7ef83-f4b4-475c-9b7f-b6a63634c029",
+   "a63c3873-6d73-4a46-8c1e-c828c24c5b0a"
+  ]
+ }
+]
