@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 
 from ...store.db import get_db, norm_project
+from ...store.redact import redact
 from ..auth import ActorDep, require_role
 from ..models import CaptureAck, CaptureCreate, CaptureDigest, CaptureRecord, new_id
 
@@ -36,7 +37,7 @@ async def create_capture(body: CaptureCreate, agent_id: str = ActorDep):
             agent_id,
             body.session_id,
             norm_project(body.project),
-            body.content,
+            redact(body.content),
             f"+{ttl} hours",
         ),
     )
