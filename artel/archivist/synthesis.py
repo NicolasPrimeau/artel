@@ -330,6 +330,17 @@ def _resolve_op_id(raw: object, valid_ids: set[str]) -> str | None:
     return matches[0] if len(matches) == 1 else None
 
 
+_ID_TOKEN = re.compile(r"[0-9a-f][0-9a-f-]{7,35}", re.I)
+
+
+def _cited_entries(reason: str, valid_ids: set[str]) -> set[str]:
+    return {
+        eid
+        for token in _ID_TOKEN.findall(reason)
+        if (eid := _resolve_op_id(token.lower(), valid_ids)) is not None
+    }
+
+
 _PROJECTS_TTL_SECONDS = 600.0
 _projects_cache: dict[str, object] = {}
 
@@ -582,6 +593,13 @@ async def _execute_operations(
                     continue
                 if task_id not in open_ids:
                     log.warning("close_task references unknown or non-open task: %s", task_id[:8])
+                    continue
+                if not _cited_entries(reason, valid_ids | (open_ids - {task_id})):
+                    log.warning(
+                        "close_task %s cites no memory entry or other open task; not closing: %s",
+                        task_id[:8],
+                        reason[:80],
+                    )
                     continue
                 await client.complete_task_as_done(
                     task_id, f"[archivist] Closed based on memory evidence: {reason}"
@@ -859,8 +877,9 @@ async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
         ]
         task_block += (
             "\n\nAlready-open tasks (do NOT create duplicates; "
-            "use close_task with the bracketed id when memory or comments clearly show the work is done "
-            "or the task is a duplicate of another):\n" + "\n".join(open_lines)
+            "use close_task with the bracketed id only when a memory entry above clearly shows the work "
+            "is done or the task duplicates another open task; never emit close_task for a task you judge "
+            "still open):\n" + "\n".join(open_lines)
         )
 
     preamble = _build_directive_preamble(_directives_in_play(directives, entries))
@@ -924,7 +943,7 @@ async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
         '- {"op": "tag", "entry": "<id>", "add_tags": ["<tag>", ...]}\n'
         '- {"op": "adjust_confidence", "entry": "<id>", "confidence": <0.0-1.0>}\n'
         '- {"op": "task", "title": "<title>", "description": "<desc>", "priority": "low|normal|high", "project": "<project|null>"}\n'
-        '- {"op": "close_task", "task_id": "<open task id from the Already-open tasks list>", "reason": "<cite the memory entry ID or comment text that evidences completion or duplication>"}\n'
+        '- {"op": "close_task", "task_id": "<open task id from the Already-open tasks list>", "reason": "<cite the memory entry ID that evidences completion, or the open task ID it duplicates; a close citing neither is ignored>"}\n'
         '- {"op": "link", "src": "<id>", "dst": "<id>", "rel": "corroborates|contradicts"}\n\n'
         "Rules:\n"
         "- Promote entries that are stable, high-signal, and likely to remain true.\n"

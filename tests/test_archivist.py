@@ -669,6 +669,56 @@ class TestExecuteOperations:
         await _execute_operations(ops, client, entries, open_task_ids={"task-other"})
         client.complete_task_as_done.assert_not_called()
 
+    async def test_close_task_skipped_when_reason_cites_no_entry(self):
+        entries = self._make_entries()
+        client = self._make_client()
+        ops = [
+            {
+                "op": "close_task",
+                "task_id": "task-abc-123",
+                "reason": "No memory evidence of completion. Keeping open.",
+            }
+        ]
+        await _execute_operations(ops, client, entries, open_task_ids={"task-abc-123"})
+        client.complete_task_as_done.assert_not_called()
+
+    async def test_close_task_skipped_when_cited_entry_is_not_in_the_pass(self):
+        entries = self._make_entries()
+        client = self._make_client()
+        ops = [
+            {
+                "op": "close_task",
+                "task_id": "task-abc-123",
+                "reason": "Entry [f22a0fdf-9999] shows it shipped",
+            }
+        ]
+        await _execute_operations(ops, client, entries, open_task_ids={"task-abc-123"})
+        client.complete_task_as_done.assert_not_called()
+
+    async def test_close_task_may_cite_the_open_task_it_duplicates(self):
+        entries = self._make_entries()
+        client = self._make_client()
+        ops = [
+            {
+                "op": "close_task",
+                "task_id": "abc12345-0001",
+                "reason": "duplicate of [def67890-0002]",
+            }
+        ]
+        await _execute_operations(
+            ops, client, entries, open_task_ids={"abc12345-0001", "def67890-0002"}
+        )
+        client.complete_task_as_done.assert_called_once()
+
+    async def test_close_task_cannot_cite_itself(self):
+        entries = self._make_entries()
+        client = self._make_client()
+        ops = [
+            {"op": "close_task", "task_id": "abc12345-0001", "reason": "[abc12345-0001] is done"}
+        ]
+        await _execute_operations(ops, client, entries, open_task_ids={"abc12345-0001"})
+        client.complete_task_as_done.assert_not_called()
+
     async def test_close_task_skipped_when_reason_missing(self):
         entries = self._make_entries()
         client = self._make_client()
