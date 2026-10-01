@@ -1260,3 +1260,19 @@ def test_directive_truncation_logs_loudly(caplog):
     with caplog.at_level(logging.ERROR):
         _warn_if_truncated([{"id": str(i)} for i in range(DIRECTIVE_LIMIT - 1)], "project")
     assert caplog.text == ""
+
+
+def test_only_recently_active_open_tasks_get_their_comments_fetched():
+    from datetime import UTC, datetime, timedelta
+
+    from artel.archivist.synthesis import _recently_active
+
+    def ago(days):
+        return (datetime.now(UTC) - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+    tasks = [
+        {"id": "fresh", "updated_at": ago(1)},
+        {"id": "stale", "updated_at": ago(40)},
+        {"id": "broken", "updated_at": None},
+    ]
+    assert [t["id"] for t in _recently_active(tasks)] == ["fresh"]

@@ -66,6 +66,22 @@ def _format_task_with_comments(task: dict, comments: list[dict]) -> str:
     return line
 
 
+_TASK_COMMENT_WINDOW_DAYS = 7
+
+
+def _recently_active(tasks: list[dict]) -> list[dict]:
+    cutoff = datetime.now(UTC) - timedelta(days=_TASK_COMMENT_WINDOW_DAYS)
+    active = []
+    for t in tasks:
+        try:
+            touched = datetime.fromisoformat(str(t.get("updated_at")).replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if touched > cutoff:
+            active.append(t)
+    return active
+
+
 async def _fetch_task_comments(
     tasks: list[dict],
     client: "ArtelClient",  # type: ignore[name-defined]
@@ -854,7 +870,7 @@ async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
     open_task_comments: dict[str, list[dict]] = {}
     if open_tasks:
         try:
-            open_task_comments = await _fetch_task_comments(open_tasks, client)
+            open_task_comments = await _fetch_task_comments(_recently_active(open_tasks), client)
         except Exception as e:
             log.warning("could not fetch task comments for synthesis: %s", e)
 
@@ -1024,7 +1040,7 @@ async def run_deep_synthesis(client: ArtelClient) -> None:
     open_task_comments: dict[str, list[dict]] = {}
     if open_tasks:
         try:
-            open_task_comments = await _fetch_task_comments(open_tasks, client)
+            open_task_comments = await _fetch_task_comments(_recently_active(open_tasks), client)
         except Exception as e:
             log.warning("could not fetch task comments for deep synthesis: %s", e)
 
@@ -1053,8 +1069,9 @@ async def run_deep_synthesis(client: ArtelClient) -> None:
         ]
         task_block += (
             "\n\nAlready-open tasks (do NOT create duplicates; "
-            "use close_task with the bracketed id when memory or comments clearly show the work is done "
-            "or the task is a duplicate of another):\n" + "\n".join(open_lines)
+            "use close_task with the bracketed id only when a memory entry above clearly shows the work "
+            "is done or the task duplicates another open task; never emit close_task for a task you judge "
+            "still open):\n" + "\n".join(open_lines)
         )
 
     preamble = _build_directive_preamble(_directives_in_play(directives, entries))
