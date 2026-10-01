@@ -1,7 +1,10 @@
 import asyncio
+import logging
 import os
 
 from .config import settings
+
+log = logging.getLogger(__name__)
 
 _anthropic_client = None
 _openai_client = None
@@ -136,17 +139,30 @@ async def _openai(system: str, user: str, model: str, max_tokens: int, key: str)
         if base_url:
             kwargs["base_url"] = base_url
         _openai_client = openai.AsyncOpenAI(**kwargs)
+    extra: dict = {}
+    if settings.archivist_provider == "openrouter" and settings.archivist_reasoning_effort:
+        extra["extra_body"] = {"reasoning": {"effort": settings.archivist_reasoning_effort}}
     resp = await _openai_client.chat.completions.create(
         model=model,
         max_tokens=max_tokens,
         messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+        **extra,
     )
+    usage = resp.usage.model_dump() if resp.usage else {}
     try:
-        _record(model, resp.usage.model_dump() if resp.usage else {})
+        _record(model, usage)
     except Exception:
         # Accounting must never break curation.
         pass
-    return resp.choices[0].message.content or ""
+    choice = resp.choices[0]
+    if choice.finish_reason == "length":
+        reasoning = (usage.get("completion_tokens_details") or {}).get("reasoning_tokens")
+        log.warning(
+            "LLM output truncated at max_tokens=%d (reasoning used %s); the response is incomplete",
+            max_tokens,
+            reasoning,
+        )
+    return choice.message.content or ""
 
 
 async def complete(

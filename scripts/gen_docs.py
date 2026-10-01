@@ -67,6 +67,7 @@ SETTING_NOTES: dict[str, str] = {
     "archivist_model": "Model override. Empty uses the provider default. OpenRouter needs a vendor-prefixed slug.",
     "archivist_api_key": "Overrides the provider-specific key.",
     "archivist_base_url": "Custom base URL for OpenAI-compatible providers. Defaults to OpenRouter's when the provider is `openrouter`.",
+    "archivist_reasoning_effort": "Reasoning effort requested from OpenRouter (`low`, `medium`, `high`). Reasoning tokens count against each call's output budget, so higher effort truncates more responses. Empty sends no preference.",
     "synthesis_interval": "Seconds between archivist cycles.",
     "lease_ttl_seconds": "Curator lease lifetime. Only the lease holder runs passes.",
     "lease_renew_seconds": "How often the lease is renewed.",

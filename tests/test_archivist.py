@@ -104,6 +104,41 @@ class TestLlmConfig:
             assert m.await_args.args[2] == "google/gemini-3.7-flash"
             assert m.await_args.args[4] == "sk-or-test"
 
+    async def _call_openai(self, provider, finish_reason="stop", effort="low"):
+        import artel.archivist.llm as llm_mod
+
+        resp = MagicMock()
+        resp.usage.model_dump.return_value = {
+            "completion_tokens": 1500,
+            "completion_tokens_details": {"reasoning_tokens": 1400},
+        }
+        resp.choices = [MagicMock(finish_reason=finish_reason)]
+        resp.choices[0].message.content = "[]"
+        client = MagicMock()
+        client.chat.completions.create = AsyncMock(return_value=resp)
+        with (
+            patch("artel.archivist.llm.settings") as s,
+            patch.object(llm_mod, "_openai_client", client),
+        ):
+            s.archivist_provider = provider
+            s.archivist_reasoning_effort = effort
+            out = await llm_mod._openai("sys", "usr", "m", 1500, "k")
+        return out, client.chat.completions.create.await_args.kwargs
+
+    async def test_openrouter_asks_for_low_reasoning_effort(self):
+        _, kwargs = await self._call_openai("openrouter")
+        assert kwargs["extra_body"] == {"reasoning": {"effort": "low"}}
+
+    async def test_openai_provider_sends_no_reasoning_field(self):
+        _, kwargs = await self._call_openai("openai")
+        assert "extra_body" not in kwargs
+
+    async def test_truncated_output_is_logged_loudly(self, caplog):
+        with caplog.at_level("WARNING", logger="artel.archivist.llm"):
+            await self._call_openai("openrouter", finish_reason="length")
+        assert "truncated at max_tokens=1500" in caplog.text
+        assert "1400" in caplog.text
+
     def test_claude_sdk_configured_via_oauth_token(self, monkeypatch):
         with patch("artel.archivist.llm.settings") as s:
             s.archivist_api_key = ""
