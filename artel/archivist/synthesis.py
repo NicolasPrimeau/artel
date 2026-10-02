@@ -1172,6 +1172,22 @@ async def run_deep_synthesis(client: ArtelClient) -> None:
     )
 
 
+async def run_synthesis_if_due(client: ArtelClient) -> None:
+    db = get_db()
+    row = db.execute("SELECT value FROM kv WHERE key = 'archivist_last_synthesis'").fetchone()
+    if row:
+        last_run = datetime.fromisoformat(row["value"].replace("Z", "+00:00"))
+        if datetime.now(UTC) - last_run < timedelta(seconds=settings.synthesis_pass_interval - 60):
+            return
+    await run_synthesis(client)
+    with db:
+        db.execute(
+            "INSERT INTO kv (key, value) VALUES ('archivist_last_synthesis', ?) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            (datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"),),
+        )
+
+
 async def run_deep_synthesis_if_due(client: ArtelClient) -> None:
     try:
         db = get_db()

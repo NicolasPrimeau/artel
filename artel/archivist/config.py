@@ -15,6 +15,7 @@ class ArchivistSettings(BaseSettings):
     archivist_base_url: str = ""
     archivist_reasoning_effort: str = "low"
     synthesis_interval: int = 3600
+    synthesis_pass_interval: int = 3600
     lease_ttl_seconds: int = 120
     lease_renew_seconds: int = 40
     conflict_threshold: float = 0.92

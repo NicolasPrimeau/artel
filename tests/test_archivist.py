@@ -1276,3 +1276,45 @@ def test_only_recently_active_open_tasks_get_their_comments_fetched():
         {"id": "broken", "updated_at": None},
     ]
     assert [t["id"] for t in _recently_active(tasks)] == ["fresh"]
+
+
+async def test_synthesis_pass_skips_until_its_interval_has_passed(monkeypatch):
+    from datetime import UTC, datetime, timedelta
+
+    import artel.archivist.synthesis as syn
+
+    runs = []
+
+    async def fake_run(client):
+        runs.append(1)
+
+    class FakeDb:
+        def __init__(self):
+            self.value = None
+
+        def execute(self, sql, params=()):
+            if sql.startswith("INSERT"):
+                self.value = params[0]
+            return self
+
+        def fetchone(self):
+            return {"value": self.value} if self.value else None
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    db = FakeDb()
+    monkeypatch.setattr(syn, "get_db", lambda: db)
+    monkeypatch.setattr(syn, "run_synthesis", fake_run)
+    monkeypatch.setattr(syn.settings, "synthesis_pass_interval", 10800)
+
+    await syn.run_synthesis_if_due(None)
+    await syn.run_synthesis_if_due(None)
+    assert len(runs) == 1
+
+    db.value = (datetime.now(UTC) - timedelta(hours=4)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    await syn.run_synthesis_if_due(None)
+    assert len(runs) == 2
