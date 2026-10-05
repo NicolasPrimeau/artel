@@ -380,13 +380,21 @@ async def _known_projects(client: ArtelClient) -> set[str] | None:
     return value if isinstance(value, set) else None
 
 
+def _format_entries(entries: list[dict]) -> str:
+    return "\n\n".join(
+        f"[{e['id']}] agent={e['agent_id']} type={e['type']} conf={e.get('confidence', 1.0)} tags={e.get('tags', [])}\n{e['content']}"
+        for e in entries
+    )
+
+
 async def _execute_operations(
     ops: list[dict],
     client: ArtelClient,
     entries: list[dict],
     open_task_titles: set[str] | None = None,
     open_task_ids: set[str] | None = None,
-) -> None:
+) -> set[str]:
+    deleted: set[str] = set()
     valid_ids = {e["id"] for e in entries}
     entries_by_id = {e["id"]: e for e in entries}
     open_norm = {_normalize_task_title(t) for t in (open_task_titles or set())}
@@ -434,6 +442,7 @@ async def _execute_operations(
                 )
                 for eid in ids:
                     await client.delete_memory(eid)
+                    deleted.add(eid)
                 log.info("archivist merged entries %s", ids)
 
             elif op_name == "promote":
@@ -475,6 +484,7 @@ async def _execute_operations(
                 current_conf = entry.get("confidence", 1.0)
                 if current_conf <= settings.decay_floor:
                     await client.delete_memory(eid)
+                    deleted.add(eid)
                     log.info("archivist pruned entry %s", eid)
                 else:
                     existing_tags = entry.get("tags", [])
@@ -535,6 +545,7 @@ async def _execute_operations(
                         project=original_project,
                     )
                 await client.delete_memory(eid)
+                deleted.add(eid)
                 log.info("archivist split entry %s into %d parts", eid, len(parts))
 
             elif op_name == "extract":
@@ -560,6 +571,7 @@ async def _execute_operations(
                     await client.patch_memory(from_id, content=remaining_content)
                 else:
                     await client.delete_memory(from_id)
+                    deleted.add(from_id)
                 log.info("archivist extracted segment from %s into %s", from_id, into_id)
 
             elif op_name == "task":
@@ -625,6 +637,8 @@ async def _execute_operations(
 
         except Exception as e:
             log.warning("synthesis op %s failed: %s", op_name, e)
+
+    return deleted
 
 
 async def on_task_completed(task_id: str, agent_id: str, client: ArtelClient) -> None:
@@ -803,7 +817,7 @@ async def _llm_ops_pass(
             text = await complete(
                 system=system_prompt,
                 user=user_prompt,
-                max_tokens=2048,
+                max_tokens=4096,
             )
             break
         except asyncio.CancelledError:
@@ -874,10 +888,7 @@ async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
         except Exception as e:
             log.warning("could not fetch task comments for synthesis: %s", e)
 
-    memory_block = "\n\n".join(
-        f"[{e['id']}] agent={e['agent_id']} type={e['type']} conf={e.get('confidence', 1.0)} tags={e.get('tags', [])}\n{e['content']}"
-        for e in entries
-    )
+    memory_block = _format_entries(entries)
 
     task_block = ""
     if recently_completed:
@@ -941,11 +952,13 @@ async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
 
     open_titles = {t["title"] for t in open_tasks if t.get("title")}
     open_ids = {t["id"] for t in open_tasks if t.get("id")}
-    await _execute_operations(
+    removed = await _execute_operations(
         cleanup_ops, client, entries, open_task_titles=open_titles, open_task_ids=open_ids
     )
+    entries = [e for e in entries if e["id"] not in removed]
+    memory_block = _format_entries(entries)
 
-    insight_system = "You are the Artel archivist running an insight pass. Promote stable knowledge to docs, improve tag discoverability, adjust confidence where appropriate, create tasks for work requiring an external agent, and close tasks where memory or task comments evidence completion or identify duplicates."
+    insight_system = "You are the Artel archivist running an insight pass. Promote stable knowledge to docs, improve tag discoverability, adjust confidence where appropriate, create tasks for work requiring an external agent, and close tasks where a memory entry evidences completion or another open task duplicates them."
     if preamble:
         insight_system = preamble + "\n\n" + insight_system
 
@@ -966,7 +979,7 @@ async def run_synthesis(client: ArtelClient, since_hours: int = 24) -> None:
         "- Use tag/adjust_confidence to surface connections or correct signal strength.\n"
         "- link two entries when one corroborates or contradicts another — this builds the knowledge graph that powers associative recall. Only link entries in this set, using exact IDs; omit if unsure.\n"
         "- Create tasks ONLY for work requiring an external agent — never for memory operations.\n"
-        "- close_task when: (a) memory entries or task comments clearly evidence the work is done — cite the evidence; or (b) the task is an exact or near-exact duplicate of another open task — cite the other task's ID.\n"
+        "- close_task when: (a) a memory entry clearly evidences the work is done — cite its ID; or (b) the task is an exact or near-exact duplicate of another open task — cite the other task's ID.\n"
         "- Do not close based on guesswork. Evidence must be explicit.\n"
         "- When in doubt about an operation, omit it. Conservatism is correct.\n"
         "- Output ONLY the JSON array. No prose, no explanation, no markdown fences."
@@ -1050,10 +1063,7 @@ async def run_deep_synthesis(client: ArtelClient) -> None:
     except Exception as e:
         log.warning("could not load directives for deep synthesis: %s", e)
 
-    memory_block = "\n\n".join(
-        f"[{e['id']}] agent={e['agent_id']} type={e['type']} conf={e.get('confidence', 1.0)} tags={e.get('tags', [])}\n{e['content']}"
-        for e in entries
-    )
+    memory_block = _format_entries(entries)
 
     task_block = ""
     if recently_completed:
@@ -1114,15 +1124,17 @@ async def run_deep_synthesis(client: ArtelClient) -> None:
 
     open_titles = {t["title"] for t in open_tasks if t.get("title")}
     open_ids = {t["id"] for t in open_tasks if t.get("id")}
-    await _execute_operations(
+    removed = await _execute_operations(
         cleanup_ops, client, entries, open_task_titles=open_titles, open_task_ids=open_ids
     )
+    entries = [e for e in entries if e["id"] not in removed]
+    memory_block = _format_entries(entries)
 
     insight_system = (
         "You are the Artel archivist running an insight pass on the full memory store. "
         "Promote stable knowledge to docs, improve tag discoverability, adjust confidence where appropriate, "
-        "create tasks for work requiring an external agent, and close tasks where memory or task comments "
-        "evidence completion or identify duplicates. Flag any doc entries that appear stale or superseded."
+        "create tasks for work requiring an external agent, and close tasks where a memory entry "
+        "evidences completion or another open task duplicates them. Flag any doc entries that appear stale or superseded."
     )
     if preamble:
         insight_system = preamble + "\n\n" + insight_system
@@ -1141,7 +1153,7 @@ async def run_deep_synthesis(client: ArtelClient) -> None:
         "- Promote entries that are stable, high-signal, and likely to remain true.\n"
         "- Use tag/adjust_confidence to surface connections or correct signal strength. Tag stale/superseded doc entries with 'archivist-stale'.\n"
         "- Create tasks ONLY for work requiring an external agent — never for memory operations.\n"
-        "- close_task when: (a) memory or task comments clearly evidence the work is done — cite the evidence; or (b) the task is an exact or near-exact duplicate of another open task — cite the other task's ID.\n"
+        "- close_task when: (a) a memory entry clearly evidences the work is done — cite its ID; or (b) the task is an exact or near-exact duplicate of another open task — cite the other task's ID.\n"
         "- Do not close based on guesswork. Evidence must be explicit.\n"
         "- When in doubt, omit. Conservatism is correct.\n"
         "- Output ONLY the JSON array. No prose, no explanation, no markdown fences."
@@ -1721,7 +1733,7 @@ async def run_headlines(client: ArtelClient) -> None:
     written = 0
     for e in list(candidates.values())[:_HEADLINE_BATCH]:
         try:
-            line = (await complete(_HEADLINE_SYSTEM, e["content"], max_tokens=64)).strip()
+            line = (await complete(_HEADLINE_SYSTEM, e["content"], max_tokens=256)).strip()
         except Exception as ex:
             log.warning("headline generation failed for %s: %s", e["id"], ex)
             continue

@@ -971,6 +971,45 @@ class TestRunSynthesisStructured:
         assert "archivist-flagged" in patch_kwargs.kwargs["tags"]
         client.write_memory.assert_not_called()
 
+    async def test_insight_pass_does_not_see_entries_cleanup_deleted(self):
+        entries = self._make_entries()
+        for e in entries:
+            if e["id"] == "entry-beta":
+                e["confidence"] = 0.05
+        prompts = []
+
+        async def fake_complete(system, user, max_tokens=2048):
+            prompts.append(user)
+            if len(prompts) == 1:
+                return '[{"op": "prune", "entry": "entry-beta"}]'
+            return "[]"
+
+        client = MagicMock()
+        client.get_directives = AsyncMock(return_value=[])
+        client.get_delta = AsyncMock(return_value=entries)
+        client.list_tasks = AsyncMock(return_value=[])
+        client.patch_memory = AsyncMock(return_value={})
+        client.write_memory = AsyncMock(return_value={"id": "new"})
+        client.delete_memory = AsyncMock()
+        client.create_task = AsyncMock(return_value={"id": "t"})
+        client.log = AsyncMock()
+
+        with (
+            patch("artel.archivist.synthesis.is_configured", return_value=True),
+            patch("artel.archivist.synthesis.settings") as mock_settings,
+            patch("artel.archivist.synthesis.complete", fake_complete),
+        ):
+            mock_settings.archivist_id = "archivist"
+            mock_settings.directive_conflict_threshold = 0.85
+            mock_settings.decay_floor = 0.05
+            await synthesis.run_synthesis(client)
+
+        client.delete_memory.assert_called_once_with("entry-beta")
+        assert len(prompts) == 2
+        assert "entry-beta" in prompts[0]
+        assert "entry-beta" not in prompts[1]
+        assert "entry-alpha" in prompts[1]
+
     async def test_run_synthesis_empty_ops_no_side_effects(self):
         entries = self._make_entries()
         llm_response = "[]"
