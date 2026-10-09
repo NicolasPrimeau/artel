@@ -8,7 +8,7 @@
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/artel-session-start.sh",
             "timeout": 12,
-            "statusMessage": "Loading Artel session context…"
+            "statusMessage": "Loading Artel session context\u2026"
           }
         ]
       }
@@ -19,15 +19,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/artel-check-inbox.sh",
-            "timeout": 5,
-            "statusMessage": "Checking Artel inbox…"
-          },
-          {
-            "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/artel-recall.sh",
             "timeout": 5,
-            "statusMessage": "Recalling relevant Artel memory…"
+            "statusMessage": "Recalling relevant Artel memory\u2026"
           }
         ]
       }
@@ -40,7 +34,7 @@
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/artel-pretool-gotcha.sh",
             "timeout": 5,
-            "statusMessage": "Checking Artel notes for this file…"
+            "statusMessage": "Checking Artel notes for this file\u2026"
           }
         ]
       }
@@ -53,7 +47,7 @@
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/artel-capture.sh",
             "timeout": 5,
-            "statusMessage": "Capturing session before compaction…"
+            "statusMessage": "Capturing session before compaction\u2026"
           }
         ]
       }
@@ -66,13 +60,7 @@
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/artel-capture.sh",
             "timeout": 5,
-            "statusMessage": "Capturing session…"
-          },
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/artel-stop.sh",
-            "timeout": 5,
-            "statusMessage": "Checking Artel inbox before stopping…"
+            "statusMessage": "Capturing session\u2026"
           }
         ]
       }

@@ -283,53 +283,18 @@ mcp = ArtelMCP(
     host=settings.mcp_host,
     port=settings.mcp_port,
     stateless_http=True,
-    instructions="""You are connected to Artel, your fleet's smart notepad. One place you and every other agent write
-down what you figure out, and it gets better at handing the right note back as it fills.
+    instructions="""You are connected to Artel, your fleet's shared notepad. What you write, every
+agent and your user can read, so write it for a teammate.
 
-Your standing job: write down what is worth keeping, and look before you act. What you learn, the
-whole fleet learns, including a future session of you.
+With the Claude Code plugin, hooks load your last handoff, recall relevant notes on each prompt and
+capture the session for you. Without it, call session_context() when you start.
 
-SESSION LIFECYCLE (do these every session, no exceptions):
-1. START: call session_context(), loads your last handoff + what changed in memory while you were gone.
-2. START: call message_inbox(), read messages from other agents. Messages stay unread until you call message_mark_read().
-3. After processing messages: call message_mark_read() with the IDs you've handled (or no args to clear all).
-4. END: call session_handoff(), saves what you did so the next session (or another agent) can continue.
-
-NOTES (write often, read before you act):
-- Call memory_search() before starting any non-trivial work. It may already be solved, or already have
-  been tried and failed, by another agent, by your user, or by you last week.
-- Call memory_write() whenever you learn something worth keeping: facts, findings, plans, bugs.
-- Call decision_write() when you CHOOSE between options, the choice, why, and what you
-  rejected. Not the same as a memory: notes decay, merge and get rewritten as understanding
-  improves, which is right for knowledge and wrong for a record of what was decided. A
-  decision is append-only and is what someone reads six months later asking "why is it
-  like this?". Record it when you pick a library, a schema, a tradeoff, or reverse an
-  earlier call.
-- entry_type="memory" is the default and right for almost everything. The archivist promotes stable entries to entry_type="doc" automatically.
-- Use entry_type="skill" for procedural knowledge, how to do something. Skills decay like memories but are never promoted to doc and are never merged. If a directive covers the same topic, the directive takes precedence.
-- Use tags to make things findable. Use scope="agent" only for things no other agent should see.
-- If MCP_PROJECT is set, all memory calls default to that project automatically.
-
-COORDINATION:
-- Call agent_list() to see who else is active before messaging or assigning tasks.
-- Call project_list() to see what projects are active and who is in them.
-- Use project_join() to join a project and gain visibility into its shared memories and tasks.
-- Use task_list(status="open") to find work that needs doing.
-- Claim a task before starting it. Complete or fail it when done, never leave tasks in limbo.
-
-INBOX CRON (first session only):
-- Call inbox_cron_setup() to get instructions for scheduling automatic inbox checks.
-- This lets other agents reach you even when you're not actively running.
-
-COMPILE MODE (ground memory in code):
-- If asked to "set up compile mode" (or to stop memory about code from rotting), call compile_setup().
-- It returns the one command to install a pre-commit hook that compiles changed source into grounded,
-  build-invalidated memory. Use compile_status()/compile_stale() to inspect it afterward.
-
-IDENTITY:
-- Your agent_id and api_key are in your environment (MCP_AGENT_ID, MCP_AGENT_KEY).
-- The whole fleet shares one notepad, task list, and message bus. What you write, every other agent and
-  your user can read, so write it for a teammate, not as a note to self.""",
+Call it yourself in four cases:
+- memory_search() before non-trivial work. It may already be solved, or tried and failed.
+- memory_write() when you learn something worth keeping. entry_type="skill" for how to do something.
+- decision_write() when you choose between options: the choice, why, and what you rejected.
+  Decisions are append-only; notes decay, merge and get rewritten.
+- session_handoff() when you finish, so the next session can continue.""",
 )
 
 

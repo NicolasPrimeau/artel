@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Shared implementation for the Artel plugin hooks.
 
-Invoked as: _artel_hooks.py <kind>   kind in {recall, gotcha, inbox, stop, status}.
+Invoked as: _artel_hooks.py <kind>   kind in {session, recall, gotcha, status, drain}.
 
 Reads the hook JSON payload on stdin (where applicable), calls the Artel REST API
 read-only, and prints the hook output. Config comes from
@@ -17,6 +17,7 @@ import fcntl
 import glob
 import json
 import os
+import re
 import sys
 import tempfile
 import time
@@ -26,6 +27,14 @@ import urllib.request
 TIMEOUT = 3.0
 RECALL_CONFIDENCE_MIN = 0.1
 RECALL_MAX_DISTANCE = 1.18
+RECALL_LINE_CHARS = 120
+INJECT_PREFIX = "[Artel] "
+INJECT_BUDGET = 480
+SESSION_BUDGET = 600
+SESSION_SUMMARY_CHARS = 200
+SESSION_STEP_CHARS = 80
+SESSION_TIMEOUT = 10.0
+_SENTENCE_END = re.compile(r"(?<=[.!?])\s")
 
 ACKS = {
     "yes",
@@ -142,10 +151,10 @@ def resolve_project(data=None):
     return _project_from_cwd(cwd)
 
 
-def get(path):
+def get(path, timeout=TIMEOUT):
     req = urllib.request.Request(URL + path, headers={"x-agent-id": AID, "x-api-key": KEY})
     try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             return json.load(resp)
     except Exception:
         return None
@@ -180,8 +189,28 @@ def payload():
         return {}
 
 
-def clip(text, n):
-    return " ".join(str(text or "").split())[:n]
+def nudge(text, n):
+    flat = " ".join(str(text or "").split())
+    if len(flat) <= n:
+        return flat
+    ends = [m.start() for m in _SENTENCE_END.finditer(flat[: n + 1])]
+    if ends and ends[-1] >= n // 2:
+        return flat[: ends[-1]]
+    return flat[:n].rsplit(" ", 1)[0].rstrip(",;:") + "…"
+
+
+def entry_line(entry, n):
+    return nudge(entry.get("headline") or entry.get("content"), n)
+
+
+def fit(lines, budget):
+    kept, used = [], 0
+    for line in lines:
+        used += len(line) + 1
+        if used > budget:
+            break
+        kept.append(line)
+    return kept
 
 
 def content_lower(entry):
@@ -217,14 +246,14 @@ def seen_filter(session_id, kind, ids):
     return fresh
 
 
-def emit_context(event, context):
+def emit_context(event, lines, budget=INJECT_BUDGET):
+    kept = fit(lines, budget - len(INJECT_PREFIX))
+    if not kept:
+        return
+    context = INJECT_PREFIX + "\n".join(kept)
     print(
         json.dumps({"hookSpecificOutput": {"hookEventName": event, "additionalContext": context}})
     )
-
-
-def _msg_key(m):
-    return str(m.get("id") or (str(m.get("from_agent")) + ":" + str(m.get("body"))))
 
 
 def cmd_recall():
@@ -244,29 +273,22 @@ def cmd_recall():
     results = [e for e in results if e.get("id") in fresh]
     if not results:
         return
-    memories = [e for e in results if e.get("type") != "skill"]
+    memories = [e for e in results if e.get("type") != "skill"][:2]
     skills = [e for e in results if e.get("type") == "skill"]
-    parts = []
+    lines = []
     if memories:
-        parts.append(
-            "Relevant memory:\n"
-            + "\n".join("- " + clip(e.get("content"), 160) for e in memories[:2])
-        )
-        surfaced = {e.get("id") for e in memories[:2]}
+        lines.append("Relevant memory:")
+        lines += ["- " + entry_line(e, RECALL_LINE_CHARS) for e in memories]
+        surfaced = {e.get("id") for e in memories}
         assoc = [e for e in related(memories[0].get("id")) if e.get("id") not in surfaced]
         assoc_ids = set(
             seen_filter(data.get("session_id", ""), "recall", [e.get("id") for e in assoc])
         )
         assoc = [e for e in assoc if e.get("id") in assoc_ids]
-        if assoc:
-            parts.append(
-                "Linked in the knowledge graph:\n"
-                + "\n".join("  ↳ " + clip(e.get("content"), 140) for e in assoc[:2])
-            )
+        lines += ["  ↳ linked: " + entry_line(e, RECALL_LINE_CHARS) for e in assoc[:1]]
     if skills:
-        parts.append("Skill that may apply: " + clip(skills[0].get("content"), 160))
-    if parts:
-        emit_context("UserPromptSubmit", "[Artel] " + "\n".join(parts))
+        lines.append("Skill that may apply: " + entry_line(skills[0], RECALL_LINE_CHARS))
+    emit_context("UserPromptSubmit", lines)
 
 
 def cmd_gotcha():
@@ -300,44 +322,29 @@ def cmd_gotcha():
     hits = [e for e in hits if (name + ":" + str(e.get("id"))) in fresh]
     if not hits:
         return
-    lines = "\n".join("- " + clip(e.get("content"), 180) for e in hits[:2])
-    emit_context("PreToolUse", "[Artel] Notes on " + name + " from shared memory:\n" + lines)
+    lines = ["Notes on " + name + ":"]
+    lines += ["- " + entry_line(e, RECALL_LINE_CHARS) for e in hits[:2]]
+    emit_context("PreToolUse", lines)
 
 
-def _unread(data, kind):
-    msgs = get("/messages/inbox")
-    if not isinstance(msgs, list) or not msgs:
-        return []
-    fresh = set(seen_filter(data.get("session_id", ""), kind, [_msg_key(m) for m in msgs]))
-    return [m for m in msgs if _msg_key(m) in fresh]
-
-
-def cmd_inbox():
-    data = payload()
-    msgs = _unread(data, "inbox")
-    if not msgs:
+def cmd_session():
+    data = get("/sessions/handoff", timeout=SESSION_TIMEOUT)
+    handoff = (data or {}).get("last_handoff") if isinstance(data, dict) else None
+    if not handoff:
         return
-    lines = " | ".join(
-        str(m.get("from_agent", "?")) + ": " + str(m.get("body", "")) for m in msgs[:10]
-    )
-    emit_context("UserPromptSubmit", "[Artel] " + str(len(msgs)) + " new message(s): " + lines)
-
-
-def cmd_stop():
-    data = payload()
-    if data.get("stop_hook_active"):
-        return
-    msgs = _unread(data, "stop")
-    if not msgs:
-        return
-    lines = "\n".join(
-        str(m.get("from_agent", "?")) + ": " + str(m.get("body", "")) for m in msgs[:10]
-    )
-    reason = (
-        "[Artel] " + str(len(msgs)) + " unread message(s) arrived while you worked — "
-        "handle or acknowledge them (mark read) before stopping:\n" + lines
-    )
-    print(json.dumps({"decision": "block", "reason": reason}))
+    when = str(handoff.get("created_at", ""))[:10]
+    lines = ["Last session " + when + ": " + nudge(handoff.get("summary"), SESSION_SUMMARY_CHARS)]
+    steps = [str(x) for x in handoff.get("next_steps") or []]
+    if steps:
+        more = " (+" + str(len(steps) - 2) + " more)" if len(steps) > 2 else ""
+        shown = "; ".join(nudge(x, SESSION_STEP_CHARS) for x in steps[:2])
+        lines.append("Next: " + shown + more)
+    doing = [str(x) for x in handoff.get("in_progress") or []]
+    if doing:
+        more = " (+" + str(len(doing) - 1) + " more)" if len(doing) > 1 else ""
+        lines.append("In progress: " + nudge(doing[0], SESSION_STEP_CHARS) + more)
+    lines.append("Full handoff: session_context()")
+    emit_context("SessionStart", lines, budget=SESSION_BUDGET)
 
 
 def cmd_status():
@@ -638,9 +645,8 @@ def main():
     kind = sys.argv[1] if len(sys.argv) > 1 else ""
     handler = {
         "recall": cmd_recall,
+        "session": cmd_session,
         "gotcha": cmd_gotcha,
-        "inbox": cmd_inbox,
-        "stop": cmd_stop,
         "status": cmd_status,
         "drain": cmd_drain,
     }.get(kind)

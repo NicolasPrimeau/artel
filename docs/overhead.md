@@ -18,30 +18,24 @@ uv run python scripts/measure_hook_overhead.py --json
 
 ## Measured
 
-Against a local server, real fleet memory, real agent identity, 7 samples per hook, per-session dedup active:
+Against a local server, real fleet memory, real agent identity, 7 samples per hook, per-session dedup active, re-measured 2026-10-09:
 
 | Hook | Fires | p50 | p95 | Tokens (first → then) |
 | --- | --- | --- | --- | --- |
-| `SessionStart` | per session | 696 ms | 729 ms | 612 → 612 |
-| `UserPromptSubmit` · inbox | per prompt | 65 ms | 69 ms | 0 → 0 |
-| `UserPromptSubmit` · recall | per prompt | 195 ms | 221 ms | 112 → 88 |
-| `PreToolUse` · gotcha | **per tool call** | 189 ms | 204 ms | 123 → 0 |
-| `Stop` · capture | per turn | 16 ms | 17 ms | 0 → 0 |
+| `SessionStart` | per session | 171 ms | 176 ms | 88 → 88 |
+| `UserPromptSubmit` · recall | per prompt | 219 ms | 233 ms | 69 → 41 |
+| `PreToolUse` · gotcha | **per tool call** | 176 ms | 453 ms | 72 → 0 |
+| `Stop` · capture | per turn | 18 ms | 20 ms | 0 → 0 |
 
-For a session of 20 prompts and 60 tool calls: **≈ 17.6 s of added wall-clock and ≈ 4,200 tokens of context.**
+For a session of 20 prompts and 60 tool calls: **≈ 15.4 s of added wall-clock and ≈ 2,000 tokens of context.**
 
-Two things worth reading off that table:
+**The dominant cost is `PreToolUse`**, because it fires on every tool call. At 176 ms it is most of the added wall-clock, and it is not the hook anyone would have guessed. Capture stays cheap because its real work, including the token rollup posted to `/usage`, happens in a detached drainer whose own cost is not in this table.
 
-- **The dominant cost is `PreToolUse`**, because it fires on every tool call. At 189 ms it is most of the added wall-clock, and it is not the hook anyone would have guessed.
-- **The drainer does more since these numbers were taken.** It now also extracts a
-  token rollup from the same transcript slice and posts it to `/usage`. That work is
-  in the detached drainer, not the hook, so the 16 ms hot-path figure above still
-  stands, but the measurement predates the change and the drainer's own cost has not
-  been re-measured.
+## Injections are budgeted
 
-- **`Stop` · capture is genuinely cheap**, 16 ms, injects nothing. The original claim holds for the hook it was made about; it just never covered recall, inbox or gotcha.
+The first measurement, on 2026-08-11, came to 17.6 s and 4,200 tokens, and most of the tokens were waste: session start injected the whole last handoff (612 tokens in that run, about 1,250 in a later real session), and recall cut notes at a fixed character count, often mid-word. An injection is a nudge, so each one now has a hard budget. Session start is a pointer to the handoff of at most 600 characters, recall and file notes are at most 480, each line is one headline or one sentence cut at a sentence or word boundary, and a line that does not fit is dropped whole. `tests/test_hook_injection_budget.py` holds every hook to that.
 
-Numbers to treat with care: this is `localhost`, so a remote instance is strictly worse; tokens are counted as characters/4; the inbox figure depends entirely on whether that agent has unread messages, and was 547 tokens for an identity that did.
+Numbers to treat with care: this is `localhost`, so a remote instance is strictly worse, and tokens are counted as characters/4.
 
 ## An inert plugin is not a free plugin
 

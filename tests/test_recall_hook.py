@@ -41,7 +41,7 @@ def test_recall_appends_graph_associates(monkeypatch, capsys):
         [{"id": "m9", "content": "fly token rotates monthly", "type": "memory"}],
     )
     assert "deploy via fly.io" in ctx
-    assert "Linked in the knowledge graph" in ctx
+    assert "↳ linked:" in ctx
     assert "fly token rotates monthly" in ctx
 
 
@@ -55,7 +55,7 @@ def test_recall_excludes_associates_already_surfaced_by_search(monkeypatch, caps
         ],
         [{"id": "m2", "content": "staging needs secrets", "type": "memory"}],
     )
-    assert "Linked in the knowledge graph" not in ctx
+    assert "↳ linked:" not in ctx
 
 
 def test_recall_survives_empty_related(monkeypatch, capsys):

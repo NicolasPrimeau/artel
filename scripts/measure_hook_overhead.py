@@ -2,7 +2,7 @@
 """Measure what the Artel plugin costs a session: latency and injected context.
 
 The README's "~10 ms, off the hot path" is true of the CAPTURE hook. It is not
-true of the plugin as a whole — recall, inbox and gotcha all run on the hot path.
+true of the plugin as a whole — recall and gotcha both run on the hot path.
 This script exists so that claim is a measurement rather than a memory.
 
     ARTEL_URL=... ARTEL_AGENT_ID=... ARTEL_API_KEY=... \\
@@ -40,12 +40,6 @@ PROMPTS = [
 # (label, script, fires-per, base payload)
 HOOKS = [
     ("SessionStart", "artel-session-start.sh", "session", {"hook_event_name": "SessionStart"}),
-    (
-        "UserPromptSubmit:inbox",
-        "artel-check-inbox.sh",
-        "prompt",
-        {"hook_event_name": "UserPromptSubmit"},
-    ),
     (
         "UserPromptSubmit:recall",
         "artel-recall.sh",
@@ -119,7 +113,7 @@ def measure(repeats: int, fresh: bool) -> list[dict]:
 
 def session_cost(rows: list[dict]) -> dict:
     by = {r["hook"]: r for r in rows}
-    per_prompt_ms = by["UserPromptSubmit:inbox"]["p50_ms"] + by["UserPromptSubmit:recall"]["p50_ms"]
+    per_prompt_ms = by["UserPromptSubmit:recall"]["p50_ms"]
     latency = (
         by["SessionStart"]["p50_ms"]
         + SESSION_PROMPTS * per_prompt_ms
@@ -128,7 +122,6 @@ def session_cost(rows: list[dict]) -> dict:
     )
     injected = (
         by["SessionStart"]["first_tokens"]
-        + by["UserPromptSubmit:inbox"]["first_tokens"]
         + SESSION_PROMPTS * by["UserPromptSubmit:recall"]["steady_tokens"]
         + SESSION_DISTINCT_FILES * by["PreToolUse:gotcha"]["first_tokens"]
     )

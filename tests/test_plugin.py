@@ -68,7 +68,7 @@ def test_session_start_hook_hits_header_scoped_handoff_endpoint():
     # GET /sessions/handoff resolves the agent from the x-agent-id header — there is no
     # /sessions/handoff/{agent_id} path form. A trailing /$aid 404s and the hook then
     # silently injects nothing. Regression guard for that bug.
-    src = (_ROOT / "scripts" / "artel-session-start.sh").read_text()
+    src = (_ROOT / "scripts" / "_artel_hooks.py").read_text()
     assert "/sessions/handoff" in src
     assert "/sessions/handoff/$aid" not in src
     assert "/sessions/handoff/${aid}" not in src
@@ -104,7 +104,7 @@ def test_pretool_hook_targets_edit_tools():
 
 def test_prompt_hooks_include_recall():
     scripts = [h["command"] for g in _HOOKS["hooks"]["UserPromptSubmit"] for h in g["hooks"]]
-    assert any("artel-check-inbox.sh" in c for c in scripts)
+    assert not any("inbox" in c for c in scripts)
     assert any("artel-recall.sh" in c for c in scripts)
 
 
@@ -130,7 +130,7 @@ def test_shared_hook_module_and_helpers_present():
     module = scripts / "_artel_hooks.py"
     assert module.is_file()
     body = module.read_text()
-    for kind in ("recall", "gotcha", "inbox", "stop", "status"):
+    for kind in ("session", "recall", "gotcha", "status"):
         assert f'"{kind}"' in body, f"module missing dispatch for {kind}"
     assert "seen_filter" in body, "module missing per-session dedup"
     assert '"drain"' in body, "module missing capture drain dispatch"
