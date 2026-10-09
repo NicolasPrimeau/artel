@@ -104,7 +104,7 @@ class TestLlmConfig:
             assert m.await_args.args[2] == "google/gemini-3.7-flash"
             assert m.await_args.args[4] == "sk-or-test"
 
-    async def _call_openai(self, provider, finish_reason="stop", effort="low"):
+    async def _call_openai(self, provider, finish_reason="stop", effort="low", strict=False):
         import artel.archivist.llm as llm_mod
 
         resp = MagicMock()
@@ -122,7 +122,7 @@ class TestLlmConfig:
         ):
             s.archivist_provider = provider
             s.archivist_reasoning_effort = effort
-            out = await llm_mod._openai("sys", "usr", "m", 1500, "k")
+            out = await llm_mod._openai("sys", "usr", "m", 1500, "k", strict)
         return out, client.chat.completions.create.await_args.kwargs
 
     async def test_openrouter_asks_for_low_reasoning_effort(self):
@@ -138,6 +138,14 @@ class TestLlmConfig:
             await self._call_openai("openrouter", finish_reason="length")
         assert "truncated at max_tokens=1500" in caplog.text
         assert "1400" in caplog.text
+
+    async def test_strict_call_raises_on_truncation(self):
+        from artel.archivist.llm import LLMTruncated
+
+        with pytest.raises(LLMTruncated):
+            await self._call_openai("openrouter", finish_reason="length", strict=True)
+        out, _ = await self._call_openai("openrouter", finish_reason="stop", strict=True)
+        assert out == "[]"
 
     def test_claude_sdk_configured_via_oauth_token(self, monkeypatch):
         with patch("artel.archivist.llm.settings") as s:

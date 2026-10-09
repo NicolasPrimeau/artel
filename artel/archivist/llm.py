@@ -6,6 +6,11 @@ from .config import settings
 
 log = logging.getLogger(__name__)
 
+
+class LLMTruncated(Exception):
+    pass
+
+
 _anthropic_client = None
 _openai_client = None
 
@@ -111,7 +116,9 @@ async def _claude_sdk(system: str, user: str, model: str) -> str:
     return result.result or ""
 
 
-async def _anthropic(system: str, user: str, model: str, max_tokens: int, key: str) -> str:
+async def _anthropic(
+    system: str, user: str, model: str, max_tokens: int, key: str, strict: bool = False
+) -> str:
     import anthropic
 
     global _anthropic_client
@@ -123,13 +130,17 @@ async def _anthropic(system: str, user: str, model: str, max_tokens: int, key: s
         system=system,
         messages=[{"role": "user", "content": user}],
     )
+    if strict and getattr(msg, "stop_reason", None) == "max_tokens":
+        raise LLMTruncated(f"output truncated at max_tokens={max_tokens}")
     for block in msg.content:
         if getattr(block, "type", None) == "text":
             return block.text or ""
     return ""
 
 
-async def _openai(system: str, user: str, model: str, max_tokens: int, key: str) -> str:
+async def _openai(
+    system: str, user: str, model: str, max_tokens: int, key: str, strict: bool = False
+) -> str:
     import openai
 
     global _openai_client
@@ -162,20 +173,26 @@ async def _openai(system: str, user: str, model: str, max_tokens: int, key: str)
             max_tokens,
             reasoning,
         )
+        if strict:
+            raise LLMTruncated(f"output truncated at max_tokens={max_tokens}")
     return choice.message.content or ""
 
 
 async def complete(
-    system: str, user: str, max_tokens: int = 2048, timeout: float = _LLM_TIMEOUT
+    system: str,
+    user: str,
+    max_tokens: int = 2048,
+    timeout: float = _LLM_TIMEOUT,
+    strict: bool = False,
 ) -> str:
     model = settings.archivist_model or _default_model()
     key = _api_key()
     if settings.archivist_provider == "claude-sdk":
         coro = _claude_sdk(system, user, model)
     elif settings.archivist_provider == "anthropic":
-        coro = _anthropic(system, user, model, max_tokens, key)
+        coro = _anthropic(system, user, model, max_tokens, key, strict)
     else:
-        coro = _openai(system, user, model, max_tokens, key)
+        coro = _openai(system, user, model, max_tokens, key, strict)
     # Hard bound on every provider — a stalled call raises TimeoutError rather than
     # hanging the caller (and the claude-sdk finally tears down its subprocess).
     return await asyncio.wait_for(coro, timeout=timeout)

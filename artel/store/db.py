@@ -345,8 +345,21 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE memory ADD COLUMN headline_version INTEGER NOT NULL DEFAULT 0")
         conn.commit()
 
+    _clear_truncated_headlines(conn)
     _canonicalize_projects(conn)
     _migrate_project_roles(conn)
+
+
+def _clear_truncated_headlines(conn: sqlite3.Connection) -> None:
+    if conn.execute("SELECT 1 FROM kv WHERE key = 'headline_repair_v1'").fetchone():
+        return
+    conn.execute(
+        """UPDATE memory SET headline = NULL, headline_version = 0
+           WHERE headline IS NOT NULL
+             AND length(trim(headline)) - length(replace(trim(headline), ' ', '')) + 1 < 8"""
+    )
+    conn.execute("INSERT OR IGNORE INTO kv (key, value) VALUES ('headline_repair_v1', '1')")
+    conn.commit()
 
 
 def _migrate_project_roles(conn: sqlite3.Connection) -> None:

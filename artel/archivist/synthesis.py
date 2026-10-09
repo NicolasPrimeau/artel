@@ -12,7 +12,7 @@ from ..store.db import get_db, instance_id
 from . import control
 from .client import ArtelClient
 from .config import settings
-from .llm import complete, is_configured
+from .llm import LLMTruncated, complete, is_configured
 
 log = logging.getLogger(__name__)
 
@@ -1720,6 +1720,13 @@ _HEADLINE_BATCH = 25
 _HEADLINE_MAX_CHARS = 140
 
 
+async def _headline_for(content: str) -> str:
+    try:
+        return await complete(_HEADLINE_SYSTEM, content, max_tokens=256, strict=True)
+    except LLMTruncated:
+        return await complete(_HEADLINE_SYSTEM, content, max_tokens=256, strict=True)
+
+
 async def run_headlines(client: ArtelClient) -> None:
     if not is_configured():
         return
@@ -1733,7 +1740,10 @@ async def run_headlines(client: ArtelClient) -> None:
     written = 0
     for e in list(candidates.values())[:_HEADLINE_BATCH]:
         try:
-            line = (await complete(_HEADLINE_SYSTEM, e["content"], max_tokens=256)).strip()
+            line = (await _headline_for(e["content"])).strip()
+        except LLMTruncated:
+            log.warning("headline for %s truncated twice; leaving it for the next cycle", e["id"])
+            continue
         except Exception as ex:
             log.warning("headline generation failed for %s: %s", e["id"], ex)
             continue
