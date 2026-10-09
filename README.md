@@ -8,7 +8,7 @@
 
 **Your fleet's smart notepad. One that learns.**
 
-One pad that you and every agent you run write into. Whatever any of you figures out is written down once and handed back the moment it matters: the gotcha about *this* file right before you edit it, where you stopped on Friday, the thing another agent already learned the hard way. Nothing to file, nothing to tag, nothing to look up. A normal notepad waits to be opened; this one speaks up.
+One pad that you and every agent you run write into. Whatever any of you figures out is written down once and handed back the moment it matters: the gotcha about *this* file right before you edit it, where you stopped on Friday, the thing another agent already learned the hard way. Nothing to file, nothing to tag, nothing to look up. A normal notepad waits to be opened; this one speaks up, in one line, and stays quiet when it has nothing worth saying, which is most of the time.
 
 It also doesn't just accumulate. A background archivist works the pile while you're gone, so the pad gets sharper the more the fleet uses it. What one session learns at 3am, the rest know by morning; nobody solves the same thing twice.
 
@@ -21,7 +21,7 @@ You run it on your own machine. None of it goes to anyone's cloud.
 | edit `auth.py` | "the token refresh silently no-ops when the clock skews" | a different agent, last month |
 | start work Monday | "Friday you stopped mid-migration; here's where" | you, before the weekend |
 | debug a flaky test | "seen in March: it was the shared fixture, not the test" | an agent on another machine |
-| ask a question | the three notes that answer it, before it finishes typing | whoever hit it first |
+| ask a question | the one note that answers it, or nothing at all | whoever hit it first |
 
 Nobody opened a file to find any of that, and nobody had to know who to ask.
 
@@ -63,7 +63,7 @@ A server, a database, and a librarian. Notes go in over HTTP or MCP, embeddings 
    REST / MCP ──► Artel Server ──► SQLite (WAL) + embeddings
                      ├── notes: semantic search · confidence decay · knowledge graph
                      ├── captures queue ──► archivist compaction ──► notes
-                     ├── tasks · messages · events · session handoffs
+                     ├── procedures · decisions · session handoffs
                      └── archivist: capture · synthesis · merge · decay · promote
         │
    mesh (CRDT feeds + mDNS) ◄──► your other machines
@@ -77,11 +77,11 @@ Each of these has a page in the [docs](https://artel.run); this is the map.
 
 | | |
 |---|---|
-| **[The plugin](https://artel.run/docs/plugin/)** | The half that speaks up. Injects the right note at session start, on each prompt, and before you edit a file. |
+| **[The plugin](https://artel.run/docs/plugin/)** | The half that speaks up. One line when a note is close to what the agent is doing, silence otherwise. Agents never have to call anything. |
 | **[Capture](https://artel.run/docs/capture/)** | Sessions become notes on their own, spooled in ~10 ms so writing never slows an agent down. |
 | **[Archivist](https://artel.run/docs/archivist/)** | The part that learns: merges duplicates, resolves contradictions, decays what stopped being true, promotes what held up. |
 | **[Compile mode](https://artel.run/docs/compile-mode/)** | Notes about code pinned to the code, so they re-derive instead of rotting. |
-| **[Blueprints](https://artel.run/docs/blueprints/)** | A procedure compiled into a self-expanding task DAG, with contracts the server checks before a run advances. |
+| **[Procedures](https://artel.run/docs/blueprints/)** | A written skill compiled into steps. The server checks each against the repository and the agent is handed the next one when the last is really done. |
 | **[Decisions](https://artel.run/docs/decisions/)** | Append-only record of what you chose and why. Never merged, never decayed. |
 | **[Mesh and feeds](https://artel.run/docs/mesh/)** | Several machines converging as CRDTs, plus RSS/Atom subscriptions from the outside world. |
 | **[Dashboard](https://artel.run/docs/dashboard/)** | Browse, search, and watch the fleet from a browser. |

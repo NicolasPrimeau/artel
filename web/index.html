@@ -34,300 +34,252 @@ gtag("config", "G-CYMPQ0NXJN");
 </script>
 <style>
 :root{
-  --bg:#101316; --panel:#171b1f; --row:#1c2126; --row-hi:#232a31;
-  --fg:#e0e5e9; --dim:#939ca4; --faint:#818b94;
+  --bg:#101316; --panel:#171b1f; --row:#1c2126;
+  --fg:#e0e5e9; --dim:#a3acb4; --faint:#818b94;
   --rule:#252c33; --edge:#3a444d;
   --money:#5cb8ae; --manual:#d98a72; --auto:#9ab973;
   --mono:ui-monospace,"SF Mono","JetBrains Mono","Roboto Mono",Menlo,Consolas,monospace;
-  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Inter,Roboto,sans-serif;
-  --gut:clamp(18px,5vw,40px);
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --margin:9.5rem; --gap:2.75rem;
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{
-  margin:0;background:var(--bg);color:var(--fg);
-  font:15px/1.6 var(--sans);
-  font-variant-numeric:tabular-nums;
-  overflow-x:hidden;
-}
-/* Ruled paper, but for an instrument: faint horizontal rules and one amber margin. */
-body::before{
-  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
-  background:repeating-linear-gradient(to bottom,transparent 0 31px,rgba(58,68,77,.07) 31px 32px);
-}
-.wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:0 var(--gut)}
-a{color:var(--money);text-decoration:none;border-bottom:1px solid rgba(92,184,174,.32)}
-a:hover{border-bottom-color:var(--money)}
-code,.mono{font-family:var(--mono);font-size:.92em}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 var(--sans);
+  font-variant-numeric:tabular-nums;overflow-x:hidden}
+a{color:var(--fg);text-decoration:underline;text-decoration-color:var(--money);
+  text-decoration-thickness:1px;text-underline-offset:3px}
+a:hover{color:var(--money)}
+code,.mono{font-family:var(--mono);font-size:.88em}
 
-/* ---------- chrome ---------- */
-header{border-bottom:1px solid var(--rule);background:rgba(16,19,22,.92);backdrop-filter:blur(6px);
-  position:sticky;top:0;z-index:5}
-.bar{display:flex;align-items:center;gap:14px;height:58px}
-.mark{font-family:var(--mono);font-weight:700;letter-spacing:.22em;font-size:13px;color:var(--fg);
-  border:0;display:flex;align-items:center;gap:9px}
-.mark i{width:9px;height:9px;background:var(--money);display:block;border-radius:1px;font-style:normal}
-.nav{margin-left:auto;display:flex;align-items:center;gap:22px;font-family:var(--mono);font-size:12.5px}
-.nav a{color:var(--dim);border:0;display:flex;align-items:center;gap:7px;white-space:nowrap}
-.nav a:hover{color:var(--fg)}
-.nav a svg{width:15px;height:15px;fill:currentColor;flex:none}
-.nav .ext::after{content:"\2197";font-size:10px;color:var(--faint);margin-left:-3px}
-.nav .run{color:#101316;background:var(--money);padding:7px 13px;border-radius:2px;font-weight:700;margin-left:4px}
-.nav .run:hover{color:#101316;background:#6fc9bf}
-.menu{display:none;margin-left:auto;position:relative}
-.menu summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;
-  font-family:var(--mono);font-size:12px;color:var(--fg);border:1px solid var(--edge);border-radius:2px;padding:7px 11px}
-.menu summary::-webkit-details-marker{display:none}
-.menu summary i{display:block;width:14px;height:10px;font-style:normal;
-  background:linear-gradient(var(--fg) 0 0) top/100% 1.5px no-repeat,linear-gradient(var(--fg) 0 0) center/100% 1.5px no-repeat,linear-gradient(var(--fg) 0 0) bottom/100% 1.5px no-repeat}
-.menu[open] summary{border-color:var(--money)}
-.menu .sheet{position:absolute;right:0;top:calc(100% + 10px);min-width:220px;background:var(--panel);
-  border:1px solid var(--edge);border-radius:3px;padding:6px;box-shadow:0 12px 30px rgba(0,0,0,.45);
-  display:flex;flex-direction:column}
-.menu .sheet a{color:var(--fg);border:0;padding:11px 12px;border-radius:2px;font-family:var(--mono);font-size:13px;
-  display:flex;justify-content:space-between;align-items:center}
-.menu .sheet a:hover{background:var(--row)}
-.menu .sheet a span{color:var(--faint);font-size:11px}
-.menu .sheet .run{background:var(--money);color:#101316;font-weight:700;margin-top:6px;justify-content:center}
-@media (max-width:720px){.nav{display:none}.menu{display:block}}
+/* The page is a notepad sheet: one margin line, labels in the margin, text beside it. */
+.page{position:relative;max-width:62rem;margin:0 auto;padding:0 1.5rem 4rem}
+.page::before{content:"";position:absolute;top:0;bottom:0;
+  left:calc(1.5rem + var(--margin) + var(--gap) / 2);width:1px;background:var(--money);opacity:.28}
+.entry{display:grid;grid-template-columns:var(--margin) minmax(0,1fr);column-gap:var(--gap);
+  padding:2.6rem 0}
+.entry > .m{font-family:var(--mono);font-size:12px;line-height:1.5;color:var(--faint);
+  text-align:right;padding-top:.55rem}
+.entry > .m a{color:var(--faint);text-decoration:none}
+.entry > .m a:hover{color:var(--money)}
+.entry > div{min-width:0}
 
-/* ---------- hero ---------- */
-.hero{padding:clamp(44px,8vw,86px) 0 34px}
-.kicker{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
-  color:var(--faint);margin:0 0 18px}
-h1{font-size:clamp(28px,4.6vw,46px);line-height:1.12;margin:0 0 20px;letter-spacing:-.02em;
-  font-weight:650;max-width:19ch}
-h1 em{font-style:normal;color:var(--money)}
-.lede{font-size:clamp(16px,2vw,18.5px);color:var(--dim);max-width:60ch;margin:0 0 30px}
-.lede strong{color:var(--fg);font-weight:600}
-.cta{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-family:var(--mono);font-size:13px}
-.btn{border:1px solid var(--edge);padding:9px 15px;border-radius:2px;color:var(--fg);background:var(--panel)}
-.btn:hover{background:var(--row-hi);border-color:var(--faint)}
-.btn.key{background:var(--money);color:#101316;border-color:var(--money);font-weight:700}
-.btn.key:hover{background:#6fc9bf}
+.top{padding:1.6rem 0 .4rem;align-items:baseline}
+.top .m{padding-top:0;font-family:var(--serif);font-size:21px;color:var(--fg);letter-spacing:.01em}
+.top .m a{color:var(--fg)}
+.top nav{display:flex;flex-wrap:wrap;gap:.3rem 1.4rem;font-size:14px}
+.top nav a{color:var(--dim);text-decoration:none}
+.top nav a:hover{color:var(--fg)}
 
-/* ---------- panels ---------- */
-section{padding:clamp(34px,6vw,62px) 0;border-top:1px solid var(--rule)}
-.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.17em;text-transform:uppercase;
-  color:var(--faint);margin:0 0 12px;display:flex;align-items:center;gap:10px}
-.eyebrow::after{content:"";flex:1;height:1px;background:var(--rule)}
-h2{font-size:clamp(21px,2.9vw,27px);margin:0 0 12px;letter-spacing:-.015em;font-weight:620;max-width:26ch}
-.say{color:var(--dim);max-width:62ch;margin:0 0 26px}
-.say strong{color:var(--fg);font-weight:600}
+h1,h2{font-family:var(--serif);font-weight:400;margin:0;text-wrap:balance}
+h1{font-size:clamp(34px,5.6vw,58px);line-height:1.08;letter-spacing:-.012em;max-width:17ch}
+h1 em{font-style:italic;color:var(--money)}
+h2{font-size:clamp(23px,3vw,30px);line-height:1.22;max-width:28ch;margin-bottom:.9rem}
+p{margin:0 0 1rem;max-width:60ch;color:var(--dim)}
+p strong{color:var(--fg);font-weight:500}
+.hero{padding-top:3.4rem}
+.lede{font-size:18px;margin-top:1.5rem;color:var(--dim)}
+.go{margin:1.6rem 0 0;color:var(--faint);font-size:15px}
+.go a{margin-right:1.3rem;white-space:nowrap}
+.go a.first{color:var(--money);font-weight:500}
 
-.panel{background:var(--panel);border:1px solid var(--rule);border-radius:3px;overflow:hidden}
-.phead{display:flex;align-items:center;gap:10px;padding:9px 13px;border-bottom:1px solid var(--rule);
-  font-family:var(--mono);font-size:11.5px;color:var(--dim);letter-spacing:.06em;flex-wrap:wrap}
-.phead b{color:var(--fg);font-weight:600}
-.dot{width:6px;height:6px;border-radius:50%;background:var(--auto);flex:none;
-  box-shadow:0 0 0 3px rgba(154,185,115,.16)}
+/* what a session sees */
+.session{margin:1.8rem 0 0;display:grid;grid-template-columns:minmax(8rem,13rem) minmax(0,1fr);
+  border-top:1px solid var(--rule)}
+.session dt,.session dd{margin:0;padding:.85rem 0;border-bottom:1px solid var(--rule)}
+.session dt{color:var(--dim);font-size:14px;padding-right:1.2rem}
+.session dt q{quotes:none;color:var(--fg)}
+.session dd{font-family:var(--mono);font-size:12.5px;line-height:1.6;color:var(--fg);min-width:0;
+  overflow-wrap:anywhere}
+.session dd b{color:var(--money);font-weight:400}
+.session dd.none{font-family:var(--sans);font-size:14px;color:var(--faint);font-style:italic}
+.session dd small{display:block;font-family:var(--sans);font-size:12.5px;color:var(--faint);margin-top:.25rem}
+
+.cap{font-family:var(--mono);font-size:12px;color:var(--faint);margin:1.6rem 0 .5rem;max-width:none}
+.cap b{color:var(--dim);font-weight:400}
+.sheet{border-top:1px solid var(--rule)}
+.toil{display:grid;grid-template-columns:8.5rem minmax(0,1fr) auto;gap:1rem;align-items:baseline;
+  padding:.85rem 0;border-bottom:1px solid var(--rule);font-size:14.5px}
+.tag{font-family:var(--mono);font-size:12px;color:var(--manual);line-height:1.45}
+.tag s{display:block;color:var(--faint);text-decoration:none}
+.ev{min-width:0;color:var(--fg)}
+.ev q{quotes:none}
+.freq{font-family:var(--mono);font-size:12px;color:var(--faint);white-space:nowrap}
+.stats{font-family:var(--mono);font-size:12px;color:var(--faint);padding:.7rem 0 0}
+.stat{display:inline;margin-right:1.3rem}
+.stat b{color:var(--fg);font-weight:400;margin-right:.35rem}
+
 .scroll{overflow-x:auto}
-
-/* toil rows */
-.toil{display:grid;grid-template-columns:150px 1fr auto;gap:14px;align-items:baseline;
-  padding:13px;border-bottom:1px solid var(--rule);font-size:14px}
-.toil:last-child{border-bottom:0}
-.toil:nth-child(even){background:var(--row)}
-.tag{font-family:var(--mono);font-size:11px;color:var(--manual);letter-spacing:.04em;
-  border-left:2px solid var(--manual);padding-left:8px;line-height:1.4}
-.tag s{display:block;color:var(--faint);text-decoration:none;margin-top:3px}
-.ev{color:var(--fg);min-width:0}
-.ev q{quotes:none;color:var(--dim);font-style:italic}
-.freq{font-family:var(--mono);font-size:11px;color:var(--faint);white-space:nowrap}
-@media(max-width:680px){
-  .toil{grid-template-columns:1fr;gap:7px}
-  .freq{order:3}
-}
-
-/* tables */
-table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
-th{font-family:var(--mono);font-weight:500;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
-  color:var(--faint);text-align:left;padding:9px 13px;border-bottom:1px solid var(--rule);white-space:nowrap}
-td{padding:10px 13px;border-bottom:1px solid var(--rule);vertical-align:top}
-tr:last-child td{border-bottom:0}
-tbody tr:nth-child(even){background:var(--row)}
-.num{text-align:right;font-family:var(--mono);color:var(--money);white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-size:14.5px;min-width:30rem}
+th{font-family:var(--mono);font-weight:400;font-size:12px;color:var(--faint);text-align:left;
+  padding:.5rem .8rem .5rem 0;border-bottom:1px solid var(--rule)}
+td{padding:.8rem .8rem .8rem 0;border-bottom:1px solid var(--rule);vertical-align:top}
+th:last-child,td:last-child{padding-right:0}
+.num{text-align:right;font-family:var(--mono);font-size:13px;color:var(--money);white-space:nowrap}
+th.num{color:var(--faint)}
 .sub{color:var(--faint);font-size:12px}
 
-/* stat strip */
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));border-top:1px solid var(--rule)}
-.stat{padding:14px 13px;border-right:1px solid var(--rule)}
-.stat:last-child{border-right:0}
-.stat b{display:block;font-family:var(--mono);font-size:21px;color:var(--money);font-weight:600;letter-spacing:-.01em}
-.stat span{font-family:var(--mono);font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--faint)}
+.also{margin:1.4rem 0 0;display:grid;grid-template-columns:minmax(8rem,13rem) minmax(0,1fr);
+  border-top:1px solid var(--rule)}
+.also dt,.also dd{margin:0;padding:.8rem 0;border-bottom:1px solid var(--rule)}
+.also dt{font-family:var(--serif);font-size:17px;padding-right:1.2rem}
+.also dd{color:var(--dim);font-size:15px}
 
-/* feature grid */
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(252px,1fr));gap:1px;
-  background:var(--rule);border:1px solid var(--rule);border-radius:3px;overflow:hidden}
-.cell{background:var(--panel);padding:16px 15px}
-.cell h3{margin:0 0 6px;font-size:14px;font-weight:620}
-.cell h3 a{border:0;color:var(--fg)}
-.cell h3 a:hover{color:var(--money)}
-.cell p{margin:0;color:var(--dim);font-size:13.5px;line-height:1.55}
-.kind{display:inline-block;font-family:var(--mono);font-size:10.5px;color:var(--faint);
-  border:1px solid var(--rule);border-radius:2px;padding:1px 5px;margin-right:5px;margin-bottom:5px}
+pre{margin:1.2rem 0 1rem;padding:1rem 1.1rem;background:var(--panel);border-left:1px solid var(--money);
+  overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.75;color:var(--fg)}
 
-/* code */
-pre{margin:0;background:var(--panel);border:1px solid var(--rule);border-radius:3px;
-  padding:15px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.7;color:var(--fg)}
-pre .c{color:var(--faint)}
-pre .p{color:var(--auto)}
-
-.note{border-left:2px solid var(--edge);padding:2px 0 2px 14px;color:var(--dim);font-size:13.5px;
-  max-width:62ch;margin:22px 0 0}
-
-/* ---------- signup ---------- */
-.form{display:grid;gap:12px;max-width:600px}
-.row{display:grid;gap:12px;grid-template-columns:1fr}
-.f label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.11em;
-  text-transform:uppercase;color:var(--faint);margin-bottom:5px}
-.f input,.f textarea{width:100%;background:var(--panel);border:1px solid var(--rule);border-radius:2px;
-  color:var(--fg);font:14px/1.5 var(--sans);padding:9px 11px;resize:vertical}
-.f input:focus,.f textarea:focus{outline:0;border-color:var(--edge);background:var(--row)}
-.f input::placeholder,.f textarea::placeholder{color:var(--faint)}
-.submit{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-.msg{font-family:var(--mono);font-size:12px;color:var(--auto)}
+.form{display:grid;gap:1.1rem;max-width:36rem;margin-top:1.4rem}
+.row{display:grid;gap:1.1rem;grid-template-columns:1fr}
+.f label{display:block;font-size:13px;color:var(--faint);margin-bottom:.15rem}
+.f input,.f textarea{width:100%;background:transparent;border:0;border-bottom:1px solid var(--edge);
+  border-radius:0;color:var(--fg);font:15px/1.5 var(--sans);padding:.4rem 0;resize:vertical}
+.f input:focus,.f textarea:focus{outline:0;border-bottom-color:var(--money)}
+.f input::placeholder,.f textarea::placeholder{color:#5f6971}
+.submit{display:flex;gap:1rem;align-items:center;flex-wrap:wrap}
+button{font:500 15px var(--sans);color:var(--bg);background:var(--money);border:0;
+  padding:.55rem 1.3rem;cursor:pointer}
+button:hover{background:#6fc9bf}
+button:disabled{opacity:.6}
+.msg{font-size:13px;color:var(--auto)}
 .msg.err{color:var(--manual)}
 @media(min-width:620px){.row.two{grid-template-columns:1fr 1fr}}
 
-footer{border-top:1px solid var(--rule);padding:26px 0 44px;color:var(--faint);
-  font-family:var(--mono);font-size:12px;display:flex;gap:18px;flex-wrap:wrap;align-items:center}
-footer a{color:var(--dim);border:0}
-footer a:hover{color:var(--money)}
+.foot{padding:2.2rem 0 0;font-size:13px}
+.foot div{color:var(--faint);display:flex;flex-wrap:wrap;gap:.3rem 1.3rem}
+.foot a{color:var(--dim);text-decoration:none}
+.foot a:hover{color:var(--money)}
+
+@media(max-width:760px){
+  :root{--margin:0rem;--gap:0rem}
+  .page{padding:0 1.15rem 3rem 1.9rem}
+  .page::before{left:.85rem}
+  .entry{grid-template-columns:minmax(0,1fr);padding:2rem 0}
+  .entry > .m{text-align:left;padding:0 0 .5rem}
+  .top{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+  .hero{padding-top:2.2rem}
+  .session,.also{grid-template-columns:minmax(0,1fr)}
+  .session dt,.also dt{border-bottom:0;padding-bottom:0}
+  .session dd,.also dd{padding-top:.3rem}
+  .toil{grid-template-columns:minmax(0,1fr);gap:.3rem}
+}
 </style>
 </head>
 <body>
+<div class="page">
 
-<header><div class="wrap bar">
-  <a class="mark" href="/"><i></i>ARTEL</a>
-  <nav class="nav" aria-label="Main">
-    <a href="/ledger/">Ledger</a>
-    <a class="ext" href="https://artel-sandbox.fly.dev/ui">Sandbox</a>
-    <a href="/docs/">Docs</a>
-    <a href="https://github.com/NicolasPrimeau/artel"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38v-1.33c-2.23.48-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.8.06 1.23.83 1.23.83.71 1.22 1.87.87 2.33.66.07-.52.28-.87.5-1.07-1.78-.2-3.65-.89-3.65-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>GitHub</a>
-    <a class="run" href="#run">Run it</a>
-  </nav>
-  <details class="menu">
-    <summary aria-label="Menu"><i></i>Menu</summary>
-    <div class="sheet">
-      <a href="/ledger/">Ledger <span>demo</span></a>
-      <a href="https://artel-sandbox.fly.dev/ui">Sandbox <span>&#8599;</span></a>
+  <header class="entry top">
+    <div class="m"><a href="/">Artel</a></div>
+    <nav aria-label="Main">
       <a href="/docs/">Docs</a>
-      <a href="https://github.com/NicolasPrimeau/artel">GitHub <span>&#8599;</span></a>
-      <a href="#ask">Contact</a>
-      <a class="run" href="#run">Run it yourself</a>
-    </div>
-  </details>
-</div></header>
+      <a href="/ledger/">Ledger</a>
+      <a href="https://artel-sandbox.fly.dev/ui">Sandbox</a>
+      <a href="https://github.com/NicolasPrimeau/artel">GitHub</a>
+    </nav>
+  </header>
 
-<div class="wrap">
-
-  <div class="hero">
-    <p class="kicker">Self-hosted · MIT · your machine</p>
-    <h1>Your agent fleet's notepad, one that <em>learns</em>.</h1>
-    <p class="lede">Claude Code on a laptop, Codex on a workstation, a script on a cron: each
-    starts from zero, and none of them knows what the others found out. Artel gives them one place
-    to write it down. What one agent learns, the others read before their next prompt, along with
-    <strong>who wrote it and when</strong>.</p>
-    <div class="cta">
-      <a class="btn key" href="#run">Run it yourself</a>
-      <a class="btn" href="https://artel-sandbox.fly.dev/ui">Try the sandbox</a>
-      <a class="btn" href="https://github.com/NicolasPrimeau/artel">Source</a>
+  <div class="entry hero">
+    <div class="m">self-hosted<br>MIT</div>
+    <div>
+      <h1>Your agent fleet's notepad, one that <em>learns</em>.</h1>
+      <p class="lede">Claude Code on a laptop, Codex on a workstation, a script on a cron: each
+      starts from zero, and none of them knows what the others found out. Artel is the one place
+      they all write to. What one agent learns, the others are handed when it matters, and every
+      note keeps <strong>who wrote it and when</strong>.</p>
+      <p class="go"><a class="first" href="#run">Run it yourself</a>
+        <a href="https://artel-sandbox.fly.dev/ui">try the sandbox</a>
+        <a href="https://github.com/NicolasPrimeau/artel">read the source</a></p>
     </div>
   </div>
 
-  <section id="problem">
-    <p class="eyebrow">The problem</p>
-    <h2>Without a shared place, the person running the fleet carries the notes.</h2>
-    <p class="say">Every agent is the same model with a different context. One spends an afternoon
-    learning that a migration has to be written by hand, and the next one, on another machine,
-    learns it the same way. Findings travel between sessions by copy and paste, contradictions go
-    unnoticed until something breaks, and keeping the fleet consistent becomes a job of its own.
-    That is manageable with one agent and a real cost at ten.</p>
+  <section class="entry" id="problem">
+    <div class="m">the problem</div>
+    <div>
+      <h2>Without a shared place, the person running the fleet carries the notes.</h2>
+      <p>Every agent is the same model with a different context. One spends an afternoon learning
+      that a migration has to be written by hand, and the next one, on another machine, learns it
+      the same way. Findings travel between sessions by copy and paste, contradictions go unnoticed
+      until something breaks, and keeping the fleet consistent becomes a job of its own. That is
+      manageable with one agent and a real cost at ten.</p>
+    </div>
   </section>
 
-  <section id="how">
-    <p class="eyebrow">How it works</p>
-    <h2>Agents write as they work, and the right note comes back on its own.</h2>
-    <p class="say">Sessions are captured into notes as they happen. Hooks bring the relevant ones
-    back at session start, with each prompt, and just before a file is edited, so nothing depends
-    on an agent remembering to look. Every note carries its author and time, which lets a reader
-    weigh what another machine wrote before acting on it.</p>
+  <section class="entry" id="how">
+    <div class="m">how it works</div>
+    <div>
+      <h2>Agents never call it. It sits under them and mostly says nothing.</h2>
+      <p>Hooks do the writing and the reading. Each session is captured into notes as it happens,
+      and a note comes back only when it is close to what the agent is doing: one line, once. Most
+      prompts get nothing, which is the point. Over a session of twenty prompts and sixty tool
+      calls the plugin adds <a href="/docs/overhead/">about 2,000 tokens</a>.</p>
 
-    <div class="panel">
-      <div class="phead"><span class="dot"></span> <b>recall</b> · our own fleet · injected before claude-code on the laptop edits <code>artel/mcp/config.py</code></div>
-      <div class="toil">
-        <div class="tag">claude-code<s>server · Aug 11</s></div>
-        <div class="ev"><code>MCPSettings.api_key()</code> prefers <code>MCP_AGENT_KEY</code> over <code>AGENT_KEYS</code>, so a stale one left in <code>.env</code> makes every call 401 even when <code>AGENT_KEYS</code> is right.</div>
+      <dl class="session" aria-label="What an agent sees over one session">
+        <dt>The session starts</dt>
+        <dd><b>[Artel]</b> Last session 2026-10-08: Moved the recall cut to 1.0, one note per prompt. Next: tag the release<small>A pointer to the last handoff. The rest is one call away.</small></dd>
+        <dt><q>why is every MCP call returning 401?</q></dt>
+        <dd><b>[Artel]</b> Note: MCPSettings.api_key() prefers MCP_AGENT_KEY over AGENT_KEYS, so a stale one in .env makes every call 401.<small>Written by claude-code on another machine, Aug 11.</small></dd>
+        <dt><q>ok, go ahead</q></dt>
+        <dd class="none">nothing</dd>
+        <dt>A commit lands mid-procedure</dt>
+        <dd><b>[Artel]</b> Procedure add-setting, step 2/2: Describe the setting in the config reference. Done when reference.md changes in a commit</dd>
+        <dt>The turn ends</dt>
+        <dd class="none">nothing; the session is queued for the archivist</dd>
+      </dl>
+      <p class="cap">The plugin's output, as injected. The note is one from our own fleet.</p>
+    </div>
+  </section>
+
+  <section class="entry" id="learns">
+    <div class="m">what it learns</div>
+    <div>
+      <h2>The notepad gets sharper as it fills.</h2>
+      <p>An <a href="/docs/archivist/">archivist</a> works through the notes in the background.
+      It merges duplicates, settles notes that contradict each other, lets confidence fade on what
+      stopped being true, and promotes what keeps holding up into reference docs. How fast
+      confidence fades is <a href="/docs/adaptive-control/">tuned by a control loop</a>, measured
+      against the notes agents actually reach for.</p>
+    </div>
+  </section>
+
+  <section class="entry" id="toil">
+    <div class="m">seen from<br>one place</div>
+    <div>
+      <h2>Repeated work shows up in the notes.</h2>
+      <p>With the whole fleet writing to one place, patterns across projects become visible. Chores
+      that get mentioned in passing, again and again, are grouped into themes and shown with the
+      note that mentioned them.</p>
+
+      <p class="cap"><b>toil</b> <span id="toil-head">· our own fleet · 7 projects · last 90 days</span></p>
+      <div class="sheet" id="toil-panel">
+        <div class="toil">
+          <div class="tag">data refresh<s>quill</s></div>
+          <div class="ev"><q>Interview generation must be dispatched through the message-queue worker rather than generated locally, and existing interviews are skipped rather than regenerated every run</q></div>
+          <div class="freq">×9 in theme</div>
+        </div>
+        <div class="toil">
+          <div class="tag">deploy / migrate<s>quill</s></div>
+          <div class="ev"><q>Alembic `env.py` in Quill is configured to refuse autogenerating table drops to prevent accidental schema destruction; table drop migrations must be written by hand</q></div>
+          <div class="freq">×8 in theme</div>
+        </div>
+        <div class="stats" id="toil-stats">
+          <span class="stat"><b>12</b>candidates</span>
+          <span class="stat"><b>9</b>themes</span>
+          <span class="stat"><b>4</b>projects</span>
+        </div>
       </div>
     </div>
-
-    <div class="panel" style="margin-top:18px"><pre><span class="c">  you · Claude Code · opencode · Codex · AutoGen · a raw httpx script</span>
-        │   <span class="p">hooks</span> push notes in  ┄  sessions captured out
-        ▼
-   REST / MCP ──► <span class="p">Artel</span> ──► SQLite (WAL) + embeddings
-                    ├── notes ── semantic recall · confidence · graph
-                    ├── captures ──► archivist
-                    ├── decisions ── append-only
-                    └── <span class="p">ledger</span> ── cost per session · per decision · toil
-        │
-   mesh (CRDT + mDNS) ◄──► your other machines</pre></div>
   </section>
 
-  <section id="learns">
-    <p class="eyebrow">What it learns</p>
-    <h2>The notepad gets sharper as it fills.</h2>
-    <p class="say">An <a href="/docs/archivist/">archivist</a> works through the notes in the
-    background. It merges duplicates, settles notes that contradict each other, lets confidence
-    fade on what stopped being true, and promotes what keeps holding up into reference docs. How
-    fast confidence fades is <a href="/docs/adaptive-control/">tuned by a control loop</a>,
-    measured against the notes agents actually reach for.</p>
-  </section>
+  <section class="entry" id="ledger">
+    <div class="m">cost</div>
+    <div>
+      <h2>What each decision cost.</h2>
+      <p>Usage is recorded per session, so spend can be attributed to the
+      <a href="/docs/decisions/">decisions</a> made in it. These are measured on our own fleet over
+      30 days, priced at list-price equivalent. The full view is in the
+      <a href="/ledger/">ledger demo</a>.</p>
 
-  <section id="toil">
-    <p class="eyebrow">Seen from one place</p>
-    <h2>Repeated work shows up in the notes.</h2>
-    <p class="say">With the whole fleet writing to one place, patterns across projects become
-    visible. Chores that get mentioned in passing, again and again, are grouped into themes and
-    shown with the note that mentioned them.</p>
-
-    <div class="panel" id="toil-panel">
-      <div class="phead"><span class="dot"></span> <b>toil</b> <span id="toil-head">· our own fleet · 7 projects · last 90 days</span></div>
-
-      <div class="toil">
-        <div class="tag">data refresh<s>quill</s></div>
-        <div class="ev"><q>Interview generation must be dispatched through the message-queue worker rather than generated locally, and existing interviews are skipped rather than regenerated every run</q></div>
-        <div class="freq">×9 in theme</div>
-      </div>
-
-      <div class="toil">
-        <div class="tag">deploy / migrate<s>quill</s></div>
-        <div class="ev"><q>Alembic `env.py` in Quill is configured to refuse autogenerating table drops to prevent accidental schema destruction; table drop migrations must be written by hand</q></div>
-        <div class="freq">×8 in theme</div>
-      </div>
-
-      <div class="stats" id="toil-stats">
-        <div class="stat"><b>12</b><span>candidates</span></div>
-        <div class="stat"><b>9</b><span>themes</span></div>
-        <div class="stat"><b>4</b><span>projects</span></div>
-      </div>
-    </div>
-
-    <p class="note">Every row traces back to the note it came from.</p>
-  </section>
-
-  <section id="ledger">
-    <p class="eyebrow">Cost</p>
-    <h2>What each decision cost.</h2>
-    <p class="say">Usage is recorded per session, so spend can be attributed to the
-    <a href="/docs/decisions/">decisions</a> made in it. The figures below are measured on our own
-    fleet over 30 days, priced at list-price equivalent. The full view is in the
-    <a href="/ledger/">ledger demo</a>.</p>
-
-    <div class="panel">
-      <div class="phead"><span class="dot"></span> <b>cost per decision</b> · our own fleet · 30 days · list-price equivalent</div>
       <div class="scroll"><table>
-        <thead><tr><th>Decision</th><th>Project</th><th class="num">Output</th><th class="num">Cost</th></tr></thead>
+        <thead><tr><th>Decision</th><th>Project</th><th class="num">Output tokens</th><th class="num">Cost</th></tr></thead>
         <tbody id="dec-rows">
           <tr><td>Bundle all procurement datasets (tenders, recompetes, standing offers, awards) into a single $49 multi-sheet feed workbook instead of selling separate niche feeds or workbooks.</td>
               <td class="mono sub">atlas</td><td class="num">2,158,334</td><td class="num">$723.93</td></tr>
@@ -336,85 +288,85 @@ footer a:hover{color:var(--money)}
         </tbody>
       </table></div>
       <div class="stats" id="led-stats">
-        <div class="stat"><b>20</b><span>sessions</span></div>
-        <div class="stat"><b>239</b><span>decisions</span></div>
-        <div class="stat"><b>7</b><span>projects</span></div>
+        <span class="stat"><b>20</b>sessions</span>
+        <span class="stat"><b>239</b>decisions</span>
+        <span class="stat"><b>7</b>projects</span>
       </div>
     </div>
   </section>
 
-  <section id="coordination">
-    <p class="eyebrow">Coordination</p>
-    <h2>Built for more than one agent at a time.</h2>
-    <p class="say">The same container carries what a fleet uses to divide work and stay in step.
-    Each piece has its own page in the <a href="/docs/">docs</a>.</p>
-    <div class="grid">
-      <div class="cell"><h3><a href="/docs/blueprints/">Blueprints</a></h3>
-        <p>A written procedure compiled into a task graph that expands as it runs. The server checks each step against the repository before the next one starts.</p></div>
-      <div class="cell"><h3>Tasks and messages</h3>
-        <p>Agents claim units of work and message each other directly, for setups where nothing else coordinates them.</p></div>
-      <div class="cell"><h3><a href="/docs/mesh/">Mesh and feeds</a></h3>
-        <p>Several machines converge on one notepad with no central server, and RSS or Atom feeds bring outside news in.</p></div>
-      <div class="cell"><h3><a href="/docs/decisions/">Decisions</a></h3>
-        <p>An append-only record of what was chosen and why, never merged or decayed.</p></div>
-      <div class="cell"><h3><a href="/docs/compile-mode/">Compile mode</a></h3>
-        <p>Notes about code are pinned to the code they describe, so they are rechecked when it changes instead of going stale.</p></div>
-      <div class="cell"><h3><a href="/docs/dashboard/">Dashboard</a></h3>
-        <p>Browse, search and watch the fleet from a browser.</p></div>
+  <section class="entry" id="also">
+    <div class="m">also in<br>the container</div>
+    <div>
+      <h2>The same notes, put to more work.</h2>
+      <dl class="also">
+        <dt><a href="/docs/blueprints/">Procedures</a></dt>
+        <dd>A written skill compiled into steps. The server checks each one against the repository, and the agent is handed the next step when the last one is really done.</dd>
+        <dt><a href="/docs/decisions/">Decisions</a></dt>
+        <dd>An append-only record of what was chosen and why, never merged or decayed.</dd>
+        <dt><a href="/docs/compile-mode/">Compile mode</a></dt>
+        <dd>Notes about code are pinned to the code they describe, so they are rechecked when it changes instead of going stale.</dd>
+        <dt><a href="/docs/mesh/">Mesh and feeds</a></dt>
+        <dd>Several machines converge on one notepad with no central server, and RSS or Atom feeds bring outside news in.</dd>
+        <dt><a href="/docs/dashboard/">Dashboard</a></dt>
+        <dd>Browse, search and watch the fleet from a browser.</dd>
+      </dl>
+      <p style="margin-top:1.2rem">Claude Code gets all of this through a plugin. Anything else that speaks HTTP or MCP
+      can read and write the same notes through the <a href="/docs/reference/rest/">REST API</a>.</p>
     </div>
-    <p class="note">Any agent that speaks HTTP or MCP can join, through 47 MCP tools or the plain
-      <a href="/docs/reference/rest/">REST API</a>.</p>
   </section>
 
-  <section id="run">
-    <p class="eyebrow">Run it</p>
-    <h2>Your fleet's notes stay on your machine.</h2>
-    <p class="say">One container, one port, running in a minute.</p>
-    <pre><span class="c">curl -O https://raw.githubusercontent.com/NicolasPrimeau/artel/master/docker-compose.yml</span>
-<span class="c">curl -O https://raw.githubusercontent.com/NicolasPrimeau/artel/master/.env.example</span>
+  <section class="entry" id="run">
+    <div class="m">run it</div>
+    <div>
+      <h2>Your fleet's notes stay on your machine.</h2>
+      <p>One container, one port, running in a minute.</p>
+      <pre>curl -O https://raw.githubusercontent.com/NicolasPrimeau/artel/master/docker-compose.yml
+curl -O https://raw.githubusercontent.com/NicolasPrimeau/artel/master/.env.example
 cp .env.example .env
 docker compose up -d</pre>
-    <p class="note">Then point an agent at it with
-      <code>curl -fsSL http://&lt;host&gt;:8000/onboard | sh</code>.</p>
+      <p>Then point an agent at it with <code>curl -fsSL http://&lt;host&gt;:8000/onboard | sh</code>.</p>
+    </div>
   </section>
 
-  <section id="ask">
-    <p class="eyebrow">Contact</p>
-    <h2>Get in touch.</h2>
-    <p class="say">Not sure it fits your setup, or missing something you need? Say what you run.</p>
-
-    <form class="form" id="ask-form" action="https://formspree.io/f/xreyoaaw" method="POST">
-      <div class="row two">
-        <div class="f"><label for="q-email">Email</label>
-          <input id="q-email" type="email" name="email" placeholder="you@wherever" required></div>
-        <div class="f"><label for="q-fleet">What do you run?</label>
-          <input id="q-fleet" type="text" name="fleet" placeholder="Claude Code, 3 machines, solo"></div>
-      </div>
-      <div class="f"><label for="q-msg">Message</label>
-        <textarea id="q-msg" name="message" rows="3"
-          placeholder="What you are trying to do, or what is in the way."></textarea></div>
-      <input type="hidden" name="product" value="artel">
-      <input type="hidden" name="_subject" value="Artel: landing page">
-      <input type="hidden" name="referrer" id="q-ref">
-      <input type="hidden" name="saw" id="q-saw">
-      <div class="submit">
-        <button class="btn key" type="submit">Send</button>
-        <span class="msg" id="ask-msg"></span>
-      </div>
-    </form>
-    <p class="note">Goes to an inbox, not a mailing list.</p>
+  <section class="entry" id="ask">
+    <div class="m">contact</div>
+    <div>
+      <h2>Not sure it fits your setup?</h2>
+      <p>Say what you run. This goes to an inbox, not a mailing list.</p>
+      <form class="form" id="ask-form" action="https://formspree.io/f/xreyoaaw" method="POST">
+        <div class="row two">
+          <div class="f"><label for="q-email">Email</label>
+            <input id="q-email" type="email" name="email" placeholder="you@wherever" required></div>
+          <div class="f"><label for="q-fleet">What do you run?</label>
+            <input id="q-fleet" type="text" name="fleet" placeholder="Claude Code, 3 machines, solo"></div>
+        </div>
+        <div class="f"><label for="q-msg">Message</label>
+          <textarea id="q-msg" name="message" rows="3"
+            placeholder="What you are trying to do, or what is in the way."></textarea></div>
+        <input type="hidden" name="product" value="artel">
+        <input type="hidden" name="_subject" value="Artel: landing page">
+        <input type="hidden" name="referrer" id="q-ref">
+        <input type="hidden" name="saw" id="q-saw">
+        <div class="submit">
+          <button type="submit">Send</button>
+          <span class="msg" id="ask-msg"></span>
+        </div>
+      </form>
+    </div>
   </section>
+
+  <footer class="entry foot">
+    <div class="m">Artel · MIT</div>
+    <div>
+      <a href="https://github.com/NicolasPrimeau/artel">GitHub</a>
+      <a href="/docs/">Docs</a>
+      <a href="/ledger/">Ledger</a>
+      <span>Ledger and sandbox data: our own fleet, anonymized.</span>
+    </div>
+  </footer>
 
 </div>
-
-<footer><div class="wrap" style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;padding:0">
-  <span>Artel · MIT</span>
-  <a href="https://github.com/NicolasPrimeau/artel">GitHub</a>
-  <a href="/docs/">Docs</a>
-  <a href="/ledger/">Ledger</a>
-  <span style="margin-left:auto;color:var(--faint)">Ledger and sandbox data: our own fleet, anonymized.</span>
-</div></footer>
-
 
 <script>
 // The figures below are the sandbox's own, read from the bundle it ships. Hard-coding
@@ -423,7 +375,7 @@ docker compose up -d</pre>
 (async () => {
   const usd = (v) => "$" + v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const esc = (t) => (t || "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
-  const stat = (v, l) => `<div class="stat"><b>${v}</b><span>${l}</span></div>`;
+  const stat = (v, l) => `<span class="stat"><b>${v}</b>${l}</span> `;
   try {
     const d = await (await fetch("/ledger/data/d30.json")).json();
     const t = d.projects.totals;
@@ -477,8 +429,6 @@ docker compose up -d</pre>
     a.addEventListener("click", () => ev("ledger_open", { from: a.closest("section")?.id || "hero" })));
   document.querySelectorAll('a[href^="/docs"]').forEach((a) =>
     a.addEventListener("click", () => ev("docs_click", { to: a.getAttribute("href") })));
-  const menu = document.querySelector(".menu");
-  if (menu) menu.querySelectorAll("a").forEach((a) => a.addEventListener("click", () => menu.removeAttribute("open")));
   const pre = document.querySelector("#run pre");
   if (pre) pre.addEventListener("copy", () => ev("install_copy"));
   // What each visitor actually reached, in order. Submitted with the form, so a

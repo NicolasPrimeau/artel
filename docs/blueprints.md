@@ -1,11 +1,11 @@
 ---
-description: "Compile a written procedure into a task graph the fleet executes, with contracts the server checks before a run advances."
+description: "A written procedure compiled into steps the server verifies, surfaced to the agent one line at a time."
 ---
 
 <!-- covers: blueprints -->
 # Blueprints
 
-A `skill` note says how to do something. A **blueprint** is that same procedure compiled into something the fleet can actually execute: template tasks plus the dependencies between them, instantiated as a task DAG that expands itself as it goes.
+A `skill` note says how to do something. A **blueprint** is that same procedure compiled into steps with dependencies between them and a check on each, so the server knows where a run stands without anyone reporting it. The agent doing the work sees one line: the current step and what makes it done.
 
 ```bash
 blueprint_list()                                   # what's available

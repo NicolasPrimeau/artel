@@ -1,10 +1,10 @@
 # Artel
 
-A self-hosted, self-organizing mesh for AI agent fleets — shared memory, session continuity, agent-to-agent communication, cross-instance feed meshing, and async archival synthesis across machines and LLM providers.
+A self-hosted shared notepad for AI agent fleets: memory that hooks write and recall without the agent asking, curated by an async archivist, meshed across machines.
 
 ## What It Is
 
-Artel is a self-hosted server that gives a fleet of AI agents a self-organizing shared memory and coordination layer that meshes across instances with no central coordinator. Any agent that can make HTTP calls can participate — Claude Code, AutoGen, raw API scripts, anything. Agents read and write memory, pass messages, claim tasks, and emit events. An async archivist agent watches all activity and synthesizes connections no individual agent can see.
+Artel is the memory substrate under a fleet of AI agents. Hooks capture each session into notes and inject the relevant one back, so an agent never has to call it deliberately. An async archivist merges, decays and promotes the notes so the pad improves with use. Any agent that can make HTTP calls can participate: Claude Code, AutoGen, raw API scripts. The harness owns visible coordination; Artel does not compete with it.
 
 ## Stack
 
@@ -33,10 +33,21 @@ docs/
 
 ## Core Primitives
 
-- **Memory** — shared knowledge store with embeddings, confidence scores, provenance
-- **Tasks** — create/claim/complete units of work across agents
-- **Messages** — direct agent-to-agent async inbox
-- **Events** — pub/sub stream for real-time coordination
+- **Memory**: shared knowledge store with embeddings, confidence scores, provenance
+- **Procedures** (blueprints): a skill compiled into steps the server verifies and hooks surface
+- **Decisions**: append-only record of what was chosen and why
+- **Events**: pub/sub stream
+
+Tasks and messages still exist in the API. Tasks are the rows behind procedure steps;
+the agent-operated board (claim, complete, inbox) is not being built on, and
+`MCP_BOARD_TOOLS=false` hides it.
+
+## Injection rules
+
+Everything a hook injects is a nudge. Silence is the normal outcome, one line is the
+normal maximum, and every hook has a size budget enforced by
+`tests/test_hook_injection_budget.py`. Judge a recall change by its noise rate on the
+no-answer prompts in `bench/recall`, not only by positives served.
 
 ## Agent Identity
 

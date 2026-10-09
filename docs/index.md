@@ -7,7 +7,7 @@ description: "A self-hosted shared notepad for you and every AI agent you run: s
 
 **Your fleet's smart notepad. One that learns.**
 
-One pad that you and every agent you run write into. Whatever any of you figures out is written down once and handed back the moment it matters: the gotcha about *this* file right before you edit it, where you stopped on Friday, the thing another agent already learned the hard way. Nothing to file, nothing to tag, nothing to look up. A normal notepad waits to be opened; this one speaks up.
+One pad that you and every agent you run write into. Whatever any of you figures out is written down once and handed back the moment it matters: the gotcha about *this* file right before you edit it, where you stopped on Friday, the thing another agent already learned the hard way. Nothing to file, nothing to tag, nothing to look up. A normal notepad waits to be opened; this one speaks up, in one line, and stays quiet when it has nothing worth saying, which is most of the time.
 
 It also doesn't just accumulate. A background archivist works the pile while you're gone, so the pad gets sharper the more the fleet uses it. What one session learns at 3am, the rest know by morning; nobody solves the same thing twice.
 
@@ -20,7 +20,7 @@ You run it yourself, on your own machine.
    REST / MCP ──► Artel Server ──► SQLite (WAL) + embeddings
                      ├── notes: semantic search · confidence decay · knowledge graph
                      ├── captures queue ──► archivist compaction ──► notes
-                     ├── tasks · messages · events · session handoffs
+                     ├── procedures · decisions · session handoffs
                      └── archivist: capture · synthesis · merge · decay · promote
         │
    mesh (CRDT feeds + mDNS) ◄──► your other machines
