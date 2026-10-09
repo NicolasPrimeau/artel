@@ -26,7 +26,7 @@ import urllib.request
 
 TIMEOUT = 3.0
 RECALL_CONFIDENCE_MIN = 0.1
-RECALL_MAX_DISTANCE = 1.18
+RECALL_MAX_DISTANCE = 1.0
 RECALL_LINE_CHARS = 120
 INJECT_PREFIX = "[Artel] "
 INJECT_BUDGET = 480
@@ -34,6 +34,7 @@ SESSION_BUDGET = 600
 SESSION_SUMMARY_CHARS = 200
 SESSION_STEP_CHARS = 80
 SESSION_TIMEOUT = 10.0
+SESSION_MAX_AGE_DAYS = 14
 STEP_TITLE_CHARS = 80
 STEP_DONE_CHARS = 90
 STEP_IDLE_SECONDS = 300
@@ -180,11 +181,6 @@ def search(query, limit=6, project="", max_distance=None):
     return result if isinstance(result, list) else []
 
 
-def related(entry_id, limit=2):
-    result = get(f"/memory/{urllib.parse.quote(str(entry_id))}/related?limit={limit}")
-    return [e for e in result if isinstance(e, dict)] if isinstance(result, list) else []
-
-
 def payload():
     try:
         return json.load(sys.stdin)
@@ -315,21 +311,10 @@ def recall_lines(data, proj):
     results = [e for e in results if e.get("id") in fresh]
     if not results:
         return []
-    memories = [e for e in results if e.get("type") != "skill"][:2]
+    memories = [e for e in results if e.get("type") != "skill"]
     skills = [e for e in results if e.get("type") == "skill"]
-    lines = []
-    if memories:
-        lines.append("Relevant memory:")
-        lines += ["- " + entry_line(e, RECALL_LINE_CHARS) for e in memories]
-        surfaced = {e.get("id") for e in memories}
-        assoc = [e for e in related(memories[0].get("id")) if e.get("id") not in surfaced]
-        assoc_ids = set(
-            seen_filter(data.get("session_id", ""), "recall", [e.get("id") for e in assoc])
-        )
-        assoc = [e for e in assoc if e.get("id") in assoc_ids]
-        lines += ["  ↳ linked: " + entry_line(e, RECALL_LINE_CHARS) for e in assoc[:1]]
-    if skills:
-        lines.append("Skill that may apply: " + entry_line(skills[0], RECALL_LINE_CHARS))
+    lines = ["Note: " + entry_line(e, RECALL_LINE_CHARS) for e in memories[:1]]
+    lines += ["Skill: " + entry_line(e, RECALL_LINE_CHARS) for e in skills[:1]]
     return lines
 
 
@@ -371,9 +356,7 @@ def cmd_gotcha():
     hits = [e for e in hits if (name + ":" + str(e.get("id"))) in fresh]
     if not hits:
         return
-    lines = ["Notes on " + name + ":"]
-    lines += ["- " + entry_line(e, RECALL_LINE_CHARS) for e in hits[:2]]
-    emit_context("PreToolUse", lines)
+    emit_context("PreToolUse", ["Note on " + name + ": " + entry_line(hits[0], RECALL_LINE_CHARS)])
 
 
 def cmd_session():
@@ -382,6 +365,12 @@ def cmd_session():
     if not handoff:
         return
     when = str(handoff.get("created_at", ""))[:10]
+    try:
+        age = time.time() - time.mktime(time.strptime(when, "%Y-%m-%d"))
+    except ValueError:
+        age = 0
+    if age > SESSION_MAX_AGE_DAYS * 86400:
+        return
     lines = ["Last session " + when + ": " + nudge(handoff.get("summary"), SESSION_SUMMARY_CHARS)]
     steps = [str(x) for x in handoff.get("next_steps") or []]
     if steps:

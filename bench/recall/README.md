@@ -10,11 +10,13 @@ Measures what the per-prompt recall hook injects: how much of it helps, and how 
 uv run python bench/recall/run.py --db ~/backups/artel/artel-<stamp>.db
 ```
 
-Measured 2026-09-24 against the 20:00 backup:
+Measured 2026-10-09 against the 2026-10-06 18:00 backup:
 
-| Policy | Precision | Positives served | Useful per prompt | Noise on no-answer prompts |
+| Policy | Lines injected | Precision | Positives served | Noise on no-answer prompts |
 | --- | --- | --- | --- | --- |
-| no distance cut | 0.38 | 25/37 | 0.77 | 11/11 |
-| `max_distance=1.18` | 0.49 | 28/37 | 0.81 | 7/11 |
+| no distance cut, two notes | 97 | 0.34 | 25/37 | 11/11 |
+| `max_distance=1.18`, two notes | 80 | 0.40 | 25/37 | 7/11 |
+| `max_distance=1.0`, one note | 31 | 0.65 | 20/37 | 3/11 |
+| `max_distance=0.95`, one note | 20 | 0.45 | 9/37 | 0/11 |
 
-The cut runs before diversification, so slots it frees are refilled with closer notes, which is why it serves more positives rather than fewer. Tighter cuts and lexical-overlap rules raise precision further but start losing positives; the table printed by `run.py` shows the whole frontier.
+The hook runs the third row. Silence is the typical right answer, so the policy is chosen for what it does not say: it injects 61% fewer lines than the cut it replaced and fires on three of the eleven prompts that deserve nothing instead of seven, at the cost of five positives. The fourth row shows where that trade stops paying: one step tighter and most real answers go too. `run.py` prints the whole frontier.

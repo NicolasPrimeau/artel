@@ -8,5 +8,5 @@
   "artel/server/routes/memory.py": "0a853599ddc0d39b255dd7760022780872908eaaa41fe5a00d440848417ed7a2",
   "artel/server/routes/tasks.py": "087f872c71089068c70b62776c86579d1d885276bff5efe05d031706067ef230",
   "artel/store/decay.py": "53d36fe8cf389b018ff65c1ef74d40f1736f40b513a76613834a316fa2a28bb9",
-  "scripts/_artel_hooks.py": "2f26755cd8dc28a5c2b5d901b8f316b8a12b489cc81eaf0307145294523eaa40"
+  "scripts/_artel_hooks.py": "d7cc1284025d7097bd2c73778f3ae75000d5f6c5dbd5ce229530123ef85be61a"
 }

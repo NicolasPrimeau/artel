@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import pathlib
+import time
 import uuid
 
 import pytest
@@ -69,11 +70,10 @@ def test_recall_injection_stays_inside_the_budget(monkeypatch, capsys, content):
     )
     found = _entries(4, content=content) + _entries(2, "skill", content)
     monkeypatch.setattr(hooks, "search", lambda q, limit=6, project="", max_distance=None: found)
-    monkeypatch.setattr(hooks, "related", lambda eid, limit=2: _entries(2, "linked", content))
     hooks.cmd_recall()
     ctx = _context(capsys)
     assert len(ctx) <= hooks.INJECT_BUDGET
-    assert len(ctx.splitlines()) <= 5
+    assert len(ctx.splitlines()) <= 3
 
 
 def test_gotcha_injection_stays_inside_the_budget(monkeypatch, capsys):
@@ -90,12 +90,12 @@ def test_gotcha_injection_stays_inside_the_budget(monkeypatch, capsys):
     hooks.cmd_gotcha()
     ctx = _context(capsys)
     assert len(ctx) <= hooks.INJECT_BUDGET
-    assert len(ctx.splitlines()) <= 3
+    assert len(ctx.splitlines()) == 1
 
 
 def test_session_start_is_a_pointer_not_the_handoff(monkeypatch, capsys):
     handoff = {
-        "created_at": "2026-08-11T16:21:00",
+        "created_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "summary": _NOVEL,
         "next_steps": [_NOVEL] * 7,
         "in_progress": [_RUN_ON] * 4,
@@ -106,7 +106,7 @@ def test_session_start_is_a_pointer_not_the_handoff(monkeypatch, capsys):
     hooks.cmd_session()
     ctx = _context(capsys)
     assert len(ctx) <= hooks.SESSION_BUDGET
-    assert ctx.startswith("[Artel] Last session 2026-08-11: Sentence 0")
+    assert ctx.startswith("[Artel] Last session " + time.strftime("%Y-%m-%d") + ": Sentence 0")
     assert "(+5 more)" in ctx
     assert "session_context()" in ctx
     assert "memory entries changed" not in ctx
@@ -114,5 +114,13 @@ def test_session_start_is_a_pointer_not_the_handoff(monkeypatch, capsys):
 
 def test_session_start_is_silent_without_a_handoff(monkeypatch, capsys):
     monkeypatch.setattr(hooks, "get", lambda path, timeout=0: {"last_handoff": None})
+    hooks.cmd_session()
+    assert _context(capsys) is None
+
+
+def test_session_start_is_silent_when_the_handoff_is_stale(monkeypatch, capsys):
+    handoff = {"created_at": "2026-08-11T16:21:00", "summary": "Shipped the reactor."}
+    monkeypatch.setattr(hooks, "get", lambda path, timeout=0: {"last_handoff": handoff})
+    monkeypatch.setattr(hooks.time, "time", lambda: time.mktime((2026, 10, 9, 12, 0, 0, 0, 0, -1)))
     hooks.cmd_session()
     assert _context(capsys) is None

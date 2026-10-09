@@ -198,7 +198,6 @@ def test_recall_puts_the_step_before_the_memories(monkeypatch, capsys):
             {"id": "m1", "content": "deploy via fly.io", "type": "memory"}
         ],
     )
-    monkeypatch.setattr(hooks, "related", lambda eid, limit=2: [])
     hooks.cmd_recall()
     ctx = json.loads(capsys.readouterr().out)["hookSpecificOutput"]["additionalContext"]
     assert ctx.splitlines()[0].startswith("[Artel] Procedure add-setting, step 2/2")

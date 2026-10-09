@@ -16,15 +16,15 @@ def _load():
 hooks = _load()
 
 
-def _run_recall(monkeypatch, capsys, search_results, related_results, session_id=None):
+def _run_recall(monkeypatch, capsys, search_results, session_id=None):
     session_id = session_id or f"s-{uuid.uuid4()}"
     monkeypatch.setattr(
         hooks, "payload", lambda: {"prompt": "how do we deploy the api", "session_id": session_id}
     )
+    monkeypatch.setattr(hooks, "step_lines", lambda data, proj: [])
     monkeypatch.setattr(
         hooks, "search", lambda q, limit=6, project="", max_distance=None: search_results
     )
-    monkeypatch.setattr(hooks, "related", lambda eid, limit=2: related_results)
     hooks.cmd_recall()
     out = capsys.readouterr().out
     if not out.strip():
@@ -33,19 +33,7 @@ def _run_recall(monkeypatch, capsys, search_results, related_results, session_id
     return session_id, ctx
 
 
-def test_recall_appends_graph_associates(monkeypatch, capsys):
-    _, ctx = _run_recall(
-        monkeypatch,
-        capsys,
-        [{"id": "m1", "content": "deploy via fly.io", "type": "memory"}],
-        [{"id": "m9", "content": "fly token rotates monthly", "type": "memory"}],
-    )
-    assert "deploy via fly.io" in ctx
-    assert "↳ linked:" in ctx
-    assert "fly token rotates monthly" in ctx
-
-
-def test_recall_excludes_associates_already_surfaced_by_search(monkeypatch, capsys):
+def test_recall_injects_only_the_closest_note(monkeypatch, capsys):
     _, ctx = _run_recall(
         monkeypatch,
         capsys,
@@ -53,49 +41,38 @@ def test_recall_excludes_associates_already_surfaced_by_search(monkeypatch, caps
             {"id": "m1", "content": "deploy via fly.io", "type": "memory"},
             {"id": "m2", "content": "staging needs secrets", "type": "memory"},
         ],
-        [{"id": "m2", "content": "staging needs secrets", "type": "memory"}],
     )
-    assert "↳ linked:" not in ctx
+    assert ctx == "[Artel] Note: deploy via fly.io"
 
 
-def test_recall_survives_empty_related(monkeypatch, capsys):
+def test_recall_adds_one_matching_skill(monkeypatch, capsys):
     _, ctx = _run_recall(
         monkeypatch,
         capsys,
-        [{"id": "m1", "content": "deploy via fly.io", "type": "memory"}],
-        [],
+        [
+            {"id": "m1", "content": "deploy via fly.io", "type": "memory"},
+            {"id": "k1", "content": "run the release checklist", "type": "skill"},
+            {"id": "k2", "content": "rotate the deploy token", "type": "skill"},
+        ],
     )
-    assert "deploy via fly.io" in ctx
-    assert "Linked" not in ctx
+    assert ctx.splitlines() == [
+        "[Artel] Note: deploy via fly.io",
+        "Skill: run the release checklist",
+    ]
 
 
-def test_recall_dedupes_associates_within_session(monkeypatch, capsys):
+def test_recall_is_silent_when_nothing_is_close(monkeypatch, capsys):
+    _, ctx = _run_recall(monkeypatch, capsys, [])
+    assert ctx is None
+
+
+def test_recall_never_repeats_a_note_in_a_session(monkeypatch, capsys):
     sid = f"s-{uuid.uuid4()}"
-    _, first = _run_recall(
-        monkeypatch,
-        capsys,
-        [{"id": "m1", "content": "deploy via fly.io", "type": "memory"}],
-        [{"id": "m9", "content": "fly token rotates monthly", "type": "memory"}],
-        session_id=sid,
-    )
-    assert "fly token rotates monthly" in first
-    # same session, new search hit, same associate — must not re-inject
-    _, second = _run_recall(
-        monkeypatch,
-        capsys,
-        [{"id": "m2", "content": "api gateway config", "type": "memory"}],
-        [{"id": "m9", "content": "fly token rotates monthly", "type": "memory"}],
-        session_id=sid,
-    )
-    assert second is not None
-    assert "fly token rotates monthly" not in second
-
-
-def test_related_helper_swallows_failure(monkeypatch):
-    monkeypatch.setattr(hooks, "get", lambda path: None)
-    assert hooks.related("m1") == []
-    monkeypatch.setattr(hooks, "get", lambda path: {"detail": "boom"})
-    assert hooks.related("m1") == []
+    hit = [{"id": "m1", "content": "deploy via fly.io", "type": "memory"}]
+    _, first = _run_recall(monkeypatch, capsys, hit, session_id=sid)
+    _, second = _run_recall(monkeypatch, capsys, hit, session_id=sid)
+    assert first is not None
+    assert second is None
 
 
 def test_search_lets_pruned_but_relevant_entries_surface(monkeypatch):

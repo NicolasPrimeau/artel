@@ -33,7 +33,7 @@ For a session of 20 prompts and 60 tool calls: **≈ 15.4 s of added wall-clock 
 
 ## Injections are budgeted
 
-The first measurement, on 2026-08-11, came to 17.6 s and 4,200 tokens, and most of the tokens were waste: session start injected the whole last handoff (612 tokens in that run, about 1,250 in a later real session), and recall cut notes at a fixed character count, often mid-word. An injection is a nudge, so each one now has a hard budget. Session start is a pointer to the handoff of at most 600 characters, recall and file notes are at most 480, each line is one headline or one sentence cut at a sentence or word boundary, and a line that does not fit is dropped whole. `tests/test_hook_injection_budget.py` holds every hook to that.
+The first measurement, on 2026-08-11, came to 17.6 s and 4,200 tokens, and most of the tokens were waste: session start injected the whole last handoff (612 tokens in that run, about 1,250 in a later real session), and recall cut notes at a fixed character count, often mid-word. An injection is a nudge, so each one now has a hard budget. Recall stays silent unless a note is close to the prompt, and then injects the single closest one ([measured](https://github.com/NicolasPrimeau/artel/tree/master/bench/recall)). Session start is a pointer to the handoff of at most 600 characters, recall and file notes are at most 480, each line is one headline or one sentence cut at a sentence or word boundary, and a line that does not fit is dropped whole. `tests/test_hook_injection_budget.py` holds every hook to that.
 
 Numbers to treat with care: this is `localhost`, so a remote instance is strictly worse, and tokens are counted as characters/4.
 

@@ -142,11 +142,12 @@ async def main():
     runs = [await retrieve(case, 6) for case in cases]
     for name, policy in POLICIES.items():
         print(f"{name:24} {json.dumps(score(cases, runs, policy))}")
-    for cos in (0.30, 0.35, 0.40):
+    for cos in (0.30, 0.35, 0.40, 0.45, 0.50, 0.55):
         dist = round(math.sqrt(2 - 2 * cos), 3)
         server = [await retrieve(case, 6, dist) for case in cases]
-        label = f"max_distance={dist}"
-        print(f"{label:24} {json.dumps(score(cases, server, POLICIES['current']))}")
+        for name in ("current", "top1-only"):
+            label = f"max_distance={dist} {name}"
+            print(f"{label:32} {json.dumps(score(cases, server, POLICIES[name]))}")
 
 
 if __name__ == "__main__":
