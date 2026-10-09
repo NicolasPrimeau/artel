@@ -29,6 +29,7 @@ class MCPSettings(BaseSettings):
     mcp_host: str = "0.0.0.0"
     mcp_port: int = 8001
     mcp_project: str = ""
+    mcp_board_tools: bool = True
 
     def api_key(self) -> str:
         if self.mcp_agent_key:

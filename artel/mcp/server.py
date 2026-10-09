@@ -2220,3 +2220,31 @@ def _enrich_tool_schemas() -> None:
 
 
 _enrich_tool_schemas()
+
+BOARD_TOOLS = (
+    "message_inbox",
+    "message_mark_read",
+    "message_send",
+    "message_list",
+    "inbox_cron_setup",
+    "task_list",
+    "task_create",
+    "task_claim",
+    "task_unclaim",
+    "task_complete",
+    "task_fail",
+    "task_comment",
+    "task_get",
+    "task_update",
+    "task_add_dependency",
+    "task_remove_dependency",
+)
+
+
+def hide_tools(server: FastMCP, names: tuple[str, ...]) -> None:
+    for name in names:
+        server.remove_tool(name)
+
+
+if not settings.mcp_board_tools:
+    hide_tools(mcp, BOARD_TOOLS)

@@ -108,6 +108,10 @@ def _migrate(conn: sqlite3.Connection) -> None:
         # a choice to the tokens spent reaching it.
         conn.execute("ALTER TABLE decisions ADD COLUMN session_id TEXT")
 
+    run_cols = {r[1] for r in conn.execute("PRAGMA table_info(blueprint_runs)").fetchall()}
+    if run_cols and "baselines" not in run_cols:
+        conn.execute("ALTER TABLE blueprint_runs ADD COLUMN baselines TEXT NOT NULL DEFAULT '{}'")
+
     task_cols = {r[1] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()}
     if "expected_outcome" not in task_cols:
         conn.execute("ALTER TABLE tasks ADD COLUMN expected_outcome TEXT NOT NULL DEFAULT ''")

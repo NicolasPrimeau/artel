@@ -266,6 +266,17 @@ class BlueprintRunNode(BaseModel):
     superseded: bool = False
 
 
+class BlueprintStep(BaseModel):
+    run_id: str
+    procedure: str
+    node_id: str
+    task_id: str
+    title: str
+    done_when: str
+    position: int
+    total: int
+
+
 class BlueprintRunEntry(BaseModel):
     id: str
     blueprint_id: str

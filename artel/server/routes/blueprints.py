@@ -19,8 +19,8 @@ from ..blueprint import (
     validate_document,
 )
 from ..contract import validate_contract
-from ..models import BlueprintEntry, BlueprintRunEntry, BlueprintRunNode, new_id
-from ..reactor import start_run
+from ..models import BlueprintEntry, BlueprintRunEntry, BlueprintRunNode, BlueprintStep, new_id
+from ..reactor import STATUS_RUNNING, open_steps, start_run
 
 router = APIRouter(prefix="/blueprints", tags=["blueprints"])
 
@@ -140,6 +140,30 @@ async def instantiate_blueprint(name: str, body: BlueprintInstantiate, agent_id:
     with db:
         run_id = start_run(db, row, doc, body.params, project, agent_id)
     return await get_run(run_id, agent_id)
+
+
+@router.get(
+    "/steps",
+    response_model=list[BlueprintStep],
+    summary="Open steps of running procedures, advanced first by what the server can observe",
+)
+async def list_steps(project: str | None = Query(default=None), agent_id: str = ReaderDep):
+    db = get_db()
+    project = norm_project(project)
+    sql = "SELECT * FROM blueprint_runs WHERE status=?"
+    params: list = [STATUS_RUNNING]
+    if project:
+        sql += " AND project=?"
+        params.append(project)
+    sql += " ORDER BY created_at ASC"
+    allowed = _memberships(agent_id)
+    steps: list[dict] = []
+    with db:
+        for run in db.execute(sql, params).fetchall():
+            if run["project"] and allowed is not None and run["project"] not in allowed:
+                continue
+            steps.extend(open_steps(db, run, agent_id))
+    return [BlueprintStep(**step) for step in steps]
 
 
 @router.get(

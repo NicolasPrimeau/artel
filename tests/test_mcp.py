@@ -778,3 +778,16 @@ async def test_blueprint_run_shows_the_fan_out(mcp):
     after = await mcp.blueprint_run(run_id)
     assert "Probe ontario" in after
     assert "Probe quebec" in after
+
+
+def test_board_tools_can_be_hidden_leaving_memory(mcp):
+    from mcp.server.fastmcp import FastMCP
+
+    registered = {t.name for t in mcp.mcp._tool_manager.list_tools()}
+    assert set(mcp.BOARD_TOOLS) <= registered
+
+    server = FastMCP("probe")
+    for name in (*mcp.BOARD_TOOLS, "memory_search"):
+        server.add_tool(lambda: "", name=name)
+    mcp.hide_tools(server, mcp.BOARD_TOOLS)
+    assert {t.name for t in server._tool_manager.list_tools()} == {"memory_search"}

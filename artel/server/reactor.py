@@ -34,6 +34,8 @@ EVENT_EXPANDED = "blueprint.node.expanded"
 EVENT_CHECK_FAILED = "blueprint.node.check_failed"
 EVENT_RUN_COMPLETED = "blueprint.run.completed"
 EVENT_ACTION_FAILED = "blueprint.node.action_failed"
+EVENT_OBSERVED = "blueprint.node.observed"
+OBSERVABLE_CHECKS = (CHECK_GIT, CHECK_SQLITE)
 REMEDIATION_TAG = "remediation"
 
 CheckContext = dict
@@ -222,7 +224,7 @@ def create_node_task(
     title_prefix: str = "",
 ) -> str:
     task_id = new_id()
-    baseline = _capture_baseline(node)
+    baseline = json.loads(run["baselines"] or "{}").get(node.id) or _capture_baseline(node)
     tags = list(node.tags) + [run_tag(run["id"], node.id)]
     if title_prefix:
         tags.append(REMEDIATION_TAG)
@@ -473,6 +475,93 @@ def on_task_completed(
     _finish_if_done(db, run, doc, agent_id)
 
 
+def _open_rows(db: sqlite3.Connection, run_id: str) -> list[sqlite3.Row]:
+    return db.execute(
+        """SELECT n.node_id, n.task_id, n.baseline, t.title, t.expected_outcome
+           FROM blueprint_run_nodes n JOIN tasks t ON t.id = n.task_id
+           WHERE n.run_id=? AND n.superseded=0 AND t.status NOT IN ('completed','failed')
+           ORDER BY n.created_at ASC""",
+        (run_id,),
+    ).fetchall()
+
+
+def _observable(node: TemplateNode | None) -> bool:
+    return (
+        node is not None
+        and node.done_check is not None
+        and node.done_check.kind in OBSERVABLE_CHECKS
+        and node.completion_contract is None
+    )
+
+
+def observe_run(
+    db: sqlite3.Connection, run: sqlite3.Row, doc: BlueprintDocument, agent_id: str
+) -> None:
+    for _ in range(len(doc.nodes) + 1):
+        advanced = False
+        for row in _open_rows(db, run["id"]):
+            node = node_by_id(doc, row["node_id"])
+            if not _observable(node):
+                continue
+            context = {"baseline": row["baseline"], "task_id": row["task_id"], "run_id": run["id"]}
+            passed, _reason = evaluate(node.done_check, None, db, context)
+            if not passed:
+                continue
+            db.execute(
+                """UPDATE tasks SET status='completed',
+                   updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?""",
+                (row["task_id"],),
+            )
+            _emit(
+                db,
+                EVENT_OBSERVED,
+                agent_id,
+                {"run_id": run["id"], "node_id": node.id, "task_id": row["task_id"]},
+            )
+            on_task_completed(db, row["task_id"], agent_id)
+            advanced = True
+        if not advanced:
+            return
+
+
+def _done_when(node: TemplateNode | None, expected_outcome: str) -> str:
+    if expected_outcome:
+        return expected_outcome
+    check = node.done_check if node else None
+    if check is None:
+        return ""
+    if check.kind == CHECK_GIT:
+        anchor = check.anchor or check.path or ""
+        expect = check.expect or git_anchor.EXPECT_CHANGED
+        if expect == git_anchor.EXPECT_CONTAINS:
+            return f"{anchor} contains {check.value!r} in a commit"
+        if expect == git_anchor.EXPECT_EXISTS:
+            return f"{anchor} exists in a commit"
+        return f"{anchor} changes in a commit"
+    return ""
+
+
+def open_steps(db: sqlite3.Connection, run: sqlite3.Row, agent_id: str) -> list[dict]:
+    doc = _load_document(db, run["blueprint_id"])
+    if doc is None:
+        return []
+    observe_run(db, run, doc, agent_id)
+    order = {node.id: index + 1 for index, node in enumerate(doc.nodes)}
+    return [
+        {
+            "run_id": run["id"],
+            "procedure": run["name"],
+            "node_id": row["node_id"],
+            "task_id": row["task_id"],
+            "title": row["title"],
+            "done_when": _done_when(node_by_id(doc, row["node_id"]), row["expected_outcome"]),
+            "position": order.get(row["node_id"], 0),
+            "total": len(doc.nodes),
+        }
+        for row in _open_rows(db, run["id"])
+    ]
+
+
 def start_run(
     db: sqlite3.Connection,
     blueprint_row: sqlite3.Row,
@@ -482,10 +571,20 @@ def start_run(
     agent_id: str,
 ) -> str:
     run_id = new_id()
+    baselines = {n.id: sha for n in doc.nodes if (sha := _capture_baseline(n))}
     db.execute(
-        """INSERT INTO blueprint_runs (id, blueprint_id, name, params, project, created_by)
-           VALUES (?,?,?,?,?,?)""",
-        (run_id, blueprint_row["id"], doc.name, json.dumps(params), project, agent_id),
+        """INSERT INTO blueprint_runs
+           (id, blueprint_id, name, params, project, created_by, baselines)
+           VALUES (?,?,?,?,?,?,?)""",
+        (
+            run_id,
+            blueprint_row["id"],
+            doc.name,
+            json.dumps(params),
+            project,
+            agent_id,
+            json.dumps(baselines),
+        ),
     )
     run = _load_run(db, run_id)
     for node in doc.nodes:

@@ -34,6 +34,9 @@ SESSION_BUDGET = 600
 SESSION_SUMMARY_CHARS = 200
 SESSION_STEP_CHARS = 80
 SESSION_TIMEOUT = 10.0
+STEP_TITLE_CHARS = 80
+STEP_DONE_CHARS = 90
+STEP_IDLE_SECONDS = 300
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s")
 
 ACKS = {
@@ -152,8 +155,8 @@ def resolve_project(data=None):
 
 
 def get(path, timeout=TIMEOUT):
-    req = urllib.request.Request(URL + path, headers={"x-agent-id": AID, "x-api-key": KEY})
     try:
+        req = urllib.request.Request(URL + path, headers={"x-agent-id": AID, "x-api-key": KEY})
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return json.load(resp)
     except Exception:
@@ -187,6 +190,10 @@ def payload():
         return json.load(sys.stdin)
     except Exception:
         return {}
+
+
+def _slug(text):
+    return re.sub(r"[^A-Za-z0-9_.-]", "_", text)[:80]
 
 
 def nudge(text, n):
@@ -256,23 +263,58 @@ def emit_context(event, lines, budget=INJECT_BUDGET):
     )
 
 
-def cmd_recall():
-    data = payload()
+def step_lines(data, proj):
+    marker = os.path.join(tempfile.gettempdir(), "artel-nosteps-" + _slug(AID + "-" + proj))
+    try:
+        if time.time() - os.path.getmtime(marker) < STEP_IDLE_SECONDS:
+            return []
+    except OSError:
+        pass
+    query = "?" + urllib.parse.urlencode({"project": proj}) if proj else ""
+    steps = get("/blueprints/steps" + query)
+    steps = [s for s in steps if isinstance(s, dict)] if isinstance(steps, list) else []
+    if not steps:
+        try:
+            with open(marker, "w"):
+                pass
+        except OSError:
+            pass
+        return []
+    fresh = set(seen_filter(data.get("session_id", ""), "step", [s.get("task_id") for s in steps]))
+    steps = [s for s in steps if s.get("task_id") in fresh]
+    if not steps:
+        return []
+    step = steps[0]
+    line = (
+        "Procedure "
+        + str(step.get("procedure"))
+        + ", step "
+        + str(step.get("position"))
+        + "/"
+        + str(step.get("total"))
+        + ": "
+        + nudge(step.get("title"), STEP_TITLE_CHARS)
+    )
+    if step.get("done_when"):
+        line += ". Done when " + nudge(step.get("done_when"), STEP_DONE_CHARS)
+    return [line]
+
+
+def recall_lines(data, proj):
     prompt = (data.get("prompt") or "").strip()
     if len(prompt) < 12 or prompt.lower().strip(" .!?") in ACKS:
-        return
-    proj = resolve_project(data)
+        return []
     results = [
         e
         for e in search(prompt, limit=6, project=proj, max_distance=RECALL_MAX_DISTANCE)
         if isinstance(e, dict)
     ]
     if not results:
-        return
+        return []
     fresh = set(seen_filter(data.get("session_id", ""), "recall", [e.get("id") for e in results]))
     results = [e for e in results if e.get("id") in fresh]
     if not results:
-        return
+        return []
     memories = [e for e in results if e.get("type") != "skill"][:2]
     skills = [e for e in results if e.get("type") == "skill"]
     lines = []
@@ -288,7 +330,14 @@ def cmd_recall():
         lines += ["  ↳ linked: " + entry_line(e, RECALL_LINE_CHARS) for e in assoc[:1]]
     if skills:
         lines.append("Skill that may apply: " + entry_line(skills[0], RECALL_LINE_CHARS))
-    emit_context("UserPromptSubmit", lines)
+    return lines
+
+
+def cmd_recall():
+    data = payload()
+    proj = resolve_project(data)
+    recalled = recall_lines(data, proj)
+    emit_context("UserPromptSubmit", step_lines(data, proj) + recalled)
 
 
 def cmd_gotcha():

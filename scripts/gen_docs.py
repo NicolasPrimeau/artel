@@ -62,6 +62,7 @@ SETTING_NOTES: dict[str, str] = {
     "mcp_host": "Bind address for the standalone MCP server.",
     "mcp_port": "Port for the standalone MCP server.",
     "mcp_project": "Default project for memory and task calls.",
+    "mcp_board_tools": "Expose the task and message tools. Off leaves memory, decisions and sessions, for fleets that run Artel as a hooks-driven memory substrate.",
     "archivist_id": "Agent id the archivist runs as.",
     "anthropic_api_key": "Anthropic API key for archivist reasoning.",
     "openrouter_api_key": "OpenRouter API key for archivist reasoning.",
