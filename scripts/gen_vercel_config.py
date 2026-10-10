@@ -6,6 +6,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
 DOCS = WEB / "docs"
 
+SANDBOX = "https://artel-sandbox.fly.dev/ui"
+
 BASE = {
     "$schema": "https://openapi.vercel.sh/vercel.json",
     "framework": None,
@@ -30,10 +32,13 @@ def main() -> int:
     # Sources carry the trailing slash: with trailingSlash enabled Vercel 308s
     # /plugin -> /plugin/ BEFORE redirects are evaluated, so a slash-less source
     # never matches. Both forms are emitted so the slash-less URL is a single hop.
-    # A redirect whose source is also a real top-level path would shadow it: the
-    # docs contain a page called "ledger", and /ledger/ is the ledger demo. Vercel
-    # evaluates redirects before static files, so the demo simply vanished.
-    reserved = {d.name for d in WEB.iterdir() if d.is_dir() and d.name != "docs"}
+    # A redirect whose source is also a real top-level page would shadow it, since
+    # Vercel evaluates redirects before static files.
+    reserved = {
+        d.name
+        for d in WEB.iterdir()
+        if d.is_dir() and d.name != "docs" and (d / "index.html").exists()
+    }
     redirects = []
     for page in pages:
         if page.split("/")[0] in reserved:
@@ -46,11 +51,8 @@ def main() -> int:
     redirects.append(
         {"source": "/reference/", "destination": "/docs/reference/rest/", "permanent": True}
     )
-    # /sandbox was this page's name for one afternoon. It promised the Artel
-    # dashboard and delivered the ledger, so the ledger took the honest name and
-    # /sandbox is left free for a live instance later.
-    redirects.append({"source": "/sandbox/", "destination": "/ledger/", "permanent": False})
-    redirects.append({"source": "/sandbox", "destination": "/ledger/", "permanent": False})
+    redirects.append({"source": "/sandbox/", "destination": SANDBOX, "permanent": False})
+    redirects.append({"source": "/sandbox", "destination": SANDBOX, "permanent": False})
     # One host serves the site. Without this, www.artel.run answers everything the
     # apex does and the two compete for the same pages in search results.
     redirects.append(

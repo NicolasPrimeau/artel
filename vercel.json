@@ -129,6 +129,16 @@
       "permanent": true
     },
     {
+      "source": "/ledger/",
+      "destination": "/docs/ledger/",
+      "permanent": true
+    },
+    {
+      "source": "/ledger",
+      "destination": "/docs/ledger/",
+      "permanent": true
+    },
+    {
       "source": "/mesh/",
       "destination": "/docs/mesh/",
       "permanent": true
@@ -225,12 +235,12 @@
     },
     {
       "source": "/sandbox/",
-      "destination": "/ledger/",
+      "destination": "https://artel-sandbox.fly.dev/ui",
       "permanent": false
     },
     {
       "source": "/sandbox",
-      "destination": "/ledger/",
+      "destination": "https://artel-sandbox.fly.dev/ui",
       "permanent": false
     },
     {

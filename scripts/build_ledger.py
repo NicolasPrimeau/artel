@@ -86,6 +86,7 @@ def _payloads(days: int) -> dict:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="web/ledger")
+    ap.add_argument("--data-only", action="store_true")
     args = ap.parse_args()
 
     out = pathlib.Path(args.out)
@@ -105,13 +106,14 @@ def main() -> int:
         if days == 30:
             totals = payload["projects"]["totals"]
 
-    page = (pathlib.Path(__file__).resolve().parents[1] / "artel/ledger/page.html").read_text()
-    marker = "<script>"
-    if marker not in page:
-        print("page.html has no <script> to anchor the shim before", file=sys.stderr)
-        return 1
-    at = page.index(marker)
-    (out / "index.html").write_text(page[:at] + SEO + GA + SHIM + page[at:])
+    if not args.data_only:
+        page = (pathlib.Path(__file__).resolve().parents[1] / "artel/ledger/page.html").read_text()
+        marker = "<script>"
+        if marker not in page:
+            print("page.html has no <script> to anchor the shim before", file=sys.stderr)
+            return 1
+        at = page.index(marker)
+        (out / "index.html").write_text(page[:at] + SEO + GA + SHIM + page[at:])
 
     shutil.rmtree(tmp.parent, ignore_errors=True)
 

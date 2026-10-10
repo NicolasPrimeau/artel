@@ -54,7 +54,6 @@ def main() -> int:
         "",
         f"- Site: {BASE}/",
         f"- Docs: {BASE}/docs/",
-        f"- Live ledger, real anonymized figures: {BASE}/ledger/",
         "- Source: https://github.com/NicolasPrimeau/artel",
         "",
     ]
