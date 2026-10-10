@@ -41,6 +41,7 @@ SETTING_NOTES: dict[str, str] = {
     "ui_password": "Password for the dashboard.",
     "ui_agent_id": "Agent identity the dashboard acts as.",
     "ui_default_theme": "Default dashboard theme.",
+    "ui_home_url": "Where the dashboard's Artel wordmark links. Empty keeps it on the Notepad.",
     "viewer_agent_id": "Read-only agent used by public sandbox deployments.",
     "demo_mode": "Relaxes limits for a public demo instance.",
     "archivist_agent_id": "Agent id the archivist authenticates as.",
