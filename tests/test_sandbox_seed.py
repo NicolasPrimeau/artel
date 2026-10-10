@@ -7,6 +7,7 @@ import pytest
 import artel.store.db as db_mod
 
 SCRIPT = pathlib.Path(__file__).parents[1] / "scripts" / "sandbox_seed.py"
+RESEED_DAYS = 7
 
 
 @pytest.fixture
@@ -38,3 +39,25 @@ def test_seeded_run_is_in_flight(seeded):
     _, db = seeded
     statuses = {r["status"] for r in db.execute("SELECT status FROM tasks")}
     assert statuses == {"completed", "open"}
+
+
+def test_specialities_name_only_seeded_projects(seeded):
+    _, db = seeded
+    projects = {r["project"] for r in db.execute("SELECT DISTINCT project FROM memory")}
+    tags = {r["tag"] for r in db.execute("SELECT tag FROM task_affinity")}
+    assert tags and tags <= projects
+
+
+def test_pulse_outlives_the_reseed_interval(seeded):
+    from artel.store import decay, hebbian
+
+    _, db = seeded
+    later = (datetime.now(UTC) + timedelta(days=RESEED_DAYS * 2)).isoformat()
+    edges = db.execute("SELECT weight, updated_at FROM hebbian_edge").fetchall()
+    alive = [
+        e
+        for e in edges
+        if decay.decayed(e["weight"], e["updated_at"], hebbian.HALF_LIFE_DAYS, later)
+        >= hebbian.MIN_WEIGHT
+    ]
+    assert len(alive) == len(edges)

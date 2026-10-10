@@ -15,6 +15,7 @@ PROCEDURES = pathlib.Path(__file__).with_name("sandbox_procedures.json")
 PEERS = (("https://artel.workshop.example", None), ("https://artel.laptop.example", "artel"))
 SESSION_TAG = "session:"
 CONFLICT_TAG = "sync-conflict"
+RUN_TAG = "run:"
 NEVER_POLL_MIN = 5_256_000
 
 
@@ -129,6 +130,8 @@ def build(path: pathlib.Path, seed: dict, embed: bool = False) -> dict:
     _mesh(db, seed)
     db.commit()
     asyncio.run(_procedures(json.loads(PROCEDURES.read_text())))
+    db.execute("DELETE FROM task_affinity WHERE tag LIKE ?", (f"{RUN_TAG}%",))
+    db.commit()
     return {
         t: db.execute(f"SELECT count(*) FROM {t}").fetchone()[0]
         for t in (

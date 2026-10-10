@@ -1,0 +1,33 @@
+name: Reseed sandbox
+
+on:
+  schedule:
+    - cron: "17 9 * * 1"
+  workflow_dispatch:
+
+concurrency: sandbox-reseed
+
+jobs:
+  reseed:
+    runs-on: ubuntu-latest
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Reseed if the demo is up
+        run: |
+          if ./scripts/sandbox.sh status | grep -q "the demo is down"; then
+            echo "demo is down, nothing to reseed"
+            exit 0
+          fi
+          ./scripts/sandbox.sh seed
