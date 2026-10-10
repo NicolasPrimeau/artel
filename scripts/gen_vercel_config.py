@@ -12,6 +12,7 @@ BASE = {
     "buildCommand": None,
     "outputDirectory": "web",
     "trailingSlash": True,
+    "git": {"deploymentEnabled": False},
 }
 
 

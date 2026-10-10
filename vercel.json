@@ -4,6 +4,9 @@
   "buildCommand": null,
   "outputDirectory": "web",
   "trailingSlash": true,
+  "git": {
+    "deploymentEnabled": false
+  },
   "redirects": [
     {
       "source": "/adaptive-control/",
