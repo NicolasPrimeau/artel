@@ -71,7 +71,7 @@ html{
   --dim:color-mix(in srgb,var(--t3),var(--t1) 35%);
   --faint:color-mix(in srgb,var(--t4),var(--t1) 35%);
   --rule:var(--b1);
-  --side:13rem;
+  --side:11.5rem;
   --margin:7.5rem;
   --gap:2.25rem;
   --pad:1.75rem;
@@ -91,87 +91,61 @@ a{color:var(--t1);text-decoration:underline;text-decoration-color:var(--accent);
 a:hover{color:var(--accent)}
 code,.mono{font-family:var(--f-mono);font-size:.86em}
 h1,h2{font-family:var(--f-serif);font-weight:400;margin:0;text-wrap:balance}
-h1{font-size:34px;line-height:1.1;letter-spacing:-.01em}
-h2{font-size:23px;line-height:1.2}
+h1{font-size:32px;line-height:1.1;letter-spacing:-.01em}
+h2{font-size:21px;line-height:1.2}
 p{margin:0}
+[hidden]{display:none!important}
 
-/* ── Sidebar ──────────────────────────── */
+/* ── Index ────────────────────────────── */
 #nav{
   position:fixed;left:0;top:0;bottom:0;width:var(--side);
   display:flex;flex-direction:column;
   background:var(--bg);border-right:1px solid var(--rule);z-index:190;
 }
-.brand{font:400 22px/1 var(--f-serif);color:var(--t1);text-decoration:none;letter-spacing:.01em}
+.brand{font:400 21px/1 var(--f-serif);color:var(--t1);text-decoration:none;letter-spacing:.01em}
 .brand:hover{color:var(--accent)}
-#nav .brand{margin:1.35rem 1.4rem 1.1rem;display:inline-block;align-self:flex-start}
+#nav .brand{margin:2.75rem 1.3rem 1.3rem;display:inline-block;align-self:flex-start}
 .nav-scroll{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
 .nav-scroll::-webkit-scrollbar{display:none}
-.nav-items{padding:.3rem 0 .9rem}
-.nav-group{padding:.7rem 0 .8rem;border-top:1px solid var(--rule)}
-.nav-lbl{display:block;font:11.5px/1 var(--f-mono);color:var(--faint);padding:.15rem 1.4rem .45rem}
-.nav-link{
+.nav-link,.pj{
   display:flex;align-items:baseline;gap:.5rem;
-  padding:.36rem 1.4rem;border-left:1px solid transparent;
-  font-size:15px;color:var(--dim);text-decoration:none;
+  padding:.3rem 1.3rem;border-left:1px solid transparent;
 }
+.nav-link{font-size:15px;color:var(--dim);text-decoration:none}
 .nav-link:hover{color:var(--t1)}
-.nav-link.on{color:var(--t1);border-left-color:var(--accent)}
-.nav-group .nav-link{font-size:14px;padding:.26rem 1.4rem}
-.nav-group.quiet .nav-link{color:var(--faint)}
-.nav-group.quiet .nav-link:hover,.nav-group.quiet .nav-link.on{color:var(--t1)}
-.nav-count{font:11.5px var(--f-mono);color:var(--faint)}
-.nav-footer{flex-shrink:0;border-top:1px solid var(--rule);padding:.5rem 0}
-.side-sec{padding:.7rem 0 .8rem;border-top:1px solid var(--rule)}
-.side-lbl{
-  display:flex;justify-content:space-between;align-items:center;width:100%;
-  font:11.5px/1 var(--f-mono);color:var(--faint);
-  padding:.15rem 1.4rem .15rem;text-decoration:none;
+.nav-link.on,.pj.on{border-left-color:var(--accent)}
+.nav-link.on{color:var(--t1)}
+.nav-count,.pj-n{font:11.5px var(--f-mono);color:var(--faint)}
+.side-head{
+  display:flex;justify-content:space-between;align-items:baseline;
+  font:11.5px/1 var(--f-mono);color:var(--faint);padding:1.7rem 1.3rem .45rem;
 }
-.side-lbl::after{content:'+';font-size:13px}
-.side-lbl:hover{color:var(--t1)}
-.side-sec:not(.collapsed) .side-lbl::after{content:'\2212'}
-.side-sec.collapsed .side-body{display:none}
-.side-body{padding:.55rem 1.4rem 0}
-.pj-add{display:flex;gap:.6rem;align-items:baseline;margin-bottom:.4rem}
-.pj-add input{flex:1;font-size:13px;padding:.2rem 0}
-.pj{display:flex;gap:.5rem;align-items:baseline;padding:.16rem 0;font-size:13.5px}
+.side-head button{font:13px/1 var(--f-mono);color:var(--faint);text-decoration:none;padding:0 .15rem}
+.pj-add{padding:.1rem 1.3rem .5rem}
+.pj-add input{width:100%;font-size:13px;padding:.2rem 0}
+.pj{padding-top:.16rem;padding-bottom:.16rem;flex-wrap:wrap}
 .pj button{font-size:12px}
 .pj .pj-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   color:var(--faint);text-decoration:none;font-size:13.5px}
 .pj.mine .pj-name{color:var(--dim)}
-.pj .pj-name:hover,.pj .pj-name.on{color:var(--t1)}
-.modes{display:flex;gap:1rem;margin-bottom:.45rem}
+.pj .pj-name:hover,.pj.on .pj-name{color:var(--t1)}
+.themes{padding:.9rem 1.3rem .4rem}
+.modes{display:flex;gap:1rem;margin-bottom:.4rem}
 .modes button,.th{font-size:13px;text-decoration:none;color:var(--dim)}
 .modes button[aria-pressed="true"],.th[aria-pressed="true"]{color:var(--accent)}
 .th-list{display:grid;grid-template-columns:1fr;gap:.05rem}
-.th{display:flex;align-items:center;gap:.5rem;padding:.14rem 0;white-space:nowrap}
-.th i{width:13px;height:13px;flex:none;border:2px solid;border-radius:50%}
-
-/* ── Top bar ──────────────────────────── */
-.main{margin-left:var(--side);min-width:0}
-.bar{
-  display:flex;align-items:center;gap:1.4rem;
-  padding:.6rem var(--pad);min-height:3rem;
-  background:var(--bg);border-bottom:1px solid var(--rule);
-  position:sticky;top:0;z-index:150;
-}
-.bar .brand,.bar .menu{display:none}
-.bar select{font-size:13.5px;color:var(--dim);border-bottom-color:transparent;max-width:14rem}
-.bar select:hover,.bar select:focus{color:var(--t1);border-bottom-color:var(--b2)}
-.spacer{flex:1}
-.bar-stat{font:12px var(--f-mono);color:var(--faint);white-space:nowrap}
-.connect{position:relative}
-.connect-drop{
-  display:none;position:absolute;top:calc(100% + .7rem);right:0;z-index:300;
-  width:min(30rem,calc(100vw - 2rem));background:var(--s1);border:1px solid var(--b2);padding:.9rem 1rem;
-}
-.connect-drop.open{display:block}
-.connect-drop p{font-size:13px;color:var(--dim);margin-bottom:.5rem}
-.connect-row{display:flex;gap:.9rem;align-items:baseline}
-.connect-row code{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--t1);font-size:12.5px}
+.th{display:flex;align-items:center;gap:.5rem;padding:.12rem 0;white-space:nowrap}
+.th i{width:12px;height:12px;flex:none;border:2px solid;border-radius:50%}
+.nav-foot{flex-shrink:0;padding:.7rem 1.3rem 1.1rem}
+.foot-links{display:flex;gap:.9rem;padding:.14rem 0}
+.foot-links a,.foot-links button{font:11.5px/1.6 var(--f-mono);color:var(--faint);text-decoration:none}
+.foot-links a:hover,.foot-links button:hover,.foot-links a.on{color:var(--t1)}
 
 /* ── Sheet ────────────────────────────── */
-.sheet{position:relative;max-width:62rem;padding:0 var(--pad) 5rem;min-height:calc(100vh - 3rem)}
+.main{margin-left:var(--side);min-width:0}
+.bar{display:none}
+.spacer{flex:1}
+.sheet{position:relative;max-width:62rem;padding:0 var(--pad) 5rem;min-height:100vh}
 .sheet::before{
   content:"";position:absolute;top:0;bottom:0;
   left:calc(var(--pad) + var(--margin) + var(--gap) / 2);
@@ -186,17 +160,22 @@ p{margin:0}
 }
 .e>.m span{display:block}
 .e>.c{min-width:0}
-.head{padding:2.3rem 0 1.5rem}
-.head>.m{padding-top:.95rem}
-.lede{color:var(--dim);margin-top:.65rem;max-width:64ch}
-.lede b{color:var(--t1);font-weight:400}
-.sec{padding:2.4rem 0 .9rem}
-.sec>.m{padding-top:.5rem}
-.sec p{color:var(--dim);font-size:14px;margin-top:.3rem;max-width:64ch}
+.head{padding:2.5rem 0 1.3rem}
+.stat{
+  display:flex;flex-wrap:wrap;gap:.1rem 1.1rem;align-items:baseline;margin-top:.5rem;
+  font:12.5px/1.7 var(--f-mono);color:var(--faint);
+}
+.stat select,.stat button{font:inherit;color:var(--dim);border:0;padding-top:0;padding-bottom:0}
+.stat button{text-decoration-color:var(--b2)}
+.sec{padding:2.2rem 0 .8rem}
+.sec>.m{padding-top:.4rem}
+.sec .c{display:flex;gap:.2rem 1.1rem;align-items:baseline;flex-wrap:wrap}
+.sec .note-line{font:12px/1.7 var(--f-mono);color:var(--faint)}
 .row>.m{padding-top:.95rem}
 .row>.c{position:relative;padding:.85rem 0;border-bottom:1px solid var(--rule);--ty:calc(.85rem + 12px)}
 .rows>.row:first-child>.c{border-top:1px solid var(--rule)}
-.empty{color:var(--dim);max-width:60ch}
+.empty{font:12.5px/1.7 var(--f-mono);color:var(--faint)}
+.busy{opacity:.45;transition:opacity .12s}
 .quiet{color:var(--faint)}
 .warn{color:var(--orange)}
 .bad{color:var(--red)}
@@ -209,9 +188,9 @@ p{margin:0}
 .body{white-space:pre-wrap;overflow-wrap:anywhere;color:var(--t2);font-size:14.5px;line-height:1.6;margin:0;font-family:var(--f-sans)}
 .clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .tags{font:12px var(--f-mono);color:var(--faint);display:flex;gap:.2rem .8rem;flex-wrap:wrap}
-.tags button{font:inherit;color:inherit;text-decoration:none}
-.tags button:hover{color:var(--accent)}
 .facts{font:12px/1.6 var(--f-mono);color:var(--faint);overflow-wrap:anywhere}
+.desc{color:var(--t2);font-size:14px;margin-top:.2rem;overflow-wrap:anywhere}
+.ro .w{display:none}
 
 /* ── Inputs and buttons ───────────────── */
 input,select,textarea{
@@ -228,7 +207,6 @@ select{
   background-repeat:no-repeat;background-position:right .1rem center;
 }
 option{background:var(--s1);color:var(--t1)}
-input[type="checkbox"]{accent-color:var(--accent);margin:0 .35rem 0 0;vertical-align:-1px}
 button{
   font:14px/1.5 var(--f-sans);color:var(--dim);background:none;border:0;padding:0;
   cursor:pointer;text-align:left;
@@ -238,42 +216,44 @@ button{
 button:hover{color:var(--accent);text-decoration-color:var(--accent)}
 button:disabled{opacity:.4;cursor:default;pointer-events:none}
 button.p{
-  color:var(--bg);background:var(--accent);padding:.38rem 1.05rem;
+  color:var(--bg);background:var(--accent);padding:.32rem .95rem;
   font-weight:500;text-decoration:none;
 }
 button.p:hover{color:var(--bg);filter:brightness(1.1)}
 button.danger:hover{color:var(--red);text-decoration-color:var(--red)}
-button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible,input[type="checkbox"]:focus-visible{outline:1px solid var(--accent);outline-offset:3px}
-.form{display:none;gap:.85rem;max-width:42rem;padding:.9rem 0 1.3rem}
-.form.open{display:grid}
+button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible{outline:1px solid var(--accent);outline-offset:3px}
+.ask{display:inline-flex;gap:.7rem;align-items:baseline;font-size:inherit;color:var(--t1)}
+.ask input{font-size:13.5px;padding:.1rem 0;width:11rem}
+.ask button{font-size:inherit}
+.form{display:grid;gap:.8rem;max-width:42rem;padding:.9rem 0 1.2rem}
 .frow{display:flex;gap:.8rem 1.2rem;flex-wrap:wrap;align-items:flex-end}
 .frow>input{flex:1 1 9rem}
-.tools{display:flex;gap:.5rem 1.4rem;flex-wrap:wrap;align-items:baseline;padding-bottom:.9rem}
+.frow select{font-size:14px}
+.tools{display:flex;gap:.5rem 1.4rem;flex-wrap:wrap;align-items:baseline}
 .tools select{font-size:14px}
-.tools .count{font:12px var(--f-mono);color:var(--faint);margin-left:auto}
-.subnav{display:flex;gap:1.4rem;margin-top:.9rem}
-.subnav button,.filters button{text-decoration:none;border-bottom:1px solid transparent}
-.subnav button.on,.filters button.on{color:var(--t1);border-bottom-color:var(--accent)}
-.subnav button{font-size:15px}
-.filters{display:flex;gap:.3rem 1.3rem;flex-wrap:wrap;padding:.8rem 0 1rem;align-items:baseline}
-.filters button{font:12.5px/1.6 var(--f-mono);color:var(--dim)}
+.filters{display:flex;gap:.3rem 1.3rem;flex-wrap:wrap;padding:.75rem 0 .9rem;align-items:baseline}
+.filters button{font:12.5px/1.6 var(--f-mono);color:var(--dim);text-decoration:none;border-bottom:1px solid transparent}
+.filters button.on{color:var(--t1);border-bottom-color:var(--accent)}
 .filters button i{font-style:normal;color:var(--faint);margin-left:.35rem}
-.filters .spacer{flex:1}
-.filters .plain{font:14px var(--f-sans);text-decoration:underline;text-decoration-color:var(--b2);border:0}
+.filters .plain{border:0;text-decoration:underline;text-decoration-color:var(--b2)}
+.filters kbd{font:inherit;color:var(--faint);margin-left:.4rem}
 
-/* ── Notepad ──────────────────────────── */
+/* ── Entries ──────────────────────────── */
 #q{width:100%;font:21px/1.4 var(--f-serif);padding:.45rem 0}
+#q::-webkit-search-cancel-button{-webkit-appearance:none}
 .hl,.dec,.title,.proc-name{font:400 17px/1.4 var(--f-serif);color:var(--t1);overflow-wrap:anywhere}
 .hl code,.dec code,.title code,.proc-name code{font-size:.8em}
 .hl{display:block;width:100%;text-decoration:none}
+.hl:hover{color:var(--t1)}
+.hl:focus-visible{outline:0}
 .day{display:grid;grid-template-columns:var(--margin) minmax(0,1fr);column-gap:var(--gap);padding-top:1.4rem}
 .day:first-child{padding-top:0}
 .daylbl{
-  position:sticky;top:3.2rem;align-self:start;z-index:1;margin:0;
+  position:sticky;top:0;align-self:start;z-index:1;margin:0;
   padding:.98rem 0 .5rem;background:var(--bg);
   font:400 12px/1.55 var(--f-mono);color:var(--dim);text-align:right;
 }
-.drow{position:relative;padding:.85rem 0;border-bottom:1px solid var(--rule);--ty:calc(.85rem + 12px)}
+.drow{position:relative;padding:.85rem 0;border-bottom:1px solid var(--rule);--ty:calc(.85rem + 12px);scroll-margin:4rem 0}
 .dayrows{min-width:0}
 .dayrows>.drow:first-child{border-top:1px solid var(--rule)}
 .day:not(:last-of-type) .dayrows>.drow:last-child{border-bottom:0}
@@ -288,24 +268,24 @@ button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible,
   position:absolute;left:calc(var(--tick-x) + .5px);top:var(--ty,1rem);
   width:var(--w,22px);height:2px;margin-top:-1px;
   transform:translateX(-50%);background:var(--accent);
+  transition:height .12s,margin-top .12s,background-color .12s;
 }
 .tick.low{background:var(--low)}
 .tick.idle{height:5px;margin-top:-2.5px;background:var(--bg);border:1px solid var(--faint)}
 .tick.done{background:var(--dim)}
 .tick.later{height:1px;margin-top:-.5px;background:var(--faint)}
+.note:hover>.tick,.pick:hover>.tick{background:var(--t1)}
+.drow.cur>.tick,.drow:has(>.hl:focus-visible)>.tick,.row>.c:has(>.hl:focus-visible)>.tick{height:4px;margin-top:-2px;background:var(--t1)}
 .tick.new{animation:arrive 1.8s ease-out}
 @keyframes arrive{
   0%{transform:translateX(-50%) scaleX(1.9);background:var(--t1)}
   60%{background:var(--t1)}
   100%{transform:translateX(-50%) scaleX(1)}
 }
-@media(prefers-reduced-motion:reduce){.tick.new{animation:none}}
-.reveal{opacity:0}
-.row:hover .reveal,.row:focus-within .reveal,.pj:hover .reveal,.pj:focus-within .reveal{opacity:1}
+.reveal{opacity:0;transition:opacity .12s}
+.row:hover .reveal,.row:focus-within .reveal,.pj:hover .reveal,.pj:focus-within .reveal,.reveal:has(.ask){opacity:1}
 @media(hover:none){.reveal{opacity:1}}
-.hl:hover{color:var(--accent)}
-.det{display:none;padding-top:.8rem}
-.note.open .det{display:block}
+.det{padding-top:.8rem}
 .det>*+*{margin-top:.7rem}
 .rel{border-top:1px solid var(--rule);padding-top:.6rem}
 .rel-lbl{font:12px var(--f-mono);color:var(--faint);margin-bottom:.25rem}
@@ -316,7 +296,6 @@ button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible,
 .rel summary span{font-size:12.5px;color:var(--faint);margin-left:.5rem}
 .rel details .body{margin:.4rem 0 .5rem;padding-left:.9rem;border-left:1px solid var(--rule)}
 
-/* ── Decisions ────────────────────────── */
 .dec{max-width:44rem}
 .why{display:grid;grid-template-columns:4.6rem minmax(0,1fr);gap:.3rem 0;margin:.6rem 0 0}
 .why dt{grid-column:1;font:12px/1.9 var(--f-mono);color:var(--faint)}
@@ -325,7 +304,6 @@ button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible,
 .rej{display:flex;gap:.6rem}
 .rej .x{font:13px/1.75 var(--f-mono);color:var(--red);flex:none}
 
-/* ── Procedures ───────────────────────── */
 .flight{list-style:none;margin:.7rem 0 0;padding:0}
 .flight li{position:relative;padding:.14rem 0;font-size:14px;color:var(--dim);--ty:calc(.14rem + 11px)}
 .flight li.done{color:var(--faint)}
@@ -335,59 +313,46 @@ button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible,
 .steps{list-style:none;margin:.6rem 0 0;padding:0;counter-reset:s}
 .steps li{counter-increment:s;display:grid;grid-template-columns:1.7rem minmax(0,1fr);padding:.14rem 0;font-size:14px;color:var(--t2)}
 .steps li::before{content:counter(s);font:12px/1.9 var(--f-mono);color:var(--faint)}
-.steps li.done{color:var(--faint)}
-.steps li.done::before{content:'\2713';color:var(--green)}
-.steps li.now{color:var(--t1)}
-.steps li.now::before{color:var(--accent)}
 .steps li small{display:block;font-size:12.5px;color:var(--faint)}
 
-/* ── Fleet ────────────────────────────── */
-#pulse-wrap{position:relative;margin-top:.4rem}
-#pulse-canvas{width:100%;height:360px;display:block;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.agent>.c{display:flex;flex-wrap:wrap;gap:.1rem 1rem;align-items:baseline}
+.agent .by{margin:0}
+.agent .acts{margin:0 0 0 auto}
+.connect-row{display:flex;gap:.9rem;align-items:baseline;padding:.7rem 0 .2rem}
+.connect-row code{flex:1;min-width:0;overflow-wrap:anywhere;color:var(--t1);font-size:12.5px}
+#pulse-wrap{position:relative}
+#pulse-canvas{width:100%;height:340px;display:block;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
 #pulse-tip{
   position:absolute;display:none;pointer-events:none;z-index:5;max-width:320px;
   background:var(--s1);border:1px solid var(--b2);padding:.25rem .55rem;font-size:12.5px;color:var(--t1);
 }
 .cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.6rem 2.2rem;margin-top:1.6rem}
-.cols h3{font:400 17px/1.3 var(--f-serif);margin:0}
-.cols .sub{font-size:12.5px;color:var(--faint);margin-bottom:.45rem}
+.cols h3{font:400 17px/1.3 var(--f-serif);margin:0 0 .3rem}
 .li{display:flex;gap:.7rem;align-items:baseline;padding:.4rem 0;border-bottom:1px solid var(--rule);font-size:14px;color:var(--t2)}
 .li .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .li .n{font:12px var(--f-mono);color:var(--faint);flex:none}
 .li .bar-h{height:1px;background:var(--accent);flex:none;align-self:center}
 
-/* ── Events, logs, mesh ───────────────── */
 .ev .c{display:grid;grid-template-columns:11rem 8rem minmax(0,1fr);gap:1rem;padding:.4rem 0;font:12.5px/1.6 var(--f-mono)}
 .ev>.m{padding-top:.45rem}
-.ev .ty{color:var(--accent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ev .et{color:var(--accent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ev .ag{color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ev .pl{color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .log-msg{color:var(--t2);font-size:14.5px;overflow-wrap:anywhere}
 .tok{display:grid;grid-template-columns:4.6rem minmax(0,1fr) auto;gap:.3rem 1rem;align-items:baseline;margin-top:.5rem}
 .tok .k{font:12px var(--f-mono);color:var(--faint)}
 .tok .v{font:12.5px/1.5 var(--f-mono);color:var(--t2);overflow-wrap:anywhere;min-width:0}
-details.manual summary{cursor:pointer;color:var(--dim);font-size:14px;list-style:none;text-decoration:underline;text-decoration-color:var(--b2);text-underline-offset:3px}
-details.manual summary::-webkit-details-marker{display:none}
-details.manual summary:hover{color:var(--accent)}
-details.manual .form{display:grid}
 
-/* ── Fleet rows ───────────────────────── */
-.agent>.c{display:flex;flex-wrap:wrap;gap:.1rem 1rem;align-items:baseline}
-.agent .by{margin:0}
-.agent .acts{margin:0 0 0 auto}
-.desc{color:var(--t2);font-size:14px;margin-top:.2rem;overflow-wrap:anywhere}
-
-/* ── Toast ────────────────────────────── */
 #toast-stack{position:fixed;bottom:1.2rem;right:1.2rem;z-index:1000;display:flex;flex-direction:column;gap:.5rem;align-items:flex-end}
-.toast{font-size:13.5px;padding:.5rem .9rem;background:var(--s1);border:1px solid var(--b2);color:var(--t1);max-width:22rem;transition:opacity .3s}
-.toast.ok{border-left:2px solid var(--green)}
-.toast.err{border-left:2px solid var(--red)}
-.toast.info{border-left:2px solid var(--accent)}
+.toast{font-size:13.5px;padding:.5rem .9rem;background:var(--s1);border:1px solid var(--b2);border-left:2px solid var(--red);color:var(--t1);max-width:22rem;transition:opacity .3s}
 .overlay{display:none;position:fixed;inset:0;background:var(--modal-bg);z-index:180}
 
 ::-webkit-scrollbar{width:6px;height:6px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--s3)}
+@media(prefers-reduced-motion:reduce){
+  .tick,.tick.new,.reveal,.busy,#nav{animation:none!important;transition:none!important}
+}
 
 /* ── Themes ───────────────────────────── */
 [data-theme="gruvbox-light"]{
@@ -740,26 +705,21 @@ details.manual .form{display:grid}
 }
 @media(max-width:760px){
   html{--margin:0rem;--gap:0rem;--pad:1.15rem;--tick-x:-1.05rem}
-  #nav{transform:translateX(-100%);transition:transform .2s ease;width:min(17rem,84vw);z-index:401}
+  #nav{transform:translateX(-100%);transition:transform .18s ease;width:min(16rem,84vw);z-index:401}
   #nav.open{transform:none}
+  #nav .brand{margin-top:1.3rem}
   .overlay.open{display:block;z-index:400}
   .main{margin-left:0}
-  .bar{flex-wrap:wrap;gap:.3rem 1rem;padding:.55rem var(--pad)}
-  .bar .brand,.bar .menu{display:block}
-  .bar .menu{order:9}
-  .bar .spacer{order:1}
-  .bar .bar-stat{order:2}
-  .bar .connect{order:3}
-  .bar .brand{order:0}
-  .bar::after{content:'';order:10;flex-basis:100%;height:0}
-  .bar select{order:11;flex:1 1 40%;max-width:none;border-bottom-color:var(--rule)}
+  .bar{
+    display:flex;align-items:baseline;padding:.7rem var(--pad) .6rem 1.9rem;
+    position:sticky;top:0;z-index:150;background:var(--bg);border-bottom:1px solid var(--rule);
+  }
   .sheet{padding:0 var(--pad) 3.5rem 1.9rem}
   .sheet::before{left:.85rem}
   .e{grid-template-columns:minmax(0,1fr)}
   .e>.m{text-align:left;display:flex;flex-wrap:wrap;gap:0 .9rem}
   .e>.m:empty{display:none}
-  .head{padding:1.6rem 0 1.1rem}
-  .head>.m{padding:0 0 .3rem}
+  .head{padding:1.4rem 0 1rem}
   .sec>.m{padding:0 0 .2rem}
   .row>.m{padding:.75rem 0 0}
   .row>.c{padding:.3rem 0 .8rem;--ty:calc(.3rem + 12px)}
@@ -769,10 +729,11 @@ details.manual .form{display:grid}
   .pct{display:none}
   .narrow{display:inline}
   .agent .acts{margin:0;flex-basis:100%}
-  h1{font-size:29px}
+  h1{font-size:28px}
   input,select,textarea{font-size:16px}
-  .bar select{font-size:16px}
+  .stat select,.ask input{font-size:16px}
   #q{font-size:19px}
+  .filters kbd{display:none}
   .frow>input,.frow>select{flex:1 1 100%}
   .ev .c{grid-template-columns:minmax(0,1fr);gap:0}
   .tok{grid-template-columns:minmax(0,1fr)}
@@ -780,7 +741,7 @@ details.manual .form{display:grid}
   .why dt,.why dd{grid-column:1}
   #toast-stack{left:1rem;right:1rem;align-items:stretch}
   .toast{max-width:none}
-  #pulse-canvas{height:300px}
+  #pulse-canvas{height:280px}
 }
 </style>
 </head>
@@ -791,64 +752,44 @@ details.manual .form{display:grid}
 <nav id="nav" aria-label="Main">
   <a class="brand" href="#notepad">Artel</a>
   <div class="nav-scroll">
-    <div class="nav-items">
-      <a class="nav-link" href="#notepad" data-v="notepad">Notepad <span class="nav-count" id="nc-notepad"></span></a>
-      <a class="nav-link" href="#decisions" data-v="decisions">Decisions <span class="nav-count" id="nc-decisions"></span></a>
-      <a class="nav-link" href="#procedures" data-v="procedures">Procedures <span class="nav-count" id="nc-procedures"></span></a>
-      <a class="nav-link" href="#sessions" data-v="sessions">Sessions</a>
-      <a class="nav-link" href="#fleet" data-v="fleet">Fleet</a>
+    <a class="nav-link" href="#notepad" data-v="notepad">Notepad <span class="nav-count" id="nc-notepad"></span></a>
+    <a class="nav-link" href="#decisions" data-v="decisions">Decisions <span class="nav-count" id="nc-decisions"></span></a>
+    <a class="nav-link" href="#procedures" data-v="procedures">Procedures <span class="nav-count" id="nc-procedures"></span></a>
+    <a class="nav-link" href="#sessions" data-v="sessions">Sessions</a>
+    <a class="nav-link" href="#fleet" data-v="fleet">Fleet <span class="nav-count" id="nc-fleet"></span></a>
+    <div class="side-head">
+      <span>projects</span>
+      <button class="w" onclick="toggleFold('pj-add','sidebar-proj-input')" title="join or create a project" aria-label="join or create a project">+</button>
     </div>
-    <div class="nav-group">
-      <span class="nav-lbl">system</span>
-      <a class="nav-link" href="#events" data-v="events">Events</a>
-      <a class="nav-link" href="#logs" data-v="logs">Logs</a>
-      <a class="nav-link" href="#mesh" data-v="mesh">Mesh</a>
+    <div id="pj-add" hidden>
+      <div class="pj-add"><input id="sidebar-proj-input" placeholder="name, then Enter" aria-label="project to join or create" onkeydown="if(event.key==='Enter')joinFromInput()"></div>
     </div>
-    <div class="side-sec" id="ps-projects-sidebar">
-      <button class="side-lbl" onclick="toggleSection('ps-projects-sidebar')">projects</button>
-      <div class="side-body">
-        <div class="pj-add">
-          <input id="sidebar-proj-input" placeholder="join or create" aria-label="project to join or create" onkeydown="if(event.key==='Enter')panelJoinProject('sidebar-proj-input')">
-          <button onclick="panelJoinProject('sidebar-proj-input')">join</button>
-        </div>
-        <div id="sidebar-pjlist"></div>
-      </div>
-    </div>
-    <div class="side-sec" id="ps-appearance-sidebar">
-      <button class="side-lbl" onclick="toggleSection('ps-appearance-sidebar')">appearance</button>
-      <div class="side-body">
+    <div id="sidebar-pjlist"></div>
+    <div id="ps-appearance-sidebar" hidden>
+      <div class="themes">
         <div class="modes" id="sidebar-mode-toggle"></div>
         <div class="th-list" id="sidebar-theme-row"></div>
       </div>
     </div>
   </div>
-  <div class="nav-footer">
-    <a class="nav-link auth-link" href="/ui/logout">Log out</a>
+  <div class="nav-foot">
+    <div class="foot-links">
+      <a href="#events" data-v="events">events</a>
+      <a href="#logs" data-v="logs">logs</a>
+      <a href="#mesh" data-v="mesh">mesh</a>
+    </div>
+    <div class="foot-links">
+      <button onclick="toggleFold('ps-appearance-sidebar')" id="theme-btn" aria-expanded="false">theme</button>
+      <a class="auth-link" href="/ui/logout">log out</a>
+    </div>
   </div>
 </nav>
 
 <div class="main">
 <header class="bar">
   <a class="brand" href="#notepad">Artel</a>
-  <select id="h-agent-sel" onchange="onAgentChange()" title="agent" aria-label="agent">
-    <option value="">all agents</option>
-  </select>
-  <select id="h-project" onchange="onProjectChange()" title="project" aria-label="project">
-    <option value="">all projects</option>
-  </select>
-  <div class="spacer"></div>
-  <span class="bar-stat" id="h-agent-count" style="display:none"><span id="h-active-count">0</span> active</span>
-  <div class="connect">
-    <button onclick="toggleConnect(event)">connect an agent</button>
-    <div class="connect-drop" id="h-connect-drop" onclick="event.stopPropagation()">
-      <p>Run this on the machine the agent lives on.</p>
-      <div class="connect-row">
-        <code id="h-connect-code"></code>
-        <button id="h-copy-btn" onclick="copyConnect()">copy</button>
-      </div>
-    </div>
-  </div>
-  <button class="menu" onclick="openDrawer(event)" aria-label="menu">menu</button>
+  <span class="spacer"></span>
+  <button onclick="openDrawer(event)">menu</button>
 </header>
 
 <div id="toast-stack"></div>
@@ -858,24 +799,26 @@ details.manual .form{display:grid}
 <!-- NOTEPAD -->
 <section id="panel-notepad" class="panel">
   <div class="e head">
-    <div class="m" id="np-scope"></div>
+    <div class="m"></div>
     <div class="c">
       <h1>Notepad</h1>
-      <p class="lede" id="np-summary">Everything your agents have written down.</p>
+      <div class="stat"><span id="np-stat"></span><select class="agent-sel" onchange="setAgent(this.value)" aria-label="written by"></select></div>
     </div>
   </div>
   <div class="e">
     <div class="m"></div>
     <div class="c">
-      <input id="q" type="search" placeholder="Search by meaning" title="Press / to search, Escape to clear" aria-label="search notes by meaning" autocomplete="off" onkeydown="if(event.key==='Enter')searchNotes()">
+      <input id="q" type="search" placeholder="Search by meaning" aria-label="search notes by meaning" autocomplete="off" oninput="onSearchInput()" onkeydown="if(event.key==='Enter')runSearch()">
       <div class="filters" id="np-filters"></div>
-      <div class="form" id="np-write">
-        <textarea id="mc" placeholder="What should the fleet know? Ctrl+Enter saves." rows="4"></textarea>
-        <div class="frow">
-          <input id="mtags" placeholder="tags, comma separated">
-          <select id="mtype" aria-label="note type"><option>memory</option><option>doc</option><option>skill</option></select>
-          <select id="mscope" aria-label="who can read it"><option value="project">shared</option><option value="agent">private</option></select>
-          <button class="p" onclick="writeMem()">Save note</button>
+      <div id="np-write" hidden>
+        <div class="form">
+          <textarea id="mc" placeholder="What should the fleet know?" aria-label="new note" rows="4"></textarea>
+          <div class="frow">
+            <input id="mtags" placeholder="tags, comma separated" aria-label="tags">
+            <select id="mtype" aria-label="note type"><option>memory</option><option>doc</option><option>skill</option></select>
+            <select id="mscope" aria-label="who can read it"><option value="project">shared</option><option value="agent">private</option></select>
+            <button class="p" onclick="writeMem()" title="Ctrl+Enter">Save</button>
+          </div>
         </div>
       </div>
     </div>
@@ -886,10 +829,10 @@ details.manual .form{display:grid}
 <!-- DECISIONS -->
 <section id="panel-decisions" class="panel">
   <div class="e head">
-    <div class="m" id="dc-scope"></div>
+    <div class="m"></div>
     <div class="c">
       <h1>Decisions</h1>
-      <p class="lede">What was chosen, why, and what was turned down. Notes get merged and rewritten over time. Decisions are only ever added.</p>
+      <div class="stat"><span id="dc-stat"></span><select class="agent-sel" onchange="setAgent(this.value)" aria-label="recorded by"></select></div>
     </div>
   </div>
   <div id="dlist"></div>
@@ -898,10 +841,10 @@ details.manual .form{display:grid}
 <!-- PROCEDURES -->
 <section id="panel-procedures" class="panel">
   <div class="e head">
-    <div class="m" id="pr-scope"></div>
+    <div class="m"></div>
     <div class="c">
       <h1>Procedures</h1>
-      <p class="lede">A procedure is a skill compiled into steps the server checks off as the work happens.</p>
+      <div class="stat"><span id="pr-stat"></span></div>
     </div>
   </div>
   <div id="prlist"></div>
@@ -910,43 +853,39 @@ details.manual .form{display:grid}
 <!-- SESSIONS -->
 <section id="panel-sessions" class="panel">
   <div class="e head">
-    <div class="m" id="ss-scope"></div>
-    <div class="c">
-      <h1>Sessions</h1>
-      <p class="lede">Where this dashboard's agent left off, and what the fleet wrote since. Every agent is handed its own handoff when its next session starts.</p>
-    </div>
-  </div>
-  <div id="session-context"></div>
-  <div class="e" id="handoff-box">
     <div class="m"></div>
     <div class="c">
-      <div class="acts"><button onclick="toggleForm('handoff-form','hs-summary')">Write a handoff</button></div>
-      <div class="form" id="handoff-form">
-        <textarea id="hs-summary" placeholder="What got done this session?" rows="3"></textarea>
-        <textarea id="hs-next" placeholder="Next steps, one per line" rows="2"></textarea>
-        <textarea id="hs-inprogress" placeholder="Task ids still in progress, one per line" rows="2"></textarea>
-        <div class="frow"><button class="p" onclick="saveHandoff()">Save handoff</button></div>
+      <h1>Sessions</h1>
+      <div class="stat"><span id="ss-stat"></span><button class="w" onclick="toggleFold('handoff-form','hs-summary')">new handoff</button></div>
+      <div id="handoff-form" hidden>
+        <div class="form">
+          <textarea id="hs-summary" placeholder="What got done?" aria-label="summary" rows="3"></textarea>
+          <textarea id="hs-next" placeholder="Next steps, one per line" aria-label="next steps" rows="2"></textarea>
+          <textarea id="hs-inprogress" placeholder="Task ids in progress, one per line" aria-label="in progress" rows="2"></textarea>
+          <div class="frow"><button class="p" onclick="saveHandoff()" title="Ctrl+Enter">Save</button></div>
+        </div>
       </div>
     </div>
   </div>
+  <div id="session-context"></div>
 </section>
 
 <!-- FLEET -->
 <section id="panel-fleet" class="panel">
   <div class="e head">
-    <div class="m" id="fl-scope"></div>
+    <div class="m"></div>
     <div class="c">
       <h1>Fleet</h1>
-      <p class="lede" id="agent-count-label">Every agent that writes to this notepad.</p>
+      <div class="stat"><span id="fl-stat"></span><button onclick="toggleConnect()">connect an agent</button></div>
+      <div id="connect-box" hidden>
+        <div class="connect-row"><code id="connect-code"></code><button onclick="copyText(_connectCmd(),this)">copy</button></div>
+      </div>
     </div>
   </div>
   <div class="rows" id="alist"></div>
   <div class="e sec">
     <div class="m" id="pulse-counts"></div>
-    <div class="c">
-      <h2>Pulse</h2>
-      <p>How the notes connect and which ones the fleet keeps reaching for. Solid lines are links the archivist made, dashed lines were learned from notes recalled together, red marks a contradiction.</p>
-    </div>
+    <div class="c"><h2>Pulse</h2><span class="note-line">solid linked · dashed learned · red contradicts</span></div>
   </div>
   <div class="e">
     <div class="m"></div>
@@ -956,10 +895,10 @@ details.manual .form{display:grid}
         <div id="pulse-tip"></div>
       </div>
       <div class="cols">
-        <div><h3>Most recalled</h3><div class="sub">Notes the fleet keeps reaching for.</div><div id="pulse-trails"></div></div>
-        <div><h3>Most central</h3><div class="sub">Notes that the most others lean on.</div><div id="pulse-central"></div></div>
-        <div><h3>Specialities</h3><div class="sub">What each agent has finished work on.</div><div id="pulse-affinity"></div></div>
-        <div><h3>Sync conflicts</h3><div class="sub">Concurrent edits kept for someone to resolve.</div><div id="pulse-conflicts"></div></div>
+        <div><h3>Most recalled</h3><div id="pulse-trails"></div></div>
+        <div><h3>Most central</h3><div id="pulse-central"></div></div>
+        <div><h3>Specialities</h3><div id="pulse-affinity"></div></div>
+        <div><h3>Sync conflicts</h3><div id="pulse-conflicts"></div></div>
       </div>
     </div>
   </div>
@@ -968,14 +907,14 @@ details.manual .form{display:grid}
 <!-- EVENTS -->
 <section id="panel-events" class="panel">
   <div class="e head">
-    <div class="m" id="sse-status">disconnected</div>
+    <div class="m"></div>
     <div class="c">
       <h1>Events</h1>
-      <p class="lede">A live stream of everything written to this server.</p>
-      <div class="acts">
-        <button id="ev-connect-btn" onclick="startSSE()">connect</button>
-        <button id="ev-disconnect-btn" onclick="stopSSE()" disabled>disconnect</button>
+      <div class="stat">
+        <span id="sse-status">off</span>
+        <button id="ev-toggle" onclick="toggleSSE()">pause</button>
         <button onclick="clearEvents()">clear</button>
+        <select class="agent-sel" onchange="setAgent(this.value)" aria-label="from agent"></select>
       </div>
     </div>
   </div>
@@ -985,24 +924,24 @@ details.manual .form{display:grid}
 <!-- LOGS -->
 <section id="panel-logs" class="panel">
   <div class="e head">
-    <div class="m" id="log-count"></div>
+    <div class="m"></div>
     <div class="c">
       <h1>Logs</h1>
-      <p class="lede">What the archivist and the feed poller did, kept for a person to read.</p>
-      <div class="tools" style="padding:1rem 0 0">
+      <div class="stat">
+        <span id="log-count"></span>
         <select id="log-level" onchange="loadLogs()" aria-label="level">
-          <option value="">all levels</option>
+          <option value="">any level</option>
           <option value="info">info</option>
           <option value="warning">warning</option>
           <option value="error">error</option>
         </select>
         <select id="log-source" onchange="loadLogs()" aria-label="source">
-          <option value="">all sources</option>
+          <option value="">any source</option>
           <option value="archivist">archivist</option>
           <option value="poller">poller</option>
         </select>
         <select id="log-action" onchange="loadLogs()" aria-label="action">
-          <option value="">all actions</option>
+          <option value="">any action</option>
           <option value="synthesis">synthesis</option>
           <option value="triage">triage</option>
           <option value="fact_extraction">fact extraction</option>
@@ -1023,28 +962,46 @@ details.manual .form{display:grid}
     <div class="m"></div>
     <div class="c">
       <h1>Mesh</h1>
-      <p class="lede">Link this notepad to another Artel so notes travel between machines.</p>
-      <div class="acts"><button onclick="loadMesh()">refresh</button></div>
+      <div class="stat"><span id="mesh-stat"></span></div>
     </div>
   </div>
   <div id="mesh-discovered-section"></div>
-  <div class="e sec"><div class="m"></div><div class="c"><h2>Linked peers</h2></div></div>
-  <div class="rows" id="mesh-list"></div>
+  <div class="e sec">
+    <div class="m"></div>
+    <div class="c"><h2>Peers</h2><button class="w" onclick="toggleFold('peer-form','mesh-url')">link a peer</button></div>
+  </div>
   <div class="e">
     <div class="m"></div>
-    <div class="c" style="padding-top:.9rem">
-      <details class="manual">
-        <summary>Link a peer by hand</summary>
+    <div class="c">
+      <div id="peer-form" hidden>
         <div class="form">
-          <input id="mesh-url" placeholder="Peer URL, for example http://host:8000">
-          <input id="mesh-token" placeholder="The peer's mesh token">
-          <input id="mesh-proj" placeholder="Project to share, blank for all">
-          <div class="frow"><button class="p" onclick="addPeer()">Link peer</button></div>
+          <input id="mesh-url" placeholder="Peer URL, such as http://host:8000" aria-label="peer url">
+          <input id="mesh-token" placeholder="Peer's mesh token" aria-label="peer token">
+          <input id="mesh-proj" placeholder="Project, blank for all" aria-label="project">
+          <div class="frow"><button class="p" onclick="addPeer()">Link</button></div>
         </div>
-      </details>
+      </div>
     </div>
   </div>
-  <div class="e sec"><div class="m"></div><div class="c"><h2>Your tokens</h2><p>Give one to a peer so it can pull notes from you.</p></div></div>
+  <div class="rows" id="mesh-list"></div>
+  <div class="e sec">
+    <div class="m"></div>
+    <div class="c"><h2>Tokens</h2><button class="w" onclick="toggleFold('token-form','tok-label')">new token</button></div>
+  </div>
+  <div class="e">
+    <div class="m"></div>
+    <div class="c">
+      <div id="token-form" hidden>
+        <div class="form">
+          <div class="frow">
+            <input id="tok-label" placeholder="Label" aria-label="token label">
+            <input id="tok-proj" placeholder="Project, blank for all" aria-label="project">
+            <button class="p" onclick="createMeshToken()">Create</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
   <div class="rows" id="mesh-token-section"></div>
 </section>
 
@@ -1062,11 +1019,12 @@ const ACTIVE_MS=300000;
 const VIEWS=['notepad','decisions','procedures','sessions','fleet','events','logs','mesh'];
 const ALIAS={dashboard:'notepad',memory:'notepad',notes:'notepad',projects:'notepad',tasks:'procedures',messages:'notepad',board:'notepad',agents:'fleet',pulse:'fleet'};
 const NOTE_TYPES=['memory','doc','skill','directive','scratch'];
-let _sseAbort=null,_agents=[],_projects=[],_myProjects=new Set(),_view='';
+const STILL=window.matchMedia('(prefers-reduced-motion: reduce)');
+let _sseAbort=null,_agents=[],_projects=[],_myProjects=new Set(),_view='',_project='',_agent='',_loaded={};
 
-function toast(msg,type='info',dur=3000){
+function toast(msg,dur=4000){
   const el=document.createElement('div');
-  el.className=`toast ${type}`;
+  el.className='toast';
   el.textContent=msg;
   $('toast-stack').appendChild(el);
   setTimeout(()=>{el.style.opacity='0';setTimeout(()=>el.remove(),300);},dur);
@@ -1112,14 +1070,14 @@ function byDay(list,stamp,rowFn){
 }
 function tick(width,cls,label){return `<i class="tick${cls?' '+cls:''}" style="--w:${width}px" role="img" title="${esc(label)}" aria-label="${esc(label)}"></i>`}
 function setCount(id,n){$(id).textContent=n||''}
-async function refreshCounts(){
-  const p=scopeQuery();
+function refreshCounts(){
   if(_view!=='notepad')req('GET','/memory/delta?'+scopeQuery({since:'2000-01-01T00:00:00.000Z'})).then(r=>setCount('nc-notepad',r.length)).catch(()=>{});
   if(_view!=='decisions')req('GET','/decisions?'+scopeQuery({limit:'200'})).then(r=>setCount('nc-decisions',r.length>=200?'200+':r.length)).catch(()=>{});
-  if(_view!=='procedures')req('GET','/blueprints/steps?'+p).then(r=>setCount('nc-procedures',new Set(r.map(x=>x.run_id)).size)).catch(()=>{});
+  if(_view!=='procedures')req('GET','/blueprints/steps?'+scopeQuery()).then(r=>setCount('nc-procedures',new Set(r.map(x=>x.run_id)).size)).catch(()=>{});
 }
 const when=iso=>`<span title="${esc(iso||'')}">${relTime(iso)}</span>`;
 const plural=(n,one,many)=>`${n} ${n===1?one:(many||one+'s')}`;
+const statLine=parts=>(_project?`<span class="narrow">${esc(_project)} · </span>`:'')+parts.filter(Boolean).join(' · ');
 
 async function parseErr(r){
   try{const j=await r.json();return typeof j.detail==='string'?j.detail:JSON.stringify(j.detail||j);}catch{return 'request failed ('+r.status+')';}
@@ -1137,28 +1095,103 @@ async function req(method,path,body){
   return (method==='DELETE'||r.status===204)?null:r.json();
 }
 
-function activeProject(){return $('h-project').value||null}
-function activeAgent(){return $('h-agent-sel').value||null}
+function activeProject(){return _project||null}
+function activeAgent(){return _agent||null}
 function scopeQuery(extra){
   const p=new URLSearchParams(extra||{});
-  if(activeProject())p.set('project',activeProject());
+  if(_project)p.set('project',_project);
   return p;
-}
-function scopeLabel(){
-  return `<span>${esc(activeProject()||'all projects')}</span>${activeAgent()?`<span>${esc(activeAgent())}</span>`:''}`;
 }
 
 function row(m,c,cls){return `<div class="row e${cls?' '+cls:''}"><div class="m">${m||''}</div><div class="c">${c}</div></div>`}
-function loading(id){$(id).innerHTML=row('','<span class="quiet">Loading.</span>')}
 function emptyState(msg){return row('',`<p class="empty">${msg}</p>`)}
 function errState(e){
   const msg=String(e.message||e);
-  if(/insufficient role/i.test(msg))return emptyState('Only the owner can see this. <a href="/ui/login">Log in</a> to read it.');
+  if(/insufficient role/i.test(msg))return emptyState('owner only · <a href="/ui/login">log in</a>');
   return row('',`<p class="bad">${esc(msg)}</p>`);
 }
-function toggleForm(id,focusId){
-  const open=$(id).classList.toggle('open');
-  if(open&&focusId)$(focusId).focus();
+function busy(id){const el=$(id);if(el.children.length)el.classList.add('busy')}
+function put(id,html){const el=$(id);el.innerHTML=html;el.classList.remove('busy')}
+
+function fold(el,open){
+  if(open===!el.hidden)return;
+  if(STILL.matches){el.hidden=!open;return;}
+  const turn=el._fold=(el._fold||0)+1;
+  const settle=()=>{
+    if(el._fold!==turn)return;
+    el.style.height=el.style.overflow=el.style.transition='';
+    if(!open)el.hidden=true;
+  };
+  if(open){
+    el.hidden=false;
+    const h=el.scrollHeight;
+    el.style.height='0px';el.style.overflow='hidden';
+    el.offsetHeight;
+    el.style.transition='height .15s ease';el.style.height=h+'px';
+  }else{
+    el.style.height=el.getBoundingClientRect().height+'px';el.style.overflow='hidden';
+    el.offsetHeight;
+    el.style.transition='height .15s ease';el.style.height='0px';
+  }
+  setTimeout(settle,190);
+}
+function resize(el,mutate){
+  if(STILL.matches){mutate();return;}
+  const from=el.getBoundingClientRect().height;
+  mutate();
+  const to=el.getBoundingClientRect().height;
+  if(Math.abs(from-to)<2)return;
+  el.style.height=from+'px';el.style.overflow='hidden';
+  el.offsetHeight;
+  el.style.transition='height .15s ease';el.style.height=to+'px';
+  setTimeout(()=>{el.style.height=el.style.overflow=el.style.transition='';},190);
+}
+function toggleFold(id,focusId){
+  const el=$(id),open=el.hidden;
+  fold(el,open);
+  if(open&&focusId)$(focusId).focus({preventScroll:true});
+  return open;
+}
+function ask(btn,fn,...args){
+  const box=document.createElement('span');
+  box.className='ask';
+  box.innerHTML=`<span>${esc(btn.textContent.trim())}?</span><button class="danger">yes</button><button>no</button>`;
+  const restore=()=>{clearTimeout(timer);if(box.isConnected)box.replaceWith(btn);};
+  const timer=setTimeout(restore,6000);
+  box.children[1].onclick=()=>{restore();window[fn](...args);};
+  box.children[2].onclick=()=>{restore();btn.focus();};
+  btn.replaceWith(box);
+  box.children[2].focus();
+}
+function askText(btn,fn,placeholder,value,...args){
+  const box=document.createElement('span');
+  box.className='ask';
+  box.innerHTML=`<input placeholder="${esc(placeholder)}" aria-label="${esc(placeholder)}" value="${esc(value||'')}"><button>ok</button><button>cancel</button>`;
+  const input=box.firstChild;
+  const restore=()=>{if(box.isConnected)box.replaceWith(btn);};
+  const go=()=>{const v=input.value.trim();restore();window[fn](...args,v);};
+  input.onkeydown=e=>{
+    if(e.key==='Enter')go();
+    if(e.key==='Escape'){e.stopPropagation();restore();btn.focus();}
+  };
+  box.children[1].onclick=go;
+  box.children[2].onclick=restore;
+  btn.replaceWith(box);
+  input.focus();input.select();
+}
+function flashLabel(btn,text){
+  if(!btn)return;
+  const was=btn.textContent;
+  btn.textContent=text;
+  setTimeout(()=>{btn.textContent=was;},1400);
+}
+function copyText(text,btn){
+  const done=()=>flashLabel(btn,'copied');
+  if(navigator.clipboard){navigator.clipboard.writeText(text).then(done,()=>toast('Could not copy'));return;}
+  const el=document.createElement('textarea');
+  el.value=text;el.style.cssText='position:fixed;opacity:0';
+  document.body.appendChild(el);el.select();
+  document.execCommand('copy');document.body.removeChild(el);done();
 }
 
 function parseRoute(raw){
@@ -1170,45 +1203,33 @@ function parseRoute(raw){
 function route(){
   let r=parseRoute(location.hash);
   if(!r){let s='';try{s=localStorage.getItem('artel-tab')||''}catch(e){}r=parseRoute(s)||{v:'notepad',sub:''};}
-  show(r.v,r.sub);
+  show(r.v);
 }
-function show(v,sub){
+function syncUrl(){
+  const qs=new URLSearchParams(location.search);
+  if(_project)qs.set('project',_project);else qs.delete('project');
+  if(_agent)qs.set('agent',_agent);else qs.delete('agent');
+  const q=qs.toString(),url=location.pathname+(q?'?'+q:'')+'#'+_view;
+  if(location.pathname+location.search+location.hash!==url)history.replaceState(null,'',url);
+}
+function show(v){
   if(_view==='events'&&v!=='events')stopSSE();
   _view=v;
   document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id==='panel-'+v));
   document.querySelectorAll('#nav [data-v]').forEach(a=>a.classList.toggle('on',a.dataset.v===v));
-  const h='#'+v;
-  try{localStorage.setItem('artel-tab',h.slice(1))}catch(e){}
-  if(location.hash!==h)history.replaceState(null,'',location.pathname+location.search+h);
+  try{localStorage.setItem('artel-tab',v)}catch(e){}
+  syncUrl();
   closeDrawer();
   loadView();
 }
-function loadView(quiet){
-  const v=_view;
-  if(v==='notepad')refreshNotes(quiet);
-  if(v==='decisions')loadDecisions(quiet);
-  if(v==='procedures')loadProcedures(quiet);
-  if(v==='sessions'&&!quiet)loadSession();
-  if(v==='fleet'){loadAgents(quiet);if(!quiet)loadPulse();}
-  if(v==='events'&&!quiet&&!_sseAbort)startSSE();
-  if(v==='logs'&&!quiet)loadLogs();
-  if(v==='mesh'&&!quiet)loadMesh();
+function scopeKey(){return _project+'|'+_agent}
+function loadView(){
+  const key=scopeKey(),quiet=_loaded[_view]===key;
+  _loaded[_view]=key;
+  LOADERS[_view](quiet);
 }
 window.addEventListener('hashchange',route);
 
-function toggleSection(id){
-  const el=$(id);if(!el)return;
-  el.classList.toggle('collapsed');
-  try{localStorage.setItem('artel-ps-'+id,el.classList.contains('collapsed')?'1':'0');}catch(e){}
-}
-(function(){
-  const defaults={'ps-projects-sidebar':'0','ps-appearance-sidebar':'1'};
-  Object.keys(defaults).forEach(id=>{
-    let v=null;
-    try{v=localStorage.getItem('artel-ps-'+id)}catch(e){}
-    if((v===null?defaults[id]:v)==='1'&&$(id))$(id).classList.add('collapsed');
-  });
-}());
 function openDrawer(e){
   if(e)e.stopPropagation();
   $('nav').classList.add('open');$('overlay').classList.add('open');
@@ -1265,26 +1286,29 @@ function renderThemePickers(){
   $('sidebar-theme-row').innerHTML=_THEMES.map(t=>`<button class="th" aria-pressed="${t.id===_curTheme}" onclick="setTheme('${t.id}')"><i style="background:${light?t.bl:t.bd};border-color:${light?t.al:t.ad}"></i>${esc(t.label)}</button>`).join('');
   $('sidebar-mode-toggle').innerHTML=['dark','light'].map(m=>`<button aria-pressed="${_curMode===m}" onclick="setMode('${m}')">${m}</button>`).join('');
 }
-async function panelJoinProject(inputId){
-  const name=$(inputId).value.trim();if(!name)return;
-  await joinProject(name);$(inputId).value='';
-}
 
-function onProjectChange(){
+function setProject(name){
+  _project=_project===name?'':name;
   _noteLimit=NOTE_PAGE;
+  renderProjects();
+  syncUrl();
+  closeDrawer();
   loadView();
-  loadProjects();
   refreshCounts();
 }
-function onAgentChange(){
+function setAgent(id){
+  _agent=id||'';
   _noteLimit=NOTE_PAGE;
+  document.querySelectorAll('.agent-sel').forEach(s=>{s.value=_agent});
+  syncUrl();
   if(_view==='events'){if(_sseAbort)startSSE();return;}
   loadView();
 }
 
 async function init(){
   if(window._agent_role==='viewer'){
-    document.querySelectorAll('.auth-link').forEach(a=>{a.textContent='Log in';a.href='/ui/login';});
+    document.body.classList.add('ro');
+    document.querySelectorAll('.auth-link').forEach(a=>{a.textContent='log in';a.href='/ui/login';});
   }
   if(window._agent_role==='owner'){
     const opt=document.createElement('option');
@@ -1292,31 +1316,14 @@ async function init(){
     $('mtype').appendChild(opt);
   }
   renderThemePickers();
-  await Promise.all([loadProjectsHeader(),loadAgentsGlobal()]);
   const qs=new URLSearchParams(location.search);
-  const dlp=qs.get('project'),dla=qs.get('agent');
-  if(dlp&&[...$('h-project').options].some(o=>o.value===dlp))$('h-project').value=dlp;
-  if(dla&&[...$('h-agent-sel').options].some(o=>o.value===dla))$('h-agent-sel').value=dla;
+  _project=qs.get('project')||'';
+  await Promise.all([loadProjects(),loadAgentsGlobal()]);
+  if(_project&&!_projects.some(p=>p.name===_project)){_project='';renderProjects();}
+  const dla=qs.get('agent');
+  if(dla&&_agents.some(a=>a.agent_id===dla)){_agent=dla;document.querySelectorAll('.agent-sel').forEach(s=>{s.value=dla});}
   route();
-  loadProjects();startLive();refreshCounts();
-}
-
-async function loadProjectsHeader(){
-  try{
-    const [all,mine]=await Promise.all([
-      req('GET','/projects'),
-      req('GET','/projects/mine').catch(()=>[]),
-    ]);
-    _projects=all;_myProjects=new Set(mine.map(p=>p.project_id));
-    const sel=$('h-project'),cur=sel.value;
-    sel.innerHTML='<option value="">all projects</option>';
-    all.forEach(p=>{
-      const o=document.createElement('option');
-      o.value=p.name;o.textContent=p.name;
-      sel.appendChild(o);
-    });
-    if(cur&&all.some(p=>p.name===cur))sel.value=cur;
-  }catch(_){}
+  startLive();refreshCounts();
 }
 
 function uniqueAgents(list){
@@ -1327,119 +1334,131 @@ function uniqueAgents(list){
 async function loadAgentsGlobal(){
   try{
     _agents=uniqueAgents(await req('GET','/agents'));
-    const dl=$('agent-list-dl'),ha=$('h-agent-sel');
-    const curH=ha.value;
-    dl.innerHTML='';
-    ha.innerHTML='<option value="">all agents</option>';
-    _agents.forEach(a=>{
-      const o=document.createElement('option');o.value=a.agent_id;o.textContent=a.agent_id;
-      dl.appendChild(o.cloneNode(true));
-      ha.appendChild(o);
-    });
-    ha.value=curH;
+    const opts='<option value="">any agent</option>'+_agents.map(a=>`<option value="${esc(a.agent_id)}">${esc(a.agent_id)}</option>`).join('');
+    document.querySelectorAll('.agent-sel').forEach(s=>{s.innerHTML=opts;s.value=_agent;});
     const now=Date.now();
-    const active=_agents.filter(a=>a.last_seen&&now-Date.parse(a.last_seen)<ACTIVE_MS).length;
-    $('h-active-count').textContent=active;
-    $('h-agent-count').style.display=active?'':'none';
+    setCount('nc-fleet',_agents.filter(a=>a.last_seen&&now-Date.parse(a.last_seen)<ACTIVE_MS).length);
   }catch(_){}
 }
 
 const NOTE_PAGE=60;
-let _all=[],_hits=null,_noteType='',_noteLimit=NOTE_PAGE,_openNotes=new Set(),_editingNote=null,_related={},_noteSeq=0,_newNotes=new Set();
+let _all=[],_hits=null,_noteType='',_noteLimit=NOTE_PAGE,_openNotes=new Set(),_editingNote=null,_related={},_noteSeq=0,_newNotes=new Set(),_cursor='',_searchTimer=0;
 
 function noteTitle(e){
   const line=clean(e.headline||clean(e.content).split('\n')[0]);
   return line.length>160?line.slice(0,160).trimEnd()+'…':(line||'(empty note)');
 }
 function noteById(id){return (_hits||[]).find(e=>e.id===id)||_all.find(e=>e.id===id)}
-
+function searchQuery(q){
+  const s=scopeQuery({q,limit:'50'});
+  if(_agent)s.set('agent',_agent);
+  if(_noteType)s.set('type',_noteType);
+  return '/memory/search?'+s;
+}
 async function refreshNotes(quiet){
   if(quiet&&_editingNote)return;
   const seq=++_noteSeq;
   const q=$('q').value.trim();
-  if(!quiet)loading('mlist');
+  if(!quiet)busy('mlist');
   const p=scopeQuery({since:'2000-01-01T00:00:00.000Z'});
-  if(activeAgent())p.set('agent',activeAgent());
+  if(_agent)p.set('agent',_agent);
   try{
-    const jobs=[req('GET','/memory/delta?'+p)];
-    if(q){
-      const s=scopeQuery({q,limit:'50'});
-      if(activeAgent())s.set('agent',activeAgent());
-      if(_noteType)s.set('type',_noteType);
-      jobs.push(req('GET','/memory/search?'+s));
-    }
-    const [all,hits]=await Promise.all(jobs);
+    const [all,hits]=await Promise.all([req('GET','/memory/delta?'+p),q?req('GET',searchQuery(q)):null]);
     if(seq!==_noteSeq)return;
     const before=new Set(_all.map(e=>e.id));
     _all=all.reverse();_hits=q?hits:null;
-    _newNotes=quiet&&before.size?new Set(_all.filter(e=>!before.has(e.id)).map(e=>e.id)):new Set();
-    if(!activeAgent())setCount('nc-notepad',_all.length);
+    if(quiet&&before.size)_all.forEach(e=>{if(!before.has(e.id))_newNotes.add(e.id)});
+    if(!_agent)setCount('nc-notepad',_all.length);
     renderNotes();
-  }catch(e){if(seq===_noteSeq)$('mlist').innerHTML=errState(e);}
+  }catch(e){if(seq===_noteSeq)put('mlist',errState(e));}
 }
-function searchNotes(){_noteLimit=NOTE_PAGE;refreshNotes();}
-function clearSearch(){$('q').value='';_noteType='';searchNotes();}
-function setNoteType(t){_noteType=t;_noteLimit=NOTE_PAGE;if(_hits)refreshNotes();else renderNotes();}
+function onSearchInput(){
+  clearTimeout(_searchTimer);
+  _searchTimer=setTimeout(runSearch,260);
+}
+async function runSearch(){
+  clearTimeout(_searchTimer);
+  const q=$('q').value.trim();
+  _noteLimit=NOTE_PAGE;
+  const seq=++_noteSeq;
+  if(!q){_hits=null;renderNotes();return;}
+  busy('mlist');
+  try{
+    const hits=await req('GET',searchQuery(q));
+    if(seq!==_noteSeq)return;
+    _hits=hits;renderNotes();
+  }catch(e){if(seq===_noteSeq)put('mlist',errState(e));}
+}
+function setNoteType(t){_noteType=t;_noteLimit=NOTE_PAGE;if(_hits)runSearch();else renderNotes();}
+function newNote(){
+  if(window._agent_role==='viewer')return;
+  fold($('np-write'),true);
+  $('mc').focus({preventScroll:true});
+  $('np-write').scrollIntoView({block:'nearest'});
+}
 
 function renderNotes(){
   const q=$('q').value.trim();
   const counts={};_all.forEach(e=>{counts[e.type]=(counts[e.type]||0)+1});
   const list=_hits?_hits:(_noteType?_all.filter(e=>e.type===_noteType):_all);
-  $('np-scope').innerHTML=scopeLabel();
   const writers=new Set(_all.map(e=>e.agent_id)).size;
-  $('np-summary').innerHTML=_all.length
-    ?`<b>${plural(_all.length,'note')}</b> from ${plural(writers,'agent')}, last written ${relTime(_all[0].updated_at)}.`
-    :'Nothing written here yet.';
+  $('np-stat').innerHTML=statLine(_all.length?[plural(_all.length,'note'),plural(writers,'agent'),relTime(_all[0].updated_at)]:['empty']);
   const types=NOTE_TYPES.filter(t=>counts[t]||t===_noteType);
   $('np-filters').innerHTML=
     `<button class="${_noteType?'':'on'}" onclick="setNoteType('')">all<i>${_all.length}</i></button>`+
     types.map(t=>`<button class="${_noteType===t?'on':''}" onclick="setNoteType('${t}')">${t}<i>${counts[t]||0}</i></button>`).join('')+
     '<span class="spacer"></span>'+
-    (q?`<button class="plain" onclick="clearSearch()">clear search</button>`:'')+
-    `<button class="plain" onclick="toggleForm('np-write','mc')">Write a note</button>`;
+    `<button class="plain w" onclick="toggleFold('np-write','mc')" title="n">new note</button>`;
   if(!list.length){
-    $('mlist').innerHTML=emptyState(_hits?`Nothing in the notepad matches “${esc(q)}”.`
-      :_all.length?'No notes of this type.'
-      :'No notes yet, they appear here as your agents work.');
+    put('mlist',emptyState(_hits?'no matches':_all.length?'none of this type':'no notes yet'));
     return;
   }
+  const wanted=_focusNote?list.findIndex(e=>e.id===_focusNote):-1;
+  if(wanted>=_noteLimit)_noteLimit=wanted+10;
   const shown=list.slice(0,_noteLimit);
-  const more=list.length>shown.length
-    ?row('',`<button onclick="_noteLimit+=NOTE_PAGE*2;renderNotes()">Show ${Math.min(NOTE_PAGE*2,list.length-shown.length)} more of ${list.length-shown.length}</button>`):'';
-  $('mlist').innerHTML=(_hits
+  const left=list.length-shown.length;
+  const more=left>0?row('',`<button onclick="_noteLimit+=NOTE_PAGE*2;renderNotes()">${left} more</button>`):'';
+  put('mlist',(_hits
     ?dayGroup(plural(list.length,'match','matches'),shown.map(noteRow).join(''))
-    :byDay(shown,e=>e.updated_at,noteRow))+more;
+    :byDay(shown,e=>e.updated_at,noteRow))+more);
   _newNotes=new Set();
   shown.forEach(e=>{if(_openNotes.has(e.id))fillNote(e.id)});
+  if(wanted>=0){
+    _focusNote='';
+    setCursor($('n-'+list[wanted].id),true);
+    $('n-'+list[wanted].id).scrollIntoView({block:'start'});
+  }else if(_cursor&&$(_cursor))$(_cursor).classList.add('cur');
 }
 function noteRow(e){
   const directive=e.type==='directive';
   const conf=directive?1:Math.max(0,Math.min(1,e.confidence));
   const pct=Math.round(conf*100);
   const low=conf<0.7;
+  const open=_openNotes.has(e.id);
   const mark=tick(4+Math.round(conf*18),(low?'low':'')+(_newNotes.has(e.id)?' new':''),directive?'directive, always applies':`confidence ${pct}%`);
   const shy=pct<100?`<span class="pct${low?' low':''}">${pct}%</span>`:'';
   const bits=[];
   if(e.type!=='memory')bits.push(`<span class="ty">${esc(e.type)}</span>`);
   bits.push(`<b>${esc(e.agent_id)}</b>`,_hits?when(e.updated_at):clock(e.updated_at));
-  if(e.project&&!activeProject())bits.push(esc(e.project));
+  if(e.project&&!_project)bits.push(esc(e.project));
   if(e.scope==='agent')bits.push('private');
   if(e.stale)bits.push('<span class="warn">stale</span>');
-  return `<div class="drow note${_openNotes.has(e.id)?' open':''}" id="n-${e.id}">
+  return `<div class="drow note" id="n-${e.id}">
     ${mark}${shy}
-    <button class="hl" onclick="toggleNote('${e.id}')" aria-expanded="${_openNotes.has(e.id)}">${md(noteTitle(e))}</button>
+    <button class="hl" onclick="toggleNote('${e.id}')" aria-expanded="${open}">${md(noteTitle(e))}</button>
     <div class="by">${bits.join(' · ')}${pct<100?`<span class="narrow${low?' low':''}"> · confidence ${pct}%</span>`:''}</div>
-    <div class="det" id="nd-${e.id}"></div>
+    <div id="nd-${e.id}"${open?'':' hidden'}></div>
   </div>`;
 }
-function toggleNote(id){
+function toggleNote(id,keep){
   if(_editingNote===id)return;
-  if(_openNotes.has(id))_openNotes.delete(id);else _openNotes.add(id);
-  const el=$('n-'+id);if(!el)return;
-  const open=_openNotes.has(id);
-  el.classList.toggle('open',open);
+  const el=$('n-'+id),box=$('nd-'+id);if(!el)return;
+  const open=!_openNotes.has(id);
+  if(open)_openNotes.add(id);else _openNotes.delete(id);
   el.querySelector('.hl').setAttribute('aria-expanded',open);
   if(open)fillNote(id);
+  fold(box,open);
+  if(!keep)setCursor(el,true);
 }
 function fillNote(id){
   const e=noteById(id),box=$('nd-'+id);if(!e||!box)return;
@@ -1449,85 +1468,125 @@ function fillNote(id){
   if(e.parents?.length)facts.push('merged from '+e.parents.length);
   if(e.source_path)facts.push(esc(e.source_path));
   if(e.created_at)facts.push('first written '+relTime(e.created_at));
-  box.innerHTML=`
+  const rel=_related[id];
+  box.innerHTML=`<div class="det">
     <pre class="body">${md(e.content)}</pre>
     ${e.tags?.length?`<div class="tags">${e.tags.map(t=>`<span>#${esc(t)}</span>`).join('')}</div>`:''}
     <div class="facts">${facts.join(' · ')}</div>
-    <div class="acts">
+    <div class="acts w">
       <button onclick="startEditMem('${e.id}')">edit</button>
-      <button class="danger" onclick="deleteMem('${e.id}')">delete</button>
+      <button class="danger" onclick="ask(this,'deleteMem','${e.id}')">delete</button>
     </div>
-    <div class="rel" id="nr-${e.id}" style="display:none"></div>`;
-  loadRelated(id);
+    <div class="rel" id="nr-${e.id}"${rel&&rel.length?'':' hidden'}>${rel?relatedHtml(rel):''}</div>
+  </div>`;
+  if(!rel)loadRelated(id);
 }
-async function loadRelated(id){
-  try{
-    if(!_related[id])_related[id]=await req('GET',`/memory/${id}/related?limit=5`);
-  }catch(_){_related[id]=[];}
-  const box=$('nr-'+id),rel=_related[id];
-  if(!box||!rel.length)return;
-  box.style.display='';
-  box.innerHTML='<div class="rel-lbl">related notes</div>'+rel.map(r=>`<details>
+function relatedHtml(rel){
+  return '<div class="rel-lbl">related</div>'+rel.map(r=>`<details>
     <summary>${md(noteTitle(r))}<span>${esc(r.agent_id)}, ${relTime(r.updated_at)}</span></summary>
     <pre class="body">${md(r.content)}</pre>
   </details>`).join('');
 }
+async function loadRelated(id){
+  try{_related[id]=await req('GET',`/memory/${id}/related?limit=5`);}
+  catch(_){_related[id]=[];}
+  const box=$('nr-'+id),rel=_related[id];
+  if(!box||!rel.length)return;
+  box.innerHTML=relatedHtml(rel);
+  fold(box,true);
+}
 function startEditMem(id){
   const e=noteById(id),box=$('nd-'+id);if(!e||!box)return;
   _editingNote=id;
-  box.innerHTML=`<textarea id="mta-${id}" rows="8">${esc(e.content)}</textarea>
-    <div class="acts"><button class="p" onclick="saveMem('${id}')">Save</button><button onclick="cancelEditMem('${id}')">cancel</button></div>`;
-  $('mta-'+id).focus();
+  resize(box,()=>{
+    box.innerHTML=`<div class="det"><textarea id="mta-${id}" aria-label="note text" rows="${Math.min(16,Math.max(5,e.content.split('\n').length+2))}">${esc(e.content)}</textarea>
+      <div class="acts"><button class="p" onclick="saveMem('${id}')" title="Ctrl+Enter">Save</button><button onclick="cancelEditMem('${id}')">cancel</button></div></div>`;
+  });
+  $('mta-'+id).focus({preventScroll:true});
 }
-function cancelEditMem(id){_editingNote=null;fillNote(id);}
+function cancelEditMem(id){
+  _editingNote=null;
+  const box=$('nd-'+id);
+  if(box)resize(box,()=>fillNote(id));
+}
 async function saveMem(id){
   const content=$('mta-'+id).value.trim();if(!content)return;
   try{
-    await req('PATCH',`/memory/${id}`,{content});
+    const saved=await req('PATCH',`/memory/${id}`,{content});
     _editingNote=null;
-    toast('Note updated','ok');refreshNotes(true);
-  }catch(e){toast('Save failed: '+e.message,'err');}
+    [_all,_hits||[]].forEach(list=>{const i=list.findIndex(e=>e.id===id);if(i>=0)list[i]=saved;});
+    renderNotes();
+  }catch(e){toast('Save failed: '+e.message);}
 }
 async function writeMem(){
   const c=$('mc').value.trim();if(!c)return;
   const tags=$('mtags').value.split(',').map(t=>t.trim()).filter(Boolean);
   try{
-    await req('POST','/memory',{content:c,type:$('mtype').value,project:activeProject(),scope:$('mscope').value,tags,confidence:1.0,parents:[]});
+    const saved=await req('POST','/memory',{content:c,type:$('mtype').value,project:activeProject(),scope:$('mscope').value,tags,confidence:1.0,parents:[]});
     $('mc').value='';$('mtags').value='';
-    $('np-write').classList.remove('open');
-    toast('Note saved','ok');refreshNotes(true);
-  }catch(e){toast('Write failed: '+e.message,'err');}
+    fold($('np-write'),false);
+    _all=[saved,..._all.filter(e=>e.id!==saved.id)];
+    _newNotes.add(saved.id);
+    _cursor='n-'+saved.id;
+    if(!_agent)setCount('nc-notepad',_all.length);
+    renderNotes();
+  }catch(e){toast('Write failed: '+e.message);}
 }
 async function deleteMem(id){
-  if(!confirm('Delete this note?'))return;
   try{
     await req('DELETE',`/memory/${id}`);
     _openNotes.delete(id);
-    toast('Note deleted','info');refreshNotes(true);
-  }catch(e){toast('Delete failed: '+e.message,'err');}
+    _all=_all.filter(e=>e.id!==id);
+    if(_hits)_hits=_hits.filter(e=>e.id!==id);
+    if(!_agent)setCount('nc-notepad',_all.length);
+    const el=$('n-'+id);
+    if(el&&!STILL.matches){fold(el,false);setTimeout(renderNotes,200);}
+    else renderNotes();
+  }catch(e){toast('Delete failed: '+e.message);}
+}
+
+function cursorRows(){return [...document.querySelectorAll('#panel-'+_view+' .drow')]}
+function setCursor(el,still){
+  document.querySelectorAll('.drow.cur').forEach(r=>r.classList.remove('cur'));
+  _cursor=el?el.id:'';
+  if(!el)return;
+  el.classList.add('cur');
+  if(!still)el.scrollIntoView({block:'nearest'});
+}
+function moveCursor(step){
+  const rows=cursorRows();if(!rows.length)return false;
+  if(document.activeElement&&document.activeElement!==document.body)document.activeElement.blur();
+  const at=rows.findIndex(r=>r.id===_cursor);
+  setCursor(rows[at<0?(step>0?0:rows.length-1):Math.max(0,Math.min(rows.length-1,at+step))]);
+  return true;
+}
+function openCursor(){
+  const el=_cursor&&$(_cursor);if(!el)return false;
+  if(el.classList.contains('note'))toggleNote(el.id.slice(2),true);
+  else if(el.id.startsWith('d-')&&!$('dm-'+el.id.slice(2)).hidden)toggleWhy(el.id.slice(2));
+  else return false;
+  return true;
 }
 
 const DEC_PAGE=40;
 let _decisions=[],_decLimit=DEC_PAGE,_openWhy=new Set();
 async function loadDecisions(quiet){
-  $('dc-scope').innerHTML=scopeLabel();
-  if(!quiet){loading('dlist');_decLimit=DEC_PAGE;}
+  if(!quiet){busy('dlist');_decLimit=DEC_PAGE;}
   const p=scopeQuery({limit:'200'});
-  if(activeAgent())p.set('agent',activeAgent());
+  if(_agent)p.set('agent',_agent);
   try{
     _decisions=await req('GET','/decisions?'+p);
-    if(!activeAgent())setCount('nc-decisions',_decisions.length>=200?'200+':_decisions.length);
+    if(!_agent)setCount('nc-decisions',_decisions.length>=200?'200+':_decisions.length);
     renderDecisions();
-  }catch(e){$('dlist').innerHTML=errState(e);}
+  }catch(e){put('dlist',errState(e));}
 }
 function decisionRow(d){
   const alts=(d.alternatives||[]).filter(Boolean);
   const open=_openWhy.has(d.id);
   const foot=[`<b>${esc(d.agent_id)}</b>`,clock(d.created_at)];
-  if(d.project&&!activeProject())foot.push(esc(d.project));
+  if(d.project&&!_project)foot.push(esc(d.project));
   foot.push(`<span class="mono">${esc(d.id.slice(0,8))}</span>`);
-  if(d.task_id)foot.push(`<span class="mono">task ${esc(d.task_id.slice(0,8))}</span>`);
-  return `<div class="drow">
+  return `<div class="drow" id="d-${d.id}">
     ${tick(10,'','decision')}
     <p class="dec">${md(d.decision)}</p>
     <dl class="why">
@@ -1538,21 +1597,21 @@ function decisionRow(d){
   </div>`;
 }
 function renderDecisions(){
-  if(!_decisions.length){
-    $('dlist').innerHTML=emptyState('No decisions yet, agents record one whenever they pick between options.');
-    return;
-  }
+  $('dc-stat').innerHTML=statLine([_decisions.length>=200?'200+ decisions':plural(_decisions.length,'decision')]);
+  if(!_decisions.length){put('dlist',emptyState('no decisions yet'));return;}
   const shown=_decisions.slice(0,_decLimit);
-  $('dlist').innerHTML=byDay(shown,d=>d.created_at,decisionRow)+(_decisions.length>shown.length
-    ?row('',`<button onclick="_decLimit+=DEC_PAGE;renderDecisions()">Show ${Math.min(DEC_PAGE,_decisions.length-shown.length)} more of ${_decisions.length-shown.length}</button>`):'');
+  const left=_decisions.length-shown.length;
+  put('dlist',byDay(shown,d=>d.created_at,decisionRow)+(left>0?row('',`<button onclick="_decLimit+=DEC_PAGE;renderDecisions()">${left} more</button>`):''));
   document.querySelectorAll('#dlist .why-text.clamp').forEach(el=>{
     if(el.scrollHeight>el.clientHeight+2)$('dm-'+el.id.slice(3)).hidden=false;
   });
+  if(_cursor&&$(_cursor))$(_cursor).classList.add('cur');
 }
 function toggleWhy(id){
   const open=!_openWhy.has(id);
   if(open)_openWhy.add(id);else _openWhy.delete(id);
-  $('dw-'+id).classList.toggle('clamp',!open);
+  const text=$('dw-'+id);
+  resize(text,()=>text.classList.toggle('clamp',!open));
   const btn=$('dm-'+id);
   btn.textContent=open?'less':'more';
   btn.setAttribute('aria-expanded',open);
@@ -1560,20 +1619,20 @@ function toggleWhy(id){
 
 let _openProcs=new Set();
 async function loadProcedures(quiet){
-  $('pr-scope').innerHTML=`<span>${esc(activeProject()||'all projects')}</span>`;
-  if(!quiet)loading('prlist');
+  if(!quiet)busy('prlist');
   const p=scopeQuery();
   try{
     const [procs,steps]=await Promise.all([
       req('GET','/blueprints?'+p),
       req('GET','/blueprints/steps?'+p).catch(()=>[]),
     ]);
-    const runIds=[...new Set(steps.map(s=>s.run_id))].slice(0,12);
-    setCount('nc-procedures',new Set(steps.map(s=>s.run_id)).size);
+    const runIds=[...new Set(steps.map(s=>s.run_id))];
+    setCount('nc-procedures',runIds.length);
     const runs={};
-    await Promise.all(runIds.map(async id=>{try{runs[id]=await req('GET','/blueprints/runs/'+id)}catch(_){}}));
+    await Promise.all(runIds.slice(0,12).map(async id=>{try{runs[id]=await req('GET','/blueprints/runs/'+id)}catch(_){}}));
+    $('pr-stat').innerHTML=statLine([runIds.length?runIds.length+' in flight':'',procs.length+' compiled']);
     renderProcedures(procs,steps,runs);
-  }catch(e){$('prlist').innerHTML=errState(e);}
+  }catch(e){put('prlist',errState(e));}
 }
 function stepLine(s){
   const title=md(String(s.title||s.node_id).replace(/[.\s]+$/,''));
@@ -1585,14 +1644,13 @@ function renderProcedures(procs,steps,runs){
   if(steps.length){
     const byRun={};
     steps.forEach(s=>{(byRun[s.run_id]=byRun[s.run_id]||[]).push(s)});
-    html+='<div class="e sec" style="padding-top:.4rem"><div class="m"></div><div class="c"><h2>In flight</h2></div></div><div class="rows">';
+    html+='<div class="rows">';
     html+=Object.entries(byRun).map(([id,list])=>{
       list.sort((a,b)=>a.position-b.position);
       const run=runs[id];
       const nodes=run?run.nodes.filter(n=>!n.superseded):[];
-      const done=nodes.filter(n=>n.status==='completed').length;
       const openIds=new Set(list.map(s=>s.task_id));
-      const by=run?`<div class="by">started by <b>${esc(run.created_by)}</b> · ${when(run.created_at)}${run.project&&!activeProject()?' · '+esc(run.project):''}${nodes.length?` · ${done} of ${list[0].total} steps done`:''}</div>`:'';
+      const by=run?`<div class="by"><b>${esc(run.created_by)}</b> · ${when(run.created_at)}${run.project&&!_project?' · '+esc(run.project):''}</div>`:'';
       const proc=procs.find(b=>run&&b.id===run.blueprint_id)||procs.find(b=>b.name===list[0].procedure);
       const fillIn=t=>String(t).replace(/\{(\w+)\}/g,(m,k)=>run&&run.params&&run.params[k]!==undefined?run.params[k]:m);
       const items=proc&&proc.document&&proc.document.nodes
@@ -1606,62 +1664,62 @@ function renderProcedures(procs,steps,runs){
       const STEP_LABEL={done:'done',now:'current step',later:'not started'};
       const check=items.length?`<ol class="flight">${items.map(i=>`<li class="${i.state}">${tick(i.state==='later'?10:22,i.state,STEP_LABEL[i.state])}${md(i.title)}${i.failed?' <span class="bad">failed</span>':''}</li>`).join('')}</ol>`:'';
       return row(`<span class="hi">step ${list[0].position}/${list[0].total}</span><span>${esc(id.slice(0,8))}</span>`,
-        `<div class="proc-name">${esc(list[0].procedure)}</div>${list.map(stepLine).join('')}${by}${check}`,'flightrow');
+        `<div class="proc-name">${esc(list[0].procedure)}</div>${list.map(stepLine).join('')}${by}${check}`);
     }).join('');
     html+='</div><div class="e sec"><div class="m"></div><div class="c"><h2>Compiled</h2></div></div>';
   }
-  if(!procs.length){
-    html+=emptyState('None compiled'+(activeProject()?' for this project':'')+' yet, a note of type skill that reads as numbered steps gets compiled into one.');
-    $('prlist').innerHTML=html;return;
-  }
+  if(!procs.length){put('prlist',html+emptyState('none compiled'));return;}
   html+='<div class="rows">'+procs.map(b=>{
     const doc=b.document||{},nodes=doc.nodes||[];
     const open=_openProcs.has(b.id);
-    const running=steps.filter(s=>s.procedure===b.name).length;
-    const by=[`compiled by <b>${esc(b.created_by)}</b>`,when(b.created_at)];
-    if(b.project&&!activeProject())by.push(esc(b.project));
+    const running=steps.some(s=>s.procedure===b.name);
+    const by=[`<b>${esc(b.created_by)}</b>`,when(b.created_at)];
+    if(b.project&&!_project)by.push(esc(b.project));
     if(doc.params?.length)by.push('needs '+doc.params.map(esc).join(', '));
     const list=`<ol class="steps">${nodes.map(n=>{
       const deps=(n.deps||[]).length?`after ${n.deps.map(esc).join(', ')}`:'';
-      const each=n.foreach?`once per item in ${esc(n.foreach)}`:'';
+      const each=n.foreach?`per item in ${esc(n.foreach)}`:'';
       const goal=n.expected_outcome?'done when '+esc(n.expected_outcome):'';
       const auto=n.run?'run by the server':'';
       const sub=[goal,deps,each,auto].filter(Boolean).join(' · ');
       return `<li><span>${md(n.title||n.id)}${sub?`<small>${sub}</small>`:''}</span></li>`;
     }).join('')}</ol>`;
     return row(`<span>${plural(b.node_count||nodes.length,'step')}</span><span>v${b.version}</span>${running?'<span class="hi">in flight</span>':''}`,
-      `<div class="proc-name">${esc(b.name)}</div>
-       ${doc.description?`<div class="desc">${esc(doc.description)}</div>`:''}
+      `${tick(10,'','procedure')}<button class="hl proc-name" onclick="toggleProc('${b.id}')" id="pb-${b.id}" aria-expanded="${open}">${esc(b.name)}</button>
+       ${doc.description?`<div class="desc">${md(doc.description)}</div>`:''}
        <div class="by">${by.join(' · ')}</div>
-       <div class="acts"><button onclick="toggleProc('${b.id}')" id="pb-${b.id}">${open?'hide steps':'show steps'}</button></div>
-       <div id="ps-${b.id}" style="display:${open?'block':'none'}">${list}</div>`);
+       <div id="ps-${b.id}"${open?'':' hidden'}>${list}</div>`,'pick');
   }).join('')+'</div>';
-  $('prlist').innerHTML=html;
+  put('prlist',html);
 }
 function toggleProc(id){
   const open=!_openProcs.has(id);
   if(open)_openProcs.add(id);else _openProcs.delete(id);
-  $('ps-'+id).style.display=open?'block':'none';
-  $('pb-'+id).textContent=open?'hide steps':'show steps';
+  fold($('ps-'+id),open);
+  $('pb-'+id).setAttribute('aria-expanded',open);
 }
 
+let _evPaused=false;
 function setSseStatus(on,label){
   const lbl=$('sse-status');
   lbl.textContent=label;
-  lbl.className='m'+(on?' good':'');
-  $('ev-connect-btn').disabled=on;
-  $('ev-disconnect-btn').disabled=!on;
+  lbl.className=on?'good':'';
+  $('ev-toggle').textContent=_evPaused?'resume':'pause';
 }
-const EV_EMPTY='Events appear here as agents write.';
-function clearEvents(){$('ev-log').innerHTML=emptyState(EV_EMPTY)}
+function toggleSSE(){
+  _evPaused=!_evPaused;
+  if(_evPaused)stopSSE();else startSSE();
+}
+function clearEvents(){put('ev-log',emptyState('waiting for events'))}
 
 let _liveAbort=null,_liveTimer=0,_liveLast=0;
 function _liveRefresh(){
   const run=()=>{
     _liveLast=Date.now();
     if(document.hidden)return;
-    if(document.activeElement&&/^(TEXTAREA|INPUT)$/.test(document.activeElement.tagName)&&document.activeElement.value)return;
-    if(['notepad','decisions','procedures','fleet'].includes(_view))loadView(true);
+    const el=document.activeElement;
+    if(el&&/^(TEXTAREA|INPUT)$/.test(el.tagName)&&el.value)return;
+    if(['notepad','decisions','procedures','fleet'].includes(_view))LOADERS[_view](true);
   };
   clearTimeout(_liveTimer);
   const wait=Math.max(800,4000-(Date.now()-_liveLast));
@@ -1695,17 +1753,16 @@ function startLive(){
   })();
 }
 function startSSE(){
-  stopSSE();
-  _sseAbort=new AbortController();
+  if(_sseAbort){_sseAbort.abort();_sseAbort=null;}
+  const abort=_sseAbort=new AbortController();
   setSseStatus(false,'connecting');
-  const agent=activeAgent();
-  const url='/events/stream'+(agent?'?agent='+encodeURIComponent(agent):'');
+  const url='/events/stream'+(_agent?'?agent='+encodeURIComponent(_agent):'');
   (async()=>{
     try{
-      const r=await fetch(url,{headers:hdrs(),credentials:'same-origin',signal:_sseAbort.signal});
+      const r=await fetch(url,{headers:hdrs(),credentials:'same-origin',signal:abort.signal});
       if(!r.ok){setSseStatus(false,'error '+r.status);return;}
-      setSseStatus(true,'connected');
-      clearEvents();
+      setSseStatus(true,'live');
+      if(!$('ev-log').children.length)clearEvents();
       const reader=r.body.getReader(),dec=new TextDecoder();let buf='';
       while(true){
         const{done,value}=await reader.read();if(done)break;
@@ -1715,26 +1772,25 @@ function startSSE(){
           if(line.startsWith('data: ')&&line.length>6){try{appendEvent(JSON.parse(line.slice(6)));}catch(_){}}
         }
       }
-      setSseStatus(false,'disconnected');
+      if(_sseAbort===abort)setSseStatus(false,'off');
     }catch(e){if(e.name!=='AbortError')setSseStatus(false,'error');}
   })();
 }
 function stopSSE(){
   if(_sseAbort){_sseAbort.abort();_sseAbort=null;}
-  setSseStatus(false,'disconnected');
+  setSseStatus(false,_evPaused?'paused':'off');
 }
 function appendEvent(e){
   const log=$('ev-log');
   if(log.querySelector('.empty'))log.innerHTML='';
   const d=document.createElement('div');d.className='row e ev';
-  d.innerHTML=`<div class="m">${esc((e.created_at||'').slice(11,19))}</div><div class="c"><span class="ty">${esc(e.type)}</span><span class="ag">${esc(e.agent_id)}</span><span class="pl" title="${esc(JSON.stringify(e.payload))}">${esc(JSON.stringify(e.payload))}</span></div>`;
+  d.innerHTML=`<div class="m">${esc((e.created_at||'').slice(11,19))}</div><div class="c"><span class="et">${esc(e.type)}</span><span class="ag">${esc(e.agent_id)}</span><span class="pl" title="${esc(JSON.stringify(e.payload))}">${esc(JSON.stringify(e.payload))}</span></div>`;
   log.prepend(d);
   while(log.children.length>400)log.lastChild.remove();
 }
 
 async function loadAgents(quiet){
-  $('fl-scope').innerHTML=`<span>${esc(activeProject()||'all projects')}</span>`;
-  if(!quiet)loading('alist');
+  if(!quiet)busy('alist');
   try{
     const [participants,projects]=await Promise.all([
       req('GET','/agents').then(uniqueAgents),
@@ -1742,18 +1798,17 @@ async function loadAgents(quiet){
     ]);
     const agentProjects={};
     projects.forEach(p=>p.agents.forEach(a=>{(agentProjects[a]||(agentProjects[a]=[])).push(p.name)}));
-    const proj=activeProject();
-    const list=proj?participants.filter(p=>(agentProjects[p.agent_id]||[]).includes(proj)):participants;
-    const lbl=$('agent-count-label');
-    if(!list.length){
-      lbl.textContent='Every agent that writes to this notepad.';
-      $('alist').innerHTML=emptyState(proj?`No agents have joined ${esc(proj)}.`:'No agents yet. Use “connect an agent” above to add the first one.');return;
-    }
+    const list=_project?participants.filter(p=>(agentProjects[p.agent_id]||[]).includes(_project)):participants;
     const now=Date.now();
     const sorted=[...list].sort((a,b)=>(b.last_seen?Date.parse(b.last_seen):0)-(a.last_seen?Date.parse(a.last_seen):0));
     const activeCount=sorted.filter(p=>p.last_seen&&(now-Date.parse(p.last_seen))<ACTIVE_MS).length;
-    lbl.innerHTML=`<b>${plural(sorted.length,'agent')}</b>${proj?' in '+esc(proj):''}, ${activeCount} active in the last five minutes.`;
-    $('alist').innerHTML=sorted.map(p=>{
+    $('fl-stat').innerHTML=statLine([plural(sorted.length,'agent'),activeCount+' active']);
+    if(!sorted.length){
+      put('alist',emptyState('no agents yet'));
+      if($('connect-box').hidden)toggleConnect();
+      return;
+    }
+    put('alist',sorted.map(p=>{
       const seenMs=p.last_seen?Date.parse(p.last_seen):null;
       const active=seenMs&&(now-seenMs)<ACTIVE_MS;
       const seen=active?'active now':p.last_seen?'seen '+relTime(p.last_seen):'never seen';
@@ -1767,98 +1822,97 @@ async function loadAgents(quiet){
         ${marks.length?`<span class="ty">${marks.join(', ')}</span>`:''}
         ${projs?`<span class="by">${projs}</span>`:''}
         ${window._agent_role==='owner'?`<span class="acts reveal">
-          <button onclick="renameAgent(${jsa(p.agent_id)})">rename</button>
-          <button class="danger" onclick="deleteAgent(${jsa(p.agent_id)})">delete</button>
+          <button onclick="askText(this,'renameAgent','new name',${jsa(p.agent_id)},${jsa(p.agent_id)})">rename</button>
+          <button class="danger" onclick="ask(this,'deleteAgent',${jsa(p.agent_id)})">delete</button>
         </span>`:''}`,'agent');
-    }).join('');
-  }catch(e){$('alist').innerHTML=errState(e);}
+    }).join(''));
+  }catch(e){put('alist',errState(e));}
 }
 async function deleteAgent(id){
-  if(!confirm(`Delete agent "${id}"?`))return;
   try{
     await adminReq('DELETE',`/agents/${encodeURIComponent(id)}`);
-    toast(`Agent "${id}" deleted`,'info');
+    if(_agent===id)setAgent('');
     await Promise.all([loadAgents(true),loadAgentsGlobal()]);
-  }catch(e){toast('Failed: '+e.message,'err');}
+  }catch(e){toast('Delete failed: '+e.message);}
 }
-async function renameAgent(id){
-  const newId=prompt(`Rename "${id}" to:`);if(!newId||newId===id)return;
+async function renameAgent(id,newId){
+  if(!newId||newId===id)return;
   try{
     await adminReq('PATCH',`/agents/${encodeURIComponent(id)}`,{new_id:newId});
-    toast('Agent renamed','ok');
     await Promise.all([loadAgents(true),loadAgentsGlobal()]);
-  }catch(e){toast('Failed: '+e.message,'err');}
+  }catch(e){toast('Rename failed: '+e.message);}
 }
 
 async function loadProjects(){
-  const box=$('sidebar-pjlist');
   try{
-    const [ps,mine]=await Promise.all([
+    const [all,mine]=await Promise.all([
       req('GET','/projects'),
       req('GET','/projects/mine').catch(()=>[]),
     ]);
-    _myProjects=new Set(mine.map(p=>p.project_id));
-    const rows=[...new Set([...mine.map(p=>p.project_id),...ps.map(p=>p.name)])];
-    const cur=activeProject();
-    box.innerHTML=rows.length?rows.map(name=>{
-      const isMine=_myProjects.has(name);
-      return `<div class="pj${isMine?' mine':''}">
-        <button class="pj-name${cur===name?' on':''}" title="${esc(name)}" onclick="selectProject(${jsa(name)})">${esc(name)}</button>
-        ${isMine
-          ?`<button class="danger reveal" onclick="leaveProject(${jsa(name)})">leave</button>`
-          :`<button class="reveal" onclick="joinProject(${jsa(name)})">join</button>`}
-      </div>`;
-    }).join(''):'<div class="by">none yet</div>';
-  }catch(e){box.innerHTML=`<div class="by bad">${esc(e.message)}</div>`;}
+    _projects=all;_myProjects=new Set(mine.map(p=>p.project_id));
+    mine.forEach(p=>{if(!_projects.some(x=>x.name===p.project_id))_projects.push({name:p.project_id,agents:[],memory_count:0})});
+  }catch(e){_projects=[];}
+  renderProjects();
 }
-function selectProject(name){
-  const sel=$('h-project');
-  sel.value=sel.value===name?'':name;
-  onProjectChange();closeDrawer();
+function renderProjects(){
+  put('sidebar-pjlist',_projects.length?_projects.map(p=>{
+    const mine=_myProjects.has(p.name),on=_project===p.name;
+    return `<div class="pj${mine?' mine':''}${on?' on':''}">
+      <button class="pj-name" title="${on?'show all projects':'show only '+esc(p.name)}" aria-pressed="${on}" onclick="setProject(${jsa(p.name)})">${esc(p.name)}</button>
+      <span class="pj-n">${p.memory_count||''}</span>
+      ${mine
+        ?`<button class="danger reveal w" onclick="ask(this,'leaveProject',${jsa(p.name)})">leave</button>`
+        :`<button class="reveal w" onclick="joinProject(${jsa(p.name)})">join</button>`}
+    </div>`;
+  }).join(''):'<div class="pj"><span class="pj-n">none yet</span></div>');
+}
+async function joinFromInput(){
+  const input=$('sidebar-proj-input'),name=input.value.trim();if(!name)return;
+  input.value='';
+  fold($('pj-add'),false);
+  await joinProject(name);
 }
 async function joinProject(name){
   if(!name)return;
   try{
     await req('POST',`/projects/${encodeURIComponent(name)}/join`);
-    toast(`Joined project "${name}"`,'ok');
-    await loadProjectsHeader();loadProjects();
-  }catch(e){toast('Failed: '+e.message,'err');}
+    await loadProjects();
+    _loaded={};loadView();refreshCounts();
+  }catch(e){toast('Join failed: '+e.message);}
 }
 async function leaveProject(name){
-  if(!confirm(`Leave project "${name}"?`))return;
   try{
     await req('DELETE',`/projects/${encodeURIComponent(name)}/leave`);
-    toast(`Left project "${name}"`,'info');
-    await loadProjectsHeader();loadProjects();
-  }catch(e){toast('Failed: '+e.message,'err');}
+    if(_project===name)_project='';
+    await loadProjects();
+    syncUrl();_loaded={};loadView();refreshCounts();
+  }catch(e){toast('Leave failed: '+e.message);}
 }
 
-async function loadSession(){
-  const agent=window._aid;
-  $('ss-scope').textContent=agent||'';
-  $('handoff-box').style.display=window._agent_role==='viewer'?'none':'';
-  loading('session-context');
+async function loadSession(quiet){
+  if(!quiet)busy('session-context');
   try{
     const d=await req('GET','/sessions/handoff');
     const h=d.last_handoff;let html='<div class="rows">';
+    $('ss-stat').innerHTML=[esc(window._aid||''),h?'handoff '+relTime(h.created_at):''].filter(Boolean).join(' · ');
     if(h){
-      html+=row(`<span>handoff</span>${when(h.created_at)}`,`<pre class="body" style="color:var(--t1)">${esc(h.summary)}</pre><div class="by"><b>${esc(h.agent_id)}</b></div>`);
-      if(h.next_steps?.length)html+=row('<span>next steps</span>',`<ol class="steps" style="margin:0">${h.next_steps.map(s=>`<li><span>${esc(s)}</span></li>`).join('')}</ol>`);
+      html+=row(when(h.created_at),`<pre class="body" style="color:var(--t1)">${md(h.summary)}</pre>`);
+      if(h.next_steps?.length)html+=row('<span>next</span>',`<ol class="steps" style="margin:0">${h.next_steps.map(s=>`<li><span>${md(s)}</span></li>`).join('')}</ol>`);
       if(h.in_progress?.length)html+=row('<span>in progress</span>',`<div class="facts">${h.in_progress.map(esc).join(' · ')}</div>`);
     }else{
-      html+=emptyState('No handoff saved yet, agents save one when a session ends.');
+      html+=emptyState('no handoff yet');
     }
     html+='</div>';
     if(d.memory_delta?.length){
-      html+=`<div class="e sec"><div class="m">${d.memory_delta.length}</div><div class="c"><h2>Written since</h2><p>Notes the fleet added after that handoff.</p></div></div><div class="rows">`;
-      html+=d.memory_delta.slice(0,80).map(e=>row(`<span>${esc(e.type)}</span>`,`
+      html+=`<div class="e sec"><div class="m">${d.memory_delta.length}</div><div class="c"><h2>Written since</h2></div></div><div class="rows">`;
+      html+=d.memory_delta.slice(0,80).map(e=>row(e.type==='memory'?'':`<span>${esc(e.type)}</span>`,`
         <div class="title">${md(noteTitle(e))}</div>
         <div class="by"><b>${esc(e.agent_id)}</b> · ${when(e.updated_at)}${e.project?' · '+esc(e.project):''}</div>`)).join('');
-      if(d.memory_delta.length>80)html+=row('',`<span class="quiet">and ${d.memory_delta.length-80} more in the notepad</span>`);
+      if(d.memory_delta.length>80)html+=row('',`<a class="empty" href="#notepad">${d.memory_delta.length-80} more in the notepad</a>`);
       html+='</div>';
     }
-    $('session-context').innerHTML=html;
-  }catch(e){$('session-context').innerHTML=errState(e);}
+    put('session-context',html);
+  }catch(e){put('session-context',errState(e));}
 }
 async function saveHandoff(){
   const summary=$('hs-summary').value.trim();if(!summary)return;
@@ -1869,247 +1923,326 @@ async function saveHandoff(){
       in_progress:$('hs-inprogress').value.split('\n').map(s=>s.trim()).filter(Boolean),
     });
     $('hs-summary').value='';$('hs-next').value='';$('hs-inprogress').value='';
-    $('handoff-form').classList.remove('open');
-    toast('Handoff saved','ok');loadSession();
-  }catch(e){toast('Save failed: '+e.message,'err');}
+    fold($('handoff-form'),false);
+    loadSession(true);
+  }catch(e){toast('Save failed: '+e.message);}
 }
 
 const LOG_LEVEL_CLASS={warning:'warn',error:'bad'};
 async function loadLogs(){
-  loading('log-list');
+  busy('log-list');
   const params=new URLSearchParams({limit:'200'});
   if($('log-level').value)params.set('level',$('log-level').value);
   if($('log-source').value)params.set('source',$('log-source').value);
   if($('log-action').value)params.set('action',$('log-action').value);
   try{
     const rows=await req('GET',`/logs?${params}`);
-    $('log-count').textContent=rows.length?plural(rows.length,'entry','entries'):'';
-    if(!rows.length){$('log-list').innerHTML=emptyState('No log entries yet, the archivist writes one each time it merges, decays or promotes notes.');return;}
-    $('log-list').innerHTML=rows.map(r=>{
+    $('log-count').textContent=plural(rows.length,'entry','entries');
+    if(!rows.length){put('log-list',emptyState('no log entries'));return;}
+    put('log-list',rows.map(r=>{
       const det=r.details&&Object.keys(r.details).length?`<div class="facts">${esc(JSON.stringify(r.details))}</div>`:'';
       return row(`${when(r.created_at)}<span class="${LOG_LEVEL_CLASS[r.level]||''}">${esc(r.level)}</span>`,
         `<div class="log-msg">${esc(r.message)}</div><div class="facts">${esc(r.source)} · ${esc(r.action)}</div>${det}`);
-    }).join('');
-  }catch(e){$('log-list').innerHTML=errState(e);}
+    }).join(''));
+  }catch(e){$('log-count').textContent='';put('log-list',errState(e));}
 }
 
-async function loadMesh(){
-  loading('mesh-list');loading('mesh-token-section');
-  try{
-    const [tokens,peers,discovered]=await Promise.all([
-      req('GET','/mesh/tokens'),
-      req('GET','/mesh/peers'),
-      req('GET','/mesh/discovered').catch(()=>[]),
-    ]);
-    const base=window.location.origin;
-    $('mesh-discovered-section').innerHTML=discovered.length
-      ?'<div class="e sec" style="padding-top:.4rem"><div class="m"></div><div class="c"><h2>Found on this network</h2></div></div><div class="rows">'+
-        discovered.map(p=>row('<span class="good">nearby</span>',`<div class="id">${esc(p.url)}</div><div class="acts"><button onclick="linkDiscovered(${jsa(p.instance_id)})">link</button></div>`)).join('')+'</div>'
-      :'';
-    const newTok='<div class="acts"><button onclick="createMeshToken()">New token</button></div>';
-    $('mesh-token-section').innerHTML=tokens.length
-      ?tokens.map(t=>{
-        const feedUrl=`${base}/memory/feed.json?mesh_token=${encodeURIComponent(t.token)}${t.project?'&project='+encodeURIComponent(t.project):''}`;
-        return row(`<span>${esc(t.project||'all projects')}</span>`,`
-          <div class="title">${esc(t.label||'token')}</div>
-          <div class="tok">
-            <span class="k">token</span><span class="v">${esc(t.token)}</span><button onclick="copyText(${jsa(t.token)})">copy</button>
-            <span class="k">feed url</span><span class="v">${esc(feedUrl)}</span><button onclick="copyText(${jsa(feedUrl)})">copy</button>
-          </div>
-          <div class="acts"><button class="danger" onclick="revokeMeshToken(${jsa(t.id)})">revoke</button></div>`);
-      }).join('')+row('',newTok)
-      :row('',`<p class="empty">No tokens yet, make one to let another Artel pull your notes.</p>${newTok}`);
-    $('mesh-list').innerHTML=peers.length?peers.map(r=>row(
+async function loadMesh(quiet){
+  if(!quiet){busy('mesh-list');busy('mesh-token-section');}
+  const base=window.location.origin,counts=[],owner=window._agent_role==='owner';
+  const ownerOnly=()=>Promise.reject(new Error('insufficient role'));
+  const peersJob=req('GET','/mesh/peers').then(peers=>{
+    counts[0]=plural(peers.length,'peer');
+    put('mesh-list',peers.length?peers.map(r=>row(
       `<span>${r.last_fetched_at?'synced '+relTime(r.last_fetched_at):'never synced'}</span>`,`
         <div class="id">${esc(r.peer_url)}</div>
-        <div class="by">sharing ${esc(r.project||'all projects')}</div>
-        <div class="acts"><button onclick="syncPeer(${jsa(r.id)})">sync now</button><button class="danger" onclick="detachPeer(${jsa(r.id)})">detach</button></div>`)).join('')
-      :emptyState('No linked peers, so this notepad is not sharing notes with another machine.');
-  }catch(e){
-    $('mesh-list').innerHTML=errState(e);
-    $('mesh-token-section').innerHTML='';
-  }
-}
-function copyText(text){
-  const done=()=>toast('Copied','info');
-  if(navigator.clipboard){navigator.clipboard.writeText(text).then(done);return;}
-  const el=document.createElement('textarea');
-  el.value=text;el.style.cssText='position:fixed;opacity:0';
-  document.body.appendChild(el);el.select();
-  document.execCommand('copy');document.body.removeChild(el);done();
+        <div class="by">${esc(r.project||'all projects')}</div>
+        <div class="acts w"><button onclick="syncPeer(${jsa(r.id)},this)">sync</button><button class="danger" onclick="ask(this,'detachPeer',${jsa(r.id)})">detach</button></div>`)).join('')
+      :emptyState('no peers'));
+  }).catch(e=>put('mesh-list',errState(e)));
+  const tokensJob=(owner?req('GET','/mesh/tokens'):ownerOnly()).then(tokens=>{
+    counts[1]=plural(tokens.length,'token');
+    put('mesh-token-section',tokens.length
+      ?tokens.map(t=>{
+        const feedUrl=`${base}/memory/feed.json?mesh_token=${encodeURIComponent(t.token)}${t.project?'&project='+encodeURIComponent(t.project):''}`;
+        return row('',`
+          <div class="title">${esc(t.label||'token')}</div>
+          <div class="by">${esc(t.project||'all projects')}</div>
+          <div class="tok">
+            <span class="k">token</span><span class="v">${esc(t.token)}</span><button onclick="copyText(${jsa(t.token)},this)">copy</button>
+            <span class="k">feed</span><span class="v">${esc(feedUrl)}</span><button onclick="copyText(${jsa(feedUrl)},this)">copy</button>
+          </div>
+          <div class="acts w"><button class="danger" onclick="ask(this,'revokeMeshToken',${jsa(t.id)})">revoke</button></div>`);
+      }).join('')
+      :emptyState('no tokens'));
+  }).catch(e=>put('mesh-token-section',errState(e)));
+  const nearJob=(owner?req('GET','/mesh/discovered'):ownerOnly()).catch(()=>[]).then(found=>{
+    if(found.length)counts[2]=found.length+' nearby';
+    put('mesh-discovered-section',found.length
+      ?'<div class="e sec" style="padding-top:.2rem"><div class="m"></div><div class="c"><h2>Nearby</h2></div></div><div class="rows">'+
+        found.map(p=>row('',`<div class="id">${esc(p.url)}</div><div class="acts w"><button onclick="askText(this,'linkDiscovered','project, blank for all','',${jsa(p.instance_id)})">link</button></div>`)).join('')+'</div>'
+      :'');
+  });
+  await Promise.all([peersJob,tokensJob,nearJob]);
+  $('mesh-stat').textContent=counts.filter(Boolean).join(' · ');
 }
 async function createMeshToken(){
-  const label=prompt('Token label (optional):','');
-  if(label===null)return;
-  const project=prompt('Project scope (leave blank for all projects):','');
-  if(project===null)return;
   try{
-    await req('POST','/mesh/tokens',{label:label||null,project:project||null});
-    toast('Token created','ok');loadMesh();
-  }catch(e){toast(e.message,'err');}
+    await req('POST','/mesh/tokens',{label:$('tok-label').value.trim()||null,project:$('tok-proj').value.trim()||null});
+    $('tok-label').value=$('tok-proj').value='';
+    fold($('token-form'),false);
+    loadMesh(true);
+  }catch(e){toast(e.message);}
 }
 async function revokeMeshToken(id){
-  if(!confirm('Revoke this token? Peers using it will stop syncing.'))return;
-  try{
-    await req('DELETE','/mesh/tokens/'+id);
-    toast('Token revoked','info');loadMesh();
-  }catch(e){toast(e.message,'err');}
+  try{await req('DELETE','/mesh/tokens/'+id);loadMesh(true);}
+  catch(e){toast(e.message);}
 }
 async function addPeer(){
   const peer_url=$('mesh-url').value.trim();
   const peer_token=$('mesh-token').value.trim();
   const project=$('mesh-proj').value.trim()||null;
-  if(!peer_url||!peer_token){toast('URL and token required','err');return;}
+  if(!peer_url||!peer_token){toast('URL and token required');return;}
   try{
     await req('POST','/mesh/peers',{peer_url,peer_token,project});
     $('mesh-url').value=$('mesh-token').value=$('mesh-proj').value='';
-    toast('Peer linked','ok');loadMesh();
-  }catch(e){toast(e.message,'err');}
+    fold($('peer-form'),false);
+    loadMesh(true);
+  }catch(e){toast(e.message);}
 }
-async function linkDiscovered(instanceId){
-  const project=prompt('Project scope (leave blank for all projects):','');
-  if(project===null)return;
+async function linkDiscovered(instanceId,project){
   try{
     await req('POST','/mesh/link-discovered',{instance_id:instanceId,project:project||null});
-    toast('Peer linked','ok');loadMesh();
-  }catch(e){toast(e.message,'err');}
+    loadMesh(true);
+  }catch(e){toast(e.message);}
 }
-async function syncPeer(id){
+async function syncPeer(id,btn){
   try{
     await req('POST',`/mesh/peers/${id}/sync`);
-    toast('Synced','ok');loadMesh();
-  }catch(e){toast(e.message,'err');}
+    flashLabel(btn,'synced');
+    setTimeout(()=>loadMesh(true),1400);
+  }catch(e){toast(e.message);}
 }
 async function detachPeer(id){
-  if(!confirm('Detach this peer? Notes will stop syncing.'))return;
-  try{
-    await req('DELETE','/mesh/peers/'+id);
-    toast('Peer detached','info');loadMesh();
-  }catch(e){toast(e.message,'err');}
+  try{await req('DELETE','/mesh/peers/'+id);loadMesh(true);}
+  catch(e){toast(e.message);}
 }
 
-let _pulseNodes=[],_pulseGraph=null;
-const pulseNone=msg=>`<div class="li"><span class="quiet">${msg}</span></div>`;
-async function loadPulse(){
-  ['pulse-trails','pulse-central','pulse-affinity','pulse-conflicts'].forEach(id=>{$(id).innerHTML=pulseNone('Loading.')});
+let _pulseNodes=[],_pulseGraph=null,_focusNote='';
+const pulseNone=msg=>`<div class="li"><span class="empty">${msg}</span></div>`;
+async function loadPulse(quiet){
+  if(!quiet)['pulse-trails','pulse-central','pulse-affinity','pulse-conflicts'].forEach(busy);
   try{
-    const p=activeProject();
-    const d=await req('GET','/pulse'+(p?'?project='+encodeURIComponent(p):''));
+    const d=await req('GET','/pulse?'+scopeQuery());
     $('pulse-counts').innerHTML=`<span>${plural(d.counts.nodes,'note')}</span><span>${plural(d.counts.semantic_edges,'link')}</span><span>${d.counts.hebbian_edges} learned</span>`;
     _pulseGraph=d.graph;
     drawPulseGraph(d.graph);
-    $('pulse-trails').innerHTML=d.trails.length?d.trails.map(t=>{
-      const heat=Math.min(1,t.trail/8);
-      return `<div class="li"><span class="bar-h" style="width:${Math.max(6,Math.round(heat*46))}px"></span><span class="t" title="${esc(clean(t.label))}">${md(clean(t.label))}</span><span class="n">${t.trail}</span></div>`;
-    }).join(''):pulseNone('None yet, these build up as agents recall notes.');
-    $('pulse-central').innerHTML=d.central.length?d.central.map((c,i)=>
+    const hottest=Math.max(1,...d.trails.map(t=>t.trail));
+    put('pulse-trails',d.trails.length?d.trails.map(t=>{
+      const heat=t.trail/hottest;
+      return `<div class="li"><span class="bar-h" style="width:${Math.max(6,Math.round(heat*46))}px"></span><span class="t" title="${esc(clean(t.label))}">${md(clean(t.label))}</span><span class="n">${Math.round(t.trail*10)/10}</span></div>`;
+    }).join(''):pulseNone('none yet'));
+    put('pulse-central',d.central.length?d.central.map((c,i)=>
       `<div class="li"><span class="n">${i+1}</span><span class="t" title="${esc(clean(c.label))}">${md(clean(c.label))}</span></div>`).join('')
-      :pulseNone('None yet, the archivist links notes that back each other up.');
+      :pulseNone('none yet'));
     const byAgent={};
     d.affinities.forEach(a=>{(byAgent[a.agent_id]=byAgent[a.agent_id]||[]).push(a)});
-    $('pulse-affinity').innerHTML=Object.keys(byAgent).length?Object.entries(byAgent).map(([ag,rows])=>
+    put('pulse-affinity',Object.keys(byAgent).length?Object.entries(byAgent).map(([ag,rows])=>
       `<div class="li"><span class="id" style="font-size:12.5px">${esc(ag)}</span><span class="t tags" style="display:block">${rows.slice(0,5).map(r=>'#'+esc(r.tag)).join(' ')}</span></div>`).join('')
-      :pulseNone('None yet.');
-    $('pulse-conflicts').innerHTML=d.conflicts.length?d.conflicts.map(c=>
+      :pulseNone('none yet'));
+    put('pulse-conflicts',d.conflicts.length?d.conflicts.map(c=>
       `<div class="li"><span class="t bad" title="${esc(clean(c.label))}">${md(clean(c.label))}</span><span class="n">${esc((c.parents[0]||'').slice(0,8))} · ${relTime(c.created_at)}</span></div>`).join('')
-      :pulseNone('No concurrent edits are waiting.');
+      :pulseNone('none'));
   }catch(e){
-    $('pulse-trails').innerHTML=`<div class="li"><span class="bad">${esc(e.message)}</span></div>`;
-    $('pulse-central').innerHTML='';$('pulse-affinity').innerHTML='';$('pulse-conflicts').innerHTML='';
+    put('pulse-trails',`<div class="li"><span class="bad">${esc(e.message)}</span></div>`);
+    ['pulse-central','pulse-affinity','pulse-conflicts'].forEach(id=>put(id,''));
   }
+}
+let _pulseLayout=null,_pulseHover=-1;
+function layoutIsland(nodes,edges){
+  const n=nodes.length,k=34,iters=n>120?140:220;
+  nodes.forEach((p,i)=>{const a=i*2.399963,r=Math.sqrt(i+0.5)*k*0.55;p.x=Math.cos(a)*r;p.y=Math.sin(a)*r;});
+  for(let it=0;it<iters;it++){
+    const heat=42*(1-it/iters)+0.6;
+    nodes.forEach(p=>{p.dx=-p.x*0.035;p.dy=-p.y*0.035;});
+    for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){
+      const a=nodes[i],b=nodes[j];
+      let dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy;
+      if(d2<0.01){dx=0.1*(i%2?1:-1);dy=0.1;d2=0.02;}
+      if(d2>k*k*36)continue;
+      const f=k*k/d2;
+      a.dx+=dx*f;a.dy+=dy*f;b.dx-=dx*f;b.dy-=dy*f;
+    }
+    edges.forEach(e=>{
+      const a=nodes[e.a],b=nodes[e.b],dx=a.x-b.x,dy=a.y-b.y,d=Math.sqrt(dx*dx+dy*dy)||0.1,f=d/k;
+      a.dx-=dx*f;a.dy-=dy*f;b.dx+=dx*f;b.dy+=dy*f;
+    });
+    nodes.forEach(p=>{
+      const m=Math.sqrt(p.dx*p.dx+p.dy*p.dy)||1,s=Math.min(m,heat)/m;
+      p.x+=p.dx*s;p.y+=p.dy*s;
+    });
+  }
+}
+function layoutPulse(g,W,H){
+  const nodes=g.nodes.map(n=>({id:n.id,label:clean(n.label).replace(/`/g,''),type:n.type,trail:n.trail||0,x:0,y:0,links:[]}));
+  const index={};nodes.forEach((n,i)=>{index[n.id]=i});
+  const edges=g.edges.map(e=>({a:index[e.src],b:index[e.dst],kind:e.kind,rel:e.rel,weight:e.weight}))
+    .filter(e=>e.a!==undefined&&e.b!==undefined&&e.a!==e.b);
+  edges.forEach(e=>{nodes[e.a].links.push(e.b);nodes[e.b].links.push(e.a);});
+  const seen=new Array(nodes.length).fill(-1),islands=[],loose=[];
+  nodes.forEach((n,i)=>{
+    if(seen[i]>=0)return;
+    if(!n.links.length){seen[i]=-2;loose.push(i);return;}
+    const members=[],stack=[i];seen[i]=islands.length;
+    while(stack.length){
+      const at=stack.pop();members.push(at);
+      nodes[at].links.forEach(to=>{if(seen[to]<0){seen[to]=islands.length;stack.push(to);}});
+    }
+    islands.push(members);
+  });
+  const blocks=islands.map(members=>{
+    const local={};members.forEach((m,i)=>{local[m]=i});
+    const pts=members.map(m=>nodes[m]);
+    layoutIsland(pts,edges.filter(e=>local[e.a]!==undefined).map(e=>({a:local[e.a],b:local[e.b]})));
+    const cx=pts.reduce((s,p)=>s+p.x,0)/pts.length,cy=pts.reduce((s,p)=>s+p.y,0)/pts.length;
+    let r=0;pts.forEach(p=>{p.x-=cx;p.y-=cy;r=Math.max(r,Math.hypot(p.x,p.y));});
+    return {pts,r:r+16};
+  });
+  if(loose.length){
+    const pts=loose.map(i=>nodes[i]),cols=Math.ceil(Math.sqrt(pts.length*1.6)),gap=20;
+    const rows=Math.ceil(pts.length/cols);
+    pts.forEach((p,i)=>{p.x=(i%cols-(cols-1)/2)*gap;p.y=(Math.floor(i/cols)-(rows-1)/2)*gap;});
+    blocks.push({pts,r:Math.max(Math.hypot((cols-1)*gap/2,(rows-1)*gap/2),6)+16});
+  }
+  blocks.sort((a,b)=>b.r-a.r);
+  const gap=18,area=blocks.reduce((s,b)=>s+(2*b.r+gap)*(2*b.r+gap),0);
+  const shelf=Math.max(blocks.length?2*blocks[0].r:0,Math.sqrt(area*W/H)*1.3);
+  let x=0,y=0,rowH=0;
+  blocks.forEach(b=>{
+    if(x>0&&x+2*b.r>shelf){x=0;y+=rowH+gap;rowH=0;}
+    b.pts.forEach(p=>{p.x+=x+b.r;p.y+=y+b.r;});
+    x+=2*b.r+gap;rowH=Math.max(rowH,2*b.r);
+  });
+  let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
+  nodes.forEach(p=>{x0=Math.min(x0,p.x);x1=Math.max(x1,p.x);y0=Math.min(y0,p.y);y1=Math.max(y1,p.y);});
+  const pad=26,s=Math.min((W-2*pad)/Math.max(1,x1-x0),(H-2*pad)/Math.max(1,y1-y0),1.8);
+  H=Math.min(H,Math.max(200,Math.ceil((y1-y0)*s+2*pad)));
+  const ox=(W-(x1-x0)*s)/2,oy=(H-(y1-y0)*s)/2;
+  const small=nodes.length>90;
+  nodes.forEach(p=>{
+    p.x=ox+(p.x-x0)*s;p.y=oy+(p.y-y0)*s;
+    p.r=(small?2:2.6)+Math.min(small?4:5.5,Math.sqrt(p.trail)*1.5);
+  });
+  const rank=nodes.map((n,i)=>i).sort((a,b)=>(nodes[b].trail+nodes[b].links.length*1.5)-(nodes[a].trail+nodes[a].links.length*1.5));
+  const want=W<520?4:nodes.length>90?9:6,perIsland=Math.max(1,Math.ceil(want/Math.max(1,islands.length))),used={},top=[];
+  rank.forEach(i=>{
+    const key=seen[i];
+    if(top.length>=want||key<0||(used[key]||0)>=perIsland)return;
+    used[key]=(used[key]||0)+1;top.push(i);
+  });
+  return {nodes,edges,W,H,top};
 }
 function drawPulseGraph(g){
   const cv=$('pulse-canvas');
+  const count=g.nodes.length,narrow=cv.getBoundingClientRect().width<520;
+  cv.style.height=Math.round(Math.max(narrow?260:320,Math.min(narrow?520:680,(narrow?220:260)+count*(narrow?1.6:2.1))))+'px';
   const rect=cv.getBoundingClientRect();
   if(!rect.width)return;
-  const dpr=window.devicePixelRatio||1;
-  const W=rect.width,H=rect.height;
+  _pulseHover=-1;
+  _pulseLayout=count?layoutPulse(g,rect.width,rect.height):{nodes:[],edges:[],W:rect.width,H:rect.height,top:[]};
+  cv.style.height=_pulseLayout.H+'px';
+  _pulseNodes=_pulseLayout.nodes;
+  paintPulse();
+}
+function paintPulse(){
+  const L=_pulseLayout;if(!L)return;
+  const cv=$('pulse-canvas'),dpr=window.devicePixelRatio||1,W=L.W,H=L.H;
   cv.width=W*dpr;cv.height=H*dpr;
   const ctx=cv.getContext('2d');ctx.scale(dpr,dpr);
   const css=getComputedStyle(document.documentElement);
   const v=n=>css.getPropertyValue(n).trim();
-  const col={accent:v('--accent')||'#fd971f',line:v('--b2')||'#888',text:v('--t2')||'#bbb',red:v('--red')||'#e06c75'};
-  const sans=v('--f-sans')||'sans-serif';
+  const col={accent:v('--accent')||'#fd971f',line:v('--b2')||'#888',text:v('--t2')||'#bbb',strong:v('--t1')||'#fff',red:v('--red')||'#e06c75'};
   ctx.clearRect(0,0,W,H);
-  if(!g.nodes.length){
-    ctx.fillStyle=col.text;ctx.font='14px '+sans;ctx.textAlign='center';
-    ctx.fillText(W<520?'No links between notes yet.':'No links yet. They appear as the archivist connects notes and agents recall them together.',W/2,H/2);
-    _pulseNodes=[];return;
+  if(!L.nodes.length){
+    ctx.fillStyle=col.line;ctx.font='12.5px '+(v('--f-mono')||'monospace');ctx.textAlign='center';
+    ctx.fillText('no links yet',W/2,H/2);
+    return;
   }
-  const nodes=g.nodes.map((n,i)=>({...n,label:clean(n.label),
-    x:W/2+Math.cos(i*2.399963)*Math.sqrt(i+1)*14,
-    y:H/2+Math.sin(i*2.399963)*Math.sqrt(i+1)*14,vx:0,vy:0}));
-  const idx={};nodes.forEach((n,i)=>idx[n.id]=i);
-  const springs=g.edges.map(e=>({a:idx[e.src],b:idx[e.dst],e})).filter(s=>s.a!==undefined&&s.b!==undefined);
-  for(let it=0;it<160;it++){
-    const k=0.86;
-    for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){
-      const a=nodes[i],b=nodes[j];let dx=a.x-b.x,dy=a.y-b.y;
-      let d2=dx*dx+dy*dy||1;if(d2<40000){const f=1400/d2;dx*=f;dy*=f;a.vx+=dx;a.vy+=dy;b.vx-=dx;b.vy-=dy;}
-    }
-    springs.forEach(s=>{
-      const a=nodes[s.a],b=nodes[s.b];const dx=b.x-a.x,dy=b.y-a.y;
-      const d=Math.sqrt(dx*dx+dy*dy)||1;const f=(d-90)*0.012;
-      a.vx+=dx/d*f*d;a.vy+=dy/d*f*d;b.vx-=dx/d*f*d;b.vy-=dy/d*f*d;
-    });
-    nodes.forEach(n=>{
-      n.vx+=(W/2-n.x)*0.004;n.vy+=(H/2-n.y)*0.004;
-      n.x+=Math.max(-12,Math.min(12,n.vx*0.08));n.y+=Math.max(-12,Math.min(12,n.vy*0.08));
-      n.vx*=k;n.vy*=k;
-      n.x=Math.max(14,Math.min(W-14,n.x));n.y=Math.max(14,Math.min(H-14,n.y));
-    });
-  }
-  springs.forEach(s=>{
-    const a=nodes[s.a],b=nodes[s.b];
+  const hover=_pulseHover,near=hover>=0?new Set([hover,...L.nodes[hover].links]):null;
+  L.edges.forEach(e=>{
+    const a=L.nodes[e.a],b=L.nodes[e.b],lit=near&&(e.a===hover||e.b===hover);
     ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
-    if(s.e.kind==='hebbian'){ctx.setLineDash([4,4]);ctx.strokeStyle=col.accent;ctx.globalAlpha=0.25+Math.min(0.6,(s.e.weight||0.2));}
-    else if(s.e.rel==='contradicts'){ctx.setLineDash([]);ctx.strokeStyle=col.red;ctx.globalAlpha=0.8;}
-    else{ctx.setLineDash([]);ctx.strokeStyle=col.line;ctx.globalAlpha=0.9;}
-    ctx.lineWidth=1;ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
+    ctx.setLineDash(e.kind==='hebbian'?[3,3]:[]);
+    ctx.strokeStyle=e.rel==='contradicts'?col.red:lit?col.accent:e.kind==='hebbian'?col.accent:col.line;
+    ctx.globalAlpha=near?(lit?0.95:0.1):e.rel==='contradicts'?0.75:e.kind==='hebbian'?0.4:0.5;
+    ctx.lineWidth=1;ctx.stroke();
   });
-  nodes.forEach(n=>{
-    const r=3+Math.min(6,Math.sqrt(n.trail||0)*2);
-    ctx.beginPath();ctx.arc(n.x,n.y,r,0,7);
-    ctx.fillStyle=n.type==='doc'?col.text:col.accent;
+  ctx.setLineDash([]);
+  L.nodes.forEach((n,i)=>{
+    ctx.globalAlpha=near&&!near.has(i)?0.22:1;
+    ctx.beginPath();ctx.arc(n.x,n.y,n.r+(i===hover?1.5:0),0,7);
+    ctx.fillStyle=i===hover?col.strong:n.type==='doc'?col.text:col.accent;
     ctx.fill();
-    n._r=r;
   });
-  const degree={};
-  springs.forEach(s=>{degree[s.a]=(degree[s.a]||0)+1;degree[s.b]=(degree[s.b]||0)+1;});
+  ctx.globalAlpha=1;
   const short=t=>{
     if(t.length<=30)return t;
     const cutAt=t.lastIndexOf(' ',30);
     return t.slice(0,cutAt>12?cutAt:30).replace(/[\s,;:.]+$/,'')+'…';
   };
-  ctx.fillStyle=col.text;ctx.font='12px '+sans;
+  ctx.font='12px '+(v('--f-sans')||'sans-serif');ctx.textAlign='left';
   const placed=[];
-  nodes.map((n,i)=>i).sort((a,b)=>(degree[b]||0)-(degree[a]||0)).slice(0,6).forEach(i=>{
-    const n=nodes[i],label=short(n.label),w=ctx.measureText(label).width;
-    const right=n.x+n._r+5+w>W-4;
-    const x0=right?n.x-n._r-5-w:n.x+n._r+5;
-    const box={x0,x1:x0+w,y0:n.y-9,y1:n.y+9};
-    if(x0<2||placed.some(q=>box.x0<q.x1+6&&box.x1>q.x0-6&&box.y0<q.y1&&box.y1>q.y0))return;
+  const named=near?[hover,...L.nodes[hover].links.slice(0,6)]:L.top;
+  named.forEach((i,order)=>{
+    const n=L.nodes[i],label=short(n.label),w=ctx.measureText(label).width;
+    const right=n.x+n.r+5+w>W-4;
+    const x=right?n.x-n.r-5-w:n.x+n.r+5;
+    const box={x0:x,x1:x+w,y0:n.y-9,y1:n.y+9};
+    if(x<2||placed.some(q=>box.x0<q.x1+6&&box.x1>q.x0-6&&box.y0<q.y1&&box.y1>q.y0))return;
     placed.push(box);
-    ctx.textAlign='left';
-    ctx.fillText(label,x0,n.y+4);
+    ctx.fillStyle=near&&order===0?col.strong:col.text;
+    ctx.fillText(label,x,n.y+4);
   });
-  cv.setAttribute('aria-label',`Graph of ${nodes.length} linked notes. Most connected: ${nodes.map((n,i)=>i).sort((a,b)=>(degree[b]||0)-(degree[a]||0)).slice(0,3).map(i=>nodes[i].label).join('; ')}`);
-  _pulseNodes=nodes;
+  cv.setAttribute('aria-label',`Graph of ${L.nodes.length} notes and ${L.edges.length} links. Most connected: ${L.top.slice(0,3).map(i=>L.nodes[i].label).join('; ')}`);
 }
-document.addEventListener('mousemove',e=>{
-  const cv=$('pulse-canvas'),tip=$('pulse-tip');
-  if(!cv||!tip||!_pulseNodes.length)return;
-  const r=cv.getBoundingClientRect();
-  if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom){tip.style.display='none';return;}
-  const x=e.clientX-r.left,y=e.clientY-r.top;
-  const hit=_pulseNodes.find(n=>{const dx=n.x-x,dy=n.y-y;return dx*dx+dy*dy<=(n._r+4)*(n._r+4)});
-  if(hit){
-    tip.textContent=hit.label+(hit.trail?`, recalled ${hit.trail} times`:'');
-    tip.style.left=Math.max(0,Math.min(x+12,r.width-330))+'px';tip.style.top=(y+12)+'px';tip.style.display='block';
-  }else tip.style.display='none';
+function pulseHit(e){
+  const cv=$('pulse-canvas'),L=_pulseLayout;
+  if(!L||!L.nodes.length)return -1;
+  const r=cv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+  let best=-1,bestD=Infinity;
+  L.nodes.forEach((n,i)=>{const d=Math.hypot(n.x-x,n.y-y)-n.r;if(d<7&&d<bestD){best=i;bestD=d;}});
+  return best;
+}
+$('pulse-canvas').addEventListener('mousemove',e=>{
+  const hit=pulseHit(e),tip=$('pulse-tip'),cv=$('pulse-canvas');
+  if(hit!==_pulseHover){_pulseHover=hit;paintPulse();}
+  cv.style.cursor=hit>=0?'pointer':'';
+  if(hit<0){tip.style.display='none';return;}
+  const n=_pulseLayout.nodes[hit],r=cv.getBoundingClientRect();
+  tip.textContent=n.label+(n.trail?` · recalled ${Math.round(n.trail*10)/10}`:'')+(n.links.length?` · ${n.links.length} linked`:'');
+  tip.style.display='block';
+  tip.style.left=Math.max(0,Math.min(n.x+12,r.width-tip.offsetWidth-4))+'px';
+  tip.style.top=(n.y+14+tip.offsetHeight>r.height?n.y-14-tip.offsetHeight:n.y+14)+'px';
 });
-let _resizeTimer=0;
+$('pulse-canvas').addEventListener('mouseleave',()=>{
+  $('pulse-tip').style.display='none';
+  if(_pulseHover>=0){_pulseHover=-1;paintPulse();}
+});
+$('pulse-canvas').addEventListener('click',e=>{
+  const hit=pulseHit(e);
+  if(hit>=0)openInNotepad(_pulseLayout.nodes[hit].id);
+});
+function openInNotepad(id){
+  _focusNote=id;
+  _openNotes.add(id);
+  if(_agent){_agent='';document.querySelectorAll('.agent-sel').forEach(s=>{s.value=''});}
+  $('q').value='';_hits=null;_noteType='';
+  if(_view==='notepad')renderNotes();else location.hash='#notepad';
+}
+let _resizeTimer=0,_lastWidth=window.innerWidth;
 window.addEventListener('resize',()=>{
+  if(window.innerWidth===_lastWidth)return;
+  _lastWidth=window.innerWidth;
   clearTimeout(_resizeTimer);
   _resizeTimer=setTimeout(()=>{if(_view==='fleet'&&_pulseGraph)drawPulseGraph(_pulseGraph)},200);
 });
@@ -2120,45 +2253,49 @@ function _connectCmd(){
     ?`curl -fsSL ${base}/onboard | ARTEL_REG_KEY=${window._regkey} sh`
     :`curl -fsSL ${base}/onboard | sh`;
 }
-function toggleConnect(e){
-  e.stopPropagation();
-  $('h-connect-code').textContent=_connectCmd();
-  $('h-connect-drop').classList.toggle('open');
+function toggleConnect(){
+  $('connect-code').textContent=_connectCmd();
+  toggleFold('connect-box');
 }
-function copyConnect(){
-  const text=_connectCmd(),b=$('h-copy-btn');
-  const done=()=>{b.textContent='copied';setTimeout(()=>b.textContent='copy',1500)};
-  if(navigator.clipboard){navigator.clipboard.writeText(text).then(done);return;}
-  const el=document.createElement('textarea');
-  el.value=text;el.style.cssText='position:fixed;opacity:0';
-  document.body.appendChild(el);el.select();
-  document.execCommand('copy');document.body.removeChild(el);done();
-}
-document.addEventListener('click',()=>$('h-connect-drop').classList.remove('open'));
 
 document.addEventListener('keydown',e=>{
+  const el=document.activeElement,id=el?.id||'',tag=el?.tagName||'';
+  const typing=/^(TEXTAREA|INPUT|SELECT)$/.test(tag);
   if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){
-    const id=document.activeElement?.id||'';
-    if(id==='mc')writeMem();
-    else if(id==='mbody')sendMsg();
-    else if(id==='hs-summary'||id==='hs-next'||id==='hs-inprogress')saveHandoff();
+    if(id==='mc'||id==='mtags')writeMem();
+    else if(id.startsWith('hs-'))saveHandoff();
     else if(id.startsWith('mta-'))saveMem(id.slice(4));
-  }
-  if(e.key==='/'&&_view==='notepad'&&!/^(TEXTAREA|INPUT|SELECT)$/.test(document.activeElement?.tagName||'')){
-    e.preventDefault();$('q').focus();
-  }
-  if(e.key==='Escape'&&document.activeElement?.id==='q'){
-    const had=$('q').value;
-    $('q').value='';$('q').blur();
-    if(had||_hits)searchNotes();
     return;
   }
   if(e.key==='Escape'){
+    if(id==='q'){$('q').value='';el.blur();runSearch();return;}
+    if(id==='mc'||id==='mtags'){fold($('np-write'),false);el.blur();return;}
+    if(id.startsWith('mta-')){cancelEditMem(id.slice(4));return;}
+    if(typing){el.blur();return;}
     closeDrawer();
-    $('h-connect-drop').classList.remove('open');
+    const cur=_cursor&&$(_cursor);
+    if(cur&&cur.classList.contains('note')&&_openNotes.has(cur.id.slice(2))){toggleNote(cur.id.slice(2),true);return;}
+    setCursor(null);
+    return;
   }
+  if(typing||e.ctrlKey||e.metaKey||e.altKey)return;
+  if(e.key==='/'&&_view==='notepad'){e.preventDefault();$('q').focus();return;}
+  if(e.key==='n'&&_view==='notepad'){e.preventDefault();newNote();return;}
+  if(e.key==='j'||e.key==='ArrowDown'){if(moveCursor(1))e.preventDefault();return;}
+  if(e.key==='k'||e.key==='ArrowUp'){if(moveCursor(-1))e.preventDefault();return;}
+  if(e.key==='Enter'&&!/^(BUTTON|A|SUMMARY)$/.test(tag)&&openCursor())e.preventDefault();
 });
 
+const LOADERS={
+  notepad:refreshNotes,
+  decisions:loadDecisions,
+  procedures:loadProcedures,
+  sessions:loadSession,
+  fleet:quiet=>{loadAgents(quiet);loadPulse(quiet);},
+  events:()=>{if(!_sseAbort&&!_evPaused)startSSE();},
+  logs:()=>loadLogs(),
+  mesh:loadMesh,
+};
 init();
 </script>
 </body>
