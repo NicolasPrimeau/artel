@@ -229,7 +229,6 @@ select{
 }
 option{background:var(--s1);color:var(--t1)}
 input[type="checkbox"]{accent-color:var(--accent);margin:0 .35rem 0 0;vertical-align:-1px}
-label.check{font-size:13.5px;color:var(--dim);cursor:pointer;white-space:nowrap}
 button{
   font:14px/1.5 var(--f-sans);color:var(--dim);background:none;border:0;padding:0;
   cursor:pointer;text-align:left;
@@ -372,30 +371,18 @@ details.manual summary::-webkit-details-marker{display:none}
 details.manual summary:hover{color:var(--accent)}
 details.manual .form{display:grid}
 
-/* ── Board ────────────────────────────── */
+/* ── Fleet rows ───────────────────────── */
 .agent>.c{display:flex;flex-wrap:wrap;gap:.1rem 1rem;align-items:baseline}
 .agent .by{margin:0}
 .agent .acts{margin:0 0 0 auto}
 .desc{color:var(--t2);font-size:14px;margin-top:.2rem;overflow-wrap:anywhere}
-.unread .title,.unread .who{color:var(--t1)}
-.read .body{color:var(--dim)}
 
-/* ── Toast and modal ──────────────────── */
+/* ── Toast ────────────────────────────── */
 #toast-stack{position:fixed;bottom:1.2rem;right:1.2rem;z-index:1000;display:flex;flex-direction:column;gap:.5rem;align-items:flex-end}
 .toast{font-size:13.5px;padding:.5rem .9rem;background:var(--s1);border:1px solid var(--b2);color:var(--t1);max-width:22rem;transition:opacity .3s}
 .toast.ok{border-left:2px solid var(--green)}
 .toast.err{border-left:2px solid var(--red)}
 .toast.info{border-left:2px solid var(--accent)}
-.modal-backdrop{display:none;position:fixed;inset:0;background:var(--modal-bg);z-index:500;align-items:center;justify-content:center;padding:1rem}
-.modal-backdrop.open{display:flex}
-.modal{background:var(--bg);border:1px solid var(--b2);padding:1.3rem 1.5rem;width:min(40rem,100%);max-height:calc(100vh - 2rem);overflow-y:auto;display:grid;gap:.8rem}
-.modal-head{display:flex;justify-content:space-between;align-items:baseline}
-.modal input,.modal textarea{width:100%}
-.modal .frow>input{width:auto}
-#et-comments{max-height:15rem;overflow-y:auto;display:grid;gap:.55rem}
-.cmt{font-size:14px}
-.cmt .by{margin:0}
-.cmt .body{font-size:14px}
 .overlay{display:none;position:fixed;inset:0;background:var(--modal-bg);z-index:180}
 
 ::-webkit-scrollbar{width:6px;height:6px}
@@ -817,10 +804,6 @@ details.manual .form{display:grid}
       <a class="nav-link" href="#logs" data-v="logs">Logs</a>
       <a class="nav-link" href="#mesh" data-v="mesh">Mesh</a>
     </div>
-    <div class="nav-group quiet">
-      <span class="nav-lbl">board</span>
-      <a class="nav-link" href="#board" data-v="board">Board <span class="nav-count" id="board-count"></span></a>
-    </div>
     <div class="side-sec" id="ps-projects-sidebar">
       <button class="side-lbl" onclick="toggleSection('ps-projects-sidebar')">projects</button>
       <div class="side-body">
@@ -1065,94 +1048,7 @@ details.manual .form{display:grid}
   <div class="rows" id="mesh-token-section"></div>
 </section>
 
-<!-- BOARD -->
-<section id="panel-board" class="panel">
-  <div class="e head">
-    <div class="m" id="bd-scope"></div>
-    <div class="c">
-      <h1>Board</h1>
-      <p class="lede">Tasks and messages from the API. Agents no longer work from this board, but procedure steps are stored here as tasks.</p>
-      <div class="subnav">
-        <button id="bd-tab-tasks" onclick="boardSub('tasks')">Tasks</button>
-        <button id="bd-tab-messages" onclick="boardSub('messages')">Messages <span class="nav-count" id="bd-unread"></span></button>
-      </div>
-    </div>
-  </div>
-
-  <div id="board-tasks">
-    <div class="e">
-      <div class="m" id="task-count"></div>
-      <div class="c">
-        <div class="tools">
-          <select id="tf" onchange="loadTasks()" aria-label="status">
-            <option value="">any status</option>
-            <option>open</option><option>claimed</option><option>completed</option><option>failed</option>
-          </select>
-          <input id="tag-filter" placeholder="tag" aria-label="tag filter" style="width:7rem;font-size:14px" oninput="loadTasks()">
-          <button onclick="toggleForm('task-form','ttitle')">New task</button>
-        </div>
-        <div class="form" id="task-form">
-          <input id="ttitle" placeholder="Title">
-          <input id="tdesc" placeholder="Description, optional">
-          <input id="toutcome" placeholder="Expected outcome">
-          <div class="frow">
-            <input id="ttags" placeholder="tags, comma separated">
-            <select id="tpri" aria-label="priority"><option>normal</option><option>low</option><option>high</option></select>
-            <button class="p" onclick="createTask()">Create task</button>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="rows" id="tlist"></div>
-  </div>
-
-  <div id="board-messages" style="display:none">
-    <div class="e">
-      <div class="m" id="inbox-label"></div>
-      <div class="c">
-        <div class="tools">
-          <label class="check"><input type="checkbox" id="msg-show-all" onchange="loadInbox()">show read messages too</label>
-          <button id="mark-all-read-btn" onclick="markAllRead()" style="display:none">mark all read</button>
-          <button onclick="toggleForm('msg-form','mto')">Write a message</button>
-        </div>
-        <div class="form" id="msg-form">
-          <div class="frow">
-            <input id="mto" placeholder="To" list="agent-list-dl">
-            <datalist id="agent-list-dl"></datalist>
-            <input id="msub" placeholder="Subject, optional">
-          </div>
-          <textarea id="mbody" placeholder="Message. Ctrl+Enter sends." rows="3"></textarea>
-          <div class="frow"><button class="p" onclick="sendMsg()">Send</button></div>
-        </div>
-      </div>
-    </div>
-    <div class="rows" id="msglist"></div>
-  </div>
-</section>
-
 </main>
-</div>
-
-<!-- TASK EDIT MODAL -->
-<div id="task-modal" class="modal-backdrop">
-  <div class="modal">
-    <div class="modal-head">
-      <h2>Task</h2>
-      <button onclick="closeTaskModal()">close</button>
-    </div>
-    <input id="et-title" placeholder="Title">
-    <textarea id="et-desc" placeholder="Description" rows="3"></textarea>
-    <input id="et-outcome" placeholder="Expected outcome">
-    <div class="frow">
-      <input id="et-tags" placeholder="tags, comma separated">
-      <select id="et-pri" aria-label="priority"><option>normal</option><option>low</option><option>high</option></select>
-      <button class="p" onclick="saveTaskEdit()">Save</button>
-    </div>
-    <div class="rel-lbl" style="margin-top:.6rem">comments</div>
-    <div id="et-comments"></div>
-    <textarea id="et-cmtbody" placeholder="Add a comment" rows="2"></textarea>
-    <div class="frow"><button onclick="postTaskComment()">add comment</button></div>
-  </div>
 </div>
 
 <script>
@@ -1163,10 +1059,10 @@ const hdrs=()=>window._akey
   ?{'content-type':'application/json','x-agent-id':window._aid,'x-api-key':window._akey}
   :{'content-type':'application/json','x-ui-session':'1'};
 const ACTIVE_MS=300000;
-const VIEWS=['notepad','decisions','procedures','sessions','fleet','events','logs','mesh','board'];
-const ALIAS={dashboard:'notepad',memory:'notepad',notes:'notepad',projects:'notepad',tasks:'board/tasks',messages:'board/messages',agents:'fleet',pulse:'fleet'};
+const VIEWS=['notepad','decisions','procedures','sessions','fleet','events','logs','mesh'];
+const ALIAS={dashboard:'notepad',memory:'notepad',notes:'notepad',projects:'notepad',tasks:'procedures',messages:'notepad',board:'notepad',agents:'fleet',pulse:'fleet'};
 const NOTE_TYPES=['memory','doc','skill','directive','scratch'];
-let _sseAbort=null,_agents=[],_projects=[],_myProjects=new Set(),_editTaskId=null,_taskData={},_view='',_boardSub='tasks';
+let _sseAbort=null,_agents=[],_projects=[],_myProjects=new Set(),_view='';
 
 function toast(msg,type='info',dur=3000){
   const el=document.createElement('div');
@@ -1281,8 +1177,7 @@ function show(v,sub){
   _view=v;
   document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id==='panel-'+v));
   document.querySelectorAll('#nav [data-v]').forEach(a=>a.classList.toggle('on',a.dataset.v===v));
-  if(v==='board'&&(sub==='tasks'||sub==='messages'))_boardSub=sub;
-  const h='#'+v+(v==='board'&&_boardSub==='messages'?'/messages':'');
+  const h='#'+v;
   try{localStorage.setItem('artel-tab',h.slice(1))}catch(e){}
   if(location.hash!==h)history.replaceState(null,'',location.pathname+location.search+h);
   closeDrawer();
@@ -1298,7 +1193,6 @@ function loadView(quiet){
   if(v==='events'&&!quiet&&!_sseAbort)startSSE();
   if(v==='logs'&&!quiet)loadLogs();
   if(v==='mesh'&&!quiet)loadMesh();
-  if(v==='board')loadBoard(quiet);
 }
 window.addEventListener('hashchange',route);
 
@@ -1386,7 +1280,6 @@ function onAgentChange(){
   _noteLimit=NOTE_PAGE;
   if(_view==='events'){if(_sseAbort)startSSE();return;}
   loadView();
-  checkInbox();
 }
 
 async function init(){
@@ -1404,7 +1297,7 @@ async function init(){
   const dlp=qs.get('project'),dla=qs.get('agent');
   if(dlp&&[...$('h-project').options].some(o=>o.value===dlp))$('h-project').value=dlp;
   if(dla&&[...$('h-agent-sel').options].some(o=>o.value===dla))$('h-agent-sel').value=dla;
-  route();checkInbox();setInterval(checkInbox,30000);
+  route();
   loadProjects();startLive();refreshCounts();
 }
 
@@ -1752,178 +1645,6 @@ function toggleProc(id){
   $('pb-'+id).textContent=open?'hide steps':'show steps';
 }
 
-function loadBoard(quiet){
-  $('bd-scope').innerHTML=scopeLabel();
-  const msgs=_boardSub==='messages';
-  $('board-tasks').style.display=msgs?'none':'';
-  $('board-messages').style.display=msgs?'':'none';
-  $('bd-tab-tasks').classList.toggle('on',!msgs);
-  $('bd-tab-messages').classList.toggle('on',msgs);
-  if(msgs)loadInbox(quiet);else loadTasks(quiet);
-}
-function boardSub(s){show('board',s)}
-
-const STATUS_CLASS={open:'warn',claimed:'hi',completed:'good',failed:'bad'};
-async function loadTasks(quiet){
-  const s=$('tf').value,tag=$('tag-filter').value.trim();
-  const p=scopeQuery();
-  if(s)p.set('status',s);
-  if(activeAgent())p.set('agent',activeAgent());
-  if(tag)p.set('tag',tag);
-  if(!quiet)loading('tlist');
-  try{
-    const ts=await req('GET','/tasks?'+p);
-    $('task-count').textContent=ts.length?plural(ts.length,'task'):'';
-    if(!ts.length){$('tlist').innerHTML=emptyState('No tasks match.');return;}
-    _taskData={};
-    ts.forEach(t=>{_taskData[t.id]={title:t.title,desc:t.description||'',outcome:t.expected_outcome||'',pri:t.priority,tags:t.tags||[]};});
-    $('tlist').innerHTML=ts.map(t=>{
-      const by=[`by <b>${esc(t.created_by)}</b>`];
-      if(t.assigned_to)by.push(`with <b>${esc(t.assigned_to)}</b>`);
-      by.push(when(t.created_at));
-      if(t.project&&!activeProject())by.push(esc(t.project));
-      const tags=(t.tags||[]).length?`<div class="tags" style="margin-top:.3rem">${t.tags.map(tg=>`<button onclick="filterTag(${jsa(tg)})">#${esc(tg)}</button>`).join('')}</div>`:'';
-      const closed=t.status==='completed'||t.status==='failed';
-      return row(`<span class="${STATUS_CLASS[t.status]||''}">${esc(t.status)}</span>${t.priority!=='normal'?`<span>${esc(t.priority)} priority</span>`:''}`,`
-        <div class="title">${md(t.title)}</div>
-        ${t.description?`<div class="desc clamp">${md(t.description)}</div>`:''}
-        ${t.expected_outcome?`<div class="by">done when: ${esc(t.expected_outcome)}</div>`:''}
-        <div class="by">${by.join(' · ')}</div>${tags}
-        <div class="acts">
-          ${t.status==='open'?`<button onclick="taskAction('${t.id}','claim')">claim</button>`:''}
-          ${t.status==='claimed'?`<button onclick="taskAction('${t.id}','complete')">complete</button><button onclick="taskActionWithReason('${t.id}','unclaim','Release this claim back to the open queue. Optional reason:')">unclaim</button><button class="danger" onclick="taskActionWithReason('${t.id}','fail','Mark this task as failed. Reason (recommended):')">fail</button>`:''}
-          <button onclick="openTaskEdit('${t.id}')">${closed?'view':'edit'}</button>
-        </div>`);
-    }).join('');
-  }catch(e){$('tlist').innerHTML=errState(e);}
-}
-function filterTag(tag){$('tag-filter').value=tag;loadTasks();}
-async function createTask(){
-  const title=$('ttitle').value.trim();if(!title)return;
-  const tags=$('ttags').value.split(',').map(t=>t.trim()).filter(Boolean);
-  try{
-    await req('POST','/tasks',{title,description:$('tdesc').value,expected_outcome:$('toutcome').value,project:activeProject(),priority:$('tpri').value,tags});
-    $('ttitle').value='';$('tdesc').value='';$('toutcome').value='';$('ttags').value='';
-    $('task-form').classList.remove('open');
-    toast('Task created','ok');loadTasks(true);
-  }catch(e){toast('Create failed: '+e.message,'err');}
-}
-async function taskAction(id,action,body){
-  try{
-    const payload=body!==undefined?{body}:undefined;
-    await req('POST',`/tasks/${id}/${action}`,payload);
-    const label={claim:'claimed',unclaim:'unclaimed',complete:'completed',fail:'failed'}[action]||action;
-    toast('Task '+label,'ok');loadTasks(true);
-  }catch(e){toast('Failed: '+e.message,'err');}
-}
-async function taskActionWithReason(id,action,promptText){
-  const reason=window.prompt(promptText,'');
-  if(reason===null)return;
-  await taskAction(id,action,reason);
-}
-function openTaskEdit(id){
-  const d=_taskData[id]||{};
-  _editTaskId=id;
-  $('et-title').value=d.title||'';
-  $('et-desc').value=d.desc||'';
-  $('et-outcome').value=d.outcome||'';
-  $('et-pri').value=d.pri||'normal';
-  $('et-tags').value=(d.tags||[]).join(', ');
-  $('et-cmtbody').value='';
-  $('et-comments').innerHTML='<span class="quiet">Loading.</span>';
-  $('task-modal').classList.add('open');
-  loadTaskComments(id);
-}
-function closeTaskModal(){$('task-modal').classList.remove('open');_editTaskId=null}
-async function saveTaskEdit(){
-  if(!_editTaskId)return;
-  const tags=$('et-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
-  const body={title:$('et-title').value.trim()||undefined,description:$('et-desc').value||undefined,expected_outcome:$('et-outcome').value||undefined,priority:$('et-pri').value,tags};
-  try{
-    await req('PATCH',`/tasks/${_editTaskId}`,body);
-    toast('Task updated','ok');loadTasks(true);
-  }catch(e){toast('Save failed: '+e.message,'err');}
-}
-const KIND_CLASS={claim:'hi',complete:'good',fail:'bad'};
-async function loadTaskComments(id){
-  try{
-    const cs=await req('GET',`/tasks/${id}/comments`);
-    if(!cs.length){$('et-comments').innerHTML='<span class="quiet">No comments yet.</span>';return;}
-    $('et-comments').innerHTML=cs.map(c=>`<div class="cmt">
-      <div class="by"><span class="${KIND_CLASS[c.kind]||''}">${esc(c.kind)}</span> · <b>${esc(c.agent_id)}</b> · ${when(c.created_at)}</div>
-      ${c.body?`<pre class="body">${esc(c.body)}</pre>`:''}
-    </div>`).join('');
-  }catch(e){$('et-comments').innerHTML=`<span class="bad">${esc(e.message)}</span>`;}
-}
-async function postTaskComment(){
-  if(!_editTaskId)return;
-  const body=$('et-cmtbody').value.trim();
-  if(!body)return;
-  try{
-    await req('POST',`/tasks/${_editTaskId}/comments`,{body});
-    $('et-cmtbody').value='';
-    loadTaskComments(_editTaskId);
-  }catch(e){toast('Comment failed: '+e.message,'err');}
-}
-$('task-modal').addEventListener('click',e=>{if(e.target===$('task-modal'))closeTaskModal()});
-
-async function loadInbox(quiet){
-  const agent=activeAgent();
-  const showAll=$('msg-show-all').checked;
-  const full=!!agent||showAll;
-  const url=agent?('/messages?limit=200&agent='+encodeURIComponent(agent)):(showAll?'/messages?limit=200':'/messages/inbox');
-  if(!quiet)loading('msglist');
-  try{
-    const ms=await req('GET',url);
-    const unread=ms.filter(m=>!m.read);
-    $('mark-all-read-btn').style.display=(!full&&unread.length)?'':'none';
-    $('inbox-label').textContent=ms.length?(agent?'all messages':(showAll?'all messages':'unread')):'';
-    if(!ms.length){$('msglist').innerHTML=emptyState(full?'No messages.':'No unread messages.');return;}
-    $('msglist').innerHTML=ms.map(m=>{
-      const to=m.to_agent&&m.to_agent!==window._aid?` to <b>${esc(m.to_agent)}</b>`:'';
-      return row(`${when(m.created_at)}<span>${m.read?'read':'<span class="hi">unread</span>'}</span>`,`
-        <div class="by" style="margin:0"><b class="who">${esc(m.from_agent)}</b>${to}</div>
-        ${m.subject?`<div class="title">${esc(m.subject)}</div>`:''}
-        <pre class="body">${esc(m.body)}</pre>
-        <div class="acts">
-          ${!m.read?`<button onclick="markRead('${m.id}')">mark read</button>`:''}
-          <button onclick="replyTo(${jsa(m.from_agent)})">reply</button>
-        </div>`,m.read?'read':'unread');
-    }).join('');
-  }catch(e){$('msglist').innerHTML=errState(e);}
-}
-async function checkInbox(){
-  try{
-    const agent=activeAgent();
-    const ms=await req('GET','/messages/inbox'+(agent?'?agent='+encodeURIComponent(agent):''));
-    $('board-count').textContent=ms.length||'';
-    $('bd-unread').textContent=ms.length||'';
-  }catch(_){}
-}
-async function sendMsg(){
-  const to=$('mto').value.trim();if(!to)return;
-  const body=$('mbody').value.trim();if(!body)return;
-  try{
-    await req('POST','/messages',{to,subject:$('msub').value||'',body});
-    $('mto').value='';$('msub').value='';$('mbody').value='';
-    $('msg-form').classList.remove('open');
-    toast('Message sent','ok');loadInbox(true);
-  }catch(e){toast('Send failed: '+e.message,'err');}
-}
-async function markRead(id){
-  try{await req('POST',`/messages/${id}/read`);loadInbox(true);checkInbox();}
-  catch(e){toast('Could not mark read: '+e.message,'err');}
-}
-async function markAllRead(){
-  try{await req('POST','/messages/inbox/read-all');loadInbox(true);checkInbox();}
-  catch(e){toast('Could not mark all read: '+e.message,'err');}
-}
-function replyTo(agent){
-  $('mto').value=agent;
-  $('msg-form').classList.add('open');
-  $('mbody').focus();
-}
-
 function setSseStatus(on,label){
   const lbl=$('sse-status');
   lbl.textContent=label;
@@ -1940,8 +1661,7 @@ function _liveRefresh(){
     _liveLast=Date.now();
     if(document.hidden)return;
     if(document.activeElement&&/^(TEXTAREA|INPUT)$/.test(document.activeElement.tagName)&&document.activeElement.value)return;
-    if(['notepad','decisions','procedures','board','fleet'].includes(_view))loadView(true);
-    checkInbox();
+    if(['notepad','decisions','procedures','fleet'].includes(_view))loadView(true);
   };
   clearTimeout(_liveTimer);
   const wait=Math.max(800,4000-(Date.now()-_liveLast));
@@ -2434,7 +2154,7 @@ document.addEventListener('keydown',e=>{
     return;
   }
   if(e.key==='Escape'){
-    closeTaskModal();closeDrawer();
+    closeDrawer();
     $('h-connect-drop').classList.remove('open');
   }
 });

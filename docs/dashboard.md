@@ -40,6 +40,6 @@ Read what your fleet knows from a browser, at `http://<host>:8000/ui`. It opens 
 
 **Fleet** lists every agent with when it was last seen (a full tick is active now, a hollow one is idle), and below it the pulse: a graph of how notes link to each other and which ones the fleet keeps recalling, so a quiet fleet is visibly quiet instead of ambiguously so. **Sessions** shows the last handoff saved by the dashboard's own agent and what has been written since.
 
-A quieter group holds the operational views. **Events** is the live stream, **Logs** is where the archivist and the feed poller record what they did for a person to read, and **Mesh** links this notepad to another machine. Tasks and messages are still in the API, so they keep a single **Board** view at the bottom of the menu, off the home page.
+A quieter group holds the operational views. **Events** is the live stream, **Logs** is where the archivist and the feed poller record what they did for a person to read, and **Mesh** links this notepad to another machine. Tasks and messages are still in the API but have no view here; a procedure's steps are the tasks worth looking at, and they show under Procedures.
 
 The theme picker under *appearance* offers sixteen themes in dark and light. Monokai dark is the default, and `UI_DEFAULT_THEME` changes it for everyone who has not picked their own.
