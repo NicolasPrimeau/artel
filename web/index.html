@@ -24,7 +24,7 @@
  "isAccessibleForFree":true,
  "offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
 </script>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='5' fill='%23101316'/><path d='M7 9h18M7 16h18M7 23h11' stroke='%235cb8ae' stroke-width='2.4' stroke-linecap='round'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='5' fill='%23272822'/><path d='M7 9h18M7 16h18M7 23h11' stroke='%23fd971f' stroke-width='2.4' stroke-linecap='round'/></svg>">
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-CYMPQ0NXJN"></script>
 <script>
 window.dataLayer = window.dataLayer || [];
@@ -32,12 +32,45 @@ function gtag(){dataLayer.push(arguments)}
 gtag("js", new Date());
 gtag("config", "G-CYMPQ0NXJN");
 </script>
+<script>
+try{var t=localStorage.getItem("artel-site-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}
+</script>
 <style>
+/*themes:start*/
+:root[data-theme="gruvbox-dark"]{--bg:#1d2021;--panel:#282828;--row:#32302f;--fg:#ebdbb2;--dim:#ab9c86;--faint:#928574;--rule:#504945;--edge:#665c54;--money:#d79921;--manual:#fe8019;--auto:#b8bb26;color-scheme:dark}
+:root[data-theme="gruvbox-light"]{--bg:#f9f5d7;--panel:#f2e5bc;--row:#ebdbb2;--fg:#3c3836;--dim:#645a52;--faint:#796c62;--rule:#bdae93;--edge:#a89984;--money:#b57614;--manual:#af3a03;--auto:#79740e;color-scheme:light}
+:root[data-theme="everforest-dark"]{--bg:#272e33;--panel:#1d2327;--row:#2e383c;--fg:#d3c6aa;--dim:#b0af9b;--faint:#96988a;--rule:#4a555b;--edge:#5c6a72;--money:#a7c080;--manual:#e69875;--auto:#a7c080;color-scheme:dark}
+:root[data-theme="everforest-light"]{--bg:#fff9ef;--panel:#f4eddb;--row:#eae4ca;--fg:#272e33;--dim:#546169;--faint:#69746f;--rule:rgba(92,106,114,.15);--edge:rgba(92,106,114,.25);--money:#839606;--manual:#d67128;--auto:#839606;color-scheme:light}
+:root[data-theme="dracula-dark"]{--bg:#282a36;--panel:#21222c;--row:#2a2c3e;--fg:#f8f8f2;--dim:#a8afc8;--faint:#8894b8;--rule:#44475a;--edge:#6272a4;--money:#bd93f9;--manual:#ffb86c;--auto:#50fa7b;color-scheme:dark}
+:root[data-theme="dracula-light"]{--bg:#f8f8f2;--panel:#eeeeee;--row:#e2e2e2;--fg:#282a36;--dim:#515c83;--faint:#686f90;--rule:rgba(98,114,164,.15);--edge:rgba(98,114,164,.25);--money:#6d28d9;--manual:#b98004;--auto:#50a14f;color-scheme:light}
+:root[data-theme="mellow-dark"]{--bg:#1e1e1e;--panel:#191919;--row:#242424;--fg:#c9c9c9;--dim:#9c9c9c;--faint:#898989;--rule:#3a3a3a;--edge:#505050;--money:#7c9b8a;--manual:#b89a78;--auto:#7c9b8a;color-scheme:dark}
+:root[data-theme="mellow-light"]{--bg:#f5f5f0;--panel:#eeeeea;--row:#e5e5e0;--fg:#2a2a2a;--dim:#5d5d5d;--faint:#707070;--rule:rgba(42,42,42,.15);--edge:rgba(42,42,42,.25);--money:#4a7060;--manual:#7a6040;--auto:#4a7060;color-scheme:light}
+:root[data-theme="rose-pine-dark"]{--bg:#191724;--panel:#1f1d2e;--row:#26233a;--fg:#e0def4;--dim:#9894b1;--faint:#85819c;--rule:#403d52;--edge:#524f67;--money:#c4a7e7;--manual:#f6c177;--auto:#9ccfd8;color-scheme:dark}
+:root[data-theme="rose-pine-light"]{--bg:#faf4ed;--panel:#fffaf3;--row:#f2e9e1;--fg:#575279;--dim:#5e587d;--faint:#6e6a8d;--rule:rgba(87,82,121,.15);--edge:rgba(87,82,121,.25);--money:#bd787d;--manual:#b7834c;--auto:#286983;color-scheme:light}
+:root[data-theme="nord-dark"]{--bg:#2e3440;--panel:#3b4252;--row:#434c5e;--fg:#eceff4;--dim:#d8dee9;--faint:#959db2;--rule:#4c566a;--edge:#616e88;--money:#88c0d0;--manual:#d08770;--auto:#a3be8c;color-scheme:dark}
+:root[data-theme="nord-light"]{--bg:#eceff4;--panel:#e5e9f0;--row:#d8dee9;--fg:#2e3440;--dim:#4c566a;--faint:#606b83;--rule:rgba(76,86,106,.15);--edge:rgba(76,86,106,.25);--money:#5e81ac;--manual:#b07666;--auto:#7a8e71;color-scheme:light}
+:root[data-theme="tokyo-night-dark"]{--bg:#1a1b26;--panel:#1f2335;--row:#24283b;--fg:#c0caf5;--dim:#959bbe;--faint:#7b84af;--rule:#3b4261;--edge:#545c7e;--money:#7aa2f7;--manual:#ff9e64;--auto:#9ece6a;color-scheme:dark}
+:root[data-theme="tokyo-night-light"]{--bg:#e1e2e7;--panel:#d5d6db;--row:#c4c8da;--fg:#343b58;--dim:#444e77;--faint:#5b6388;--rule:rgba(54,60,95,.15);--edge:rgba(54,60,95,.25);--money:#2e7de9;--manual:#8c6c3e;--auto:#587539;color-scheme:light}
+:root[data-theme="solarized-dark"]{--bg:#002b36;--panel:#073642;--row:#0d3c47;--fg:#fdf6e3;--dim:#9eaaa8;--faint:#839496;--rule:#2a5560;--edge:#3d6b78;--money:#268bd2;--manual:#cb4b16;--auto:#859900;color-scheme:dark}
+:root[data-theme="solarized-light"]{--bg:#fdf6e3;--panel:#f5eedc;--row:#eee8d5;--fg:#073642;--dim:#3f5f69;--faint:#587379;--rule:rgba(0,43,54,.15);--edge:rgba(0,43,54,.25);--money:#268bd2;--manual:#cb4b16;--auto:#7f9403;color-scheme:light}
+:root[data-theme="hacker-dark"]{--bg:#0d0d0d;--panel:#0a0a0a;--row:#111;--fg:#00ff41;--dim:#00a82a;--faint:#009424;--rule:#1a2e1a;--edge:#255225;--money:#00ff41;--manual:#ffaa00;--auto:#00ff41;color-scheme:dark}
+:root[data-theme="hacker-light"]{--bg:#f0fff0;--panel:#e6ffe6;--row:#d9f5d9;--fg:#003300;--dim:#007000;--faint:#008500;--rule:rgba(0,100,0,.15);--edge:rgba(0,100,0,.25);--money:#007700;--manual:#886600;--auto:#007700;color-scheme:light}
+:root{--bg:#272822;--panel:#1e1f1c;--row:#2d2e2a;--fg:#f8f8f2;--dim:#a9a799;--faint:#939183;--rule:#49483e;--edge:#75715e;--money:#fd971f;--manual:#f92672;--auto:#a6e22e;color-scheme:dark}
+:root[data-theme="monokai-light"]{--bg:#fafaf8;--panel:#f2f1ee;--row:#e8e7e3;--fg:#272822;--dim:#625f4f;--faint:#726f62;--rule:rgba(117,113,94,.15);--edge:rgba(117,113,94,.25);--money:#d3791e;--manual:#e8284a;--auto:#6d9c46;color-scheme:light}
+:root[data-theme="cobalt-dark"]{--bg:#193549;--panel:#0e2030;--row:#1f4462;--fg:#ffffff;--dim:#8abfd8;--faint:#73a2be;--rule:#2d5879;--edge:#3d6d8a;--money:#ffc600;--manual:#ff9d00;--auto:#3ad900;color-scheme:dark}
+:root[data-theme="cobalt-light"]{--bg:#e8f4fd;--panel:#d9ecf8;--row:#c5e1f3;--fg:#0e2030;--dim:#2d5879;--faint:#3d6d8a;--rule:rgba(25,53,73,.15);--edge:rgba(25,53,73,.25);--money:#1565c0;--manual:#e65100;--auto:#2e7d32;color-scheme:light}
+:root[data-theme="volcano-dark"]{--bg:#1a1210;--panel:#221510;--row:#2e1c12;--fg:#f0c8a0;--dim:#ba8c64;--faint:#a37a57;--rule:#4f2e18;--edge:#6b3e22;--money:#e8541a;--manual:#e8841a;--auto:#7a9b50;color-scheme:dark}
+:root[data-theme="volcano-light"]{--bg:#fdf0e8;--panel:#f5e0cc;--row:#ead0b4;--fg:#2a1408;--dim:#7a4828;--faint:#8e6245;--rule:rgba(42,20,8,.15);--edge:rgba(42,20,8,.25);--money:#c04010;--manual:#b05a10;--auto:#3a6a28;color-scheme:light}
+:root[data-theme="kanagawa-dark"]{--bg:#1f1f28;--panel:#16161d;--row:#2a2a37;--fg:#dcd7ba;--dim:#9cabca;--faint:#8c8a7d;--rule:#3f3f52;--edge:#54546d;--money:#7e9cd8;--manual:#ffa066;--auto:#76946a;color-scheme:dark}
+:root[data-theme="kanagawa-light"]{--bg:#f2ecbc;--panel:#e5dcb0;--row:#d8ceab;--fg:#43436c;--dim:#555377;--faint:#6b6586;--rule:rgba(84,84,100,.15);--edge:rgba(84,84,100,.25);--money:#4d699b;--manual:#a37e47;--auto:#6f894e;color-scheme:light}
+:root[data-theme="ayu-dark"]{--bg:#0a0e14;--panel:#0d1017;--row:#111820;--fg:#bfbdb6;--dim:#8a9199;--faint:#757d83;--rule:#1f2b3a;--edge:#2d3f55;--money:#ffb454;--manual:#ff3333;--auto:#7fd962;color-scheme:dark}
+:root[data-theme="ayu-light"]{--bg:#fafafa;--panel:#f3f3f3;--row:#e7e7e7;--fg:#5c6166;--dim:#5c6166;--faint:#6c7176;--rule:rgba(90,95,100,.15);--edge:rgba(90,95,100,.25);--money:#be834f;--manual:#da6f6f;--auto:#799a1f;color-scheme:light}
+:root[data-theme="flexoki-dark"]{--bg:#100f0f;--panel:#1c1b1a;--row:#282726;--fg:#cecdc3;--dim:#95938d;--faint:#7d7c76;--rule:#403e3c;--edge:#575653;--money:#d14d41;--manual:#da702c;--auto:#879a39;color-scheme:dark}
+:root[data-theme="flexoki-light"]{--bg:#fffcf0;--panel:#f2f0e5;--row:#e6e4d9;--fg:#100f0f;--dim:#61605c;--faint:#75736f;--rule:rgba(16,15,15,.15);--edge:rgba(16,15,15,.25);--money:#d14d41;--manual:#da702c;--auto:#879a39;color-scheme:light}
+:root[data-theme="oxocarbon-dark"]{--bg:#161616;--panel:#1c1c1c;--row:#262626;--fg:#f4f4f4;--dim:#a8b1be;--faint:#7e848a;--rule:#525252;--edge:#6f6f6f;--money:#08bdba;--manual:#ff832b;--auto:#42be65;color-scheme:dark}
+:root[data-theme="oxocarbon-light"]{--bg:#ffffff;--panel:#f4f4f4;--row:#e0e0e0;--fg:#161616;--dim:#626262;--faint:#6e737b;--rule:rgba(22,22,22,.15);--edge:rgba(22,22,22,.25);--money:#0f62fe;--manual:#8a3800;--auto:#198038;color-scheme:light}
+/*themes:end*/
 :root{
-  --bg:#272822; --panel:#1e1f1c; --row:#2d2e2a;
-  --fg:#f8f8f2; --dim:#c5c2ae; --faint:#9a9682;
-  --rule:#3e3d32; --edge:#75715e;
-  --money:#fd971f; --manual:#f92672; --auto:#a6e22e;
   --mono:ui-monospace,"SF Mono","JetBrains Mono","Roboto Mono",Menlo,Consolas,monospace;
   --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
@@ -134,11 +167,11 @@ pre{margin:1.2rem 0 1rem;padding:1rem 1.1rem;background:var(--panel);border-left
 .f input,.f textarea{width:100%;background:transparent;border:0;border-bottom:1px solid var(--edge);
   border-radius:0;color:var(--fg);font:15px/1.5 var(--sans);padding:.4rem 0;resize:vertical}
 .f input:focus,.f textarea:focus{outline:0;border-bottom-color:var(--money)}
-.f input::placeholder,.f textarea::placeholder{color:#75715e}
+.f input::placeholder,.f textarea::placeholder{color:var(--faint);opacity:.75}
 .submit{display:flex;gap:1rem;align-items:center;flex-wrap:wrap}
 button{font:500 15px var(--sans);color:var(--bg);background:var(--money);border:0;
   padding:.55rem 1.3rem;cursor:pointer}
-button:hover{background:#ffb04d}
+button:hover{filter:brightness(1.1)}
 button:disabled{opacity:.6}
 .msg{font-size:13px;color:var(--auto)}
 .msg.err{color:var(--manual)}
@@ -148,6 +181,21 @@ button:disabled{opacity:.6}
 .foot div{color:var(--faint);display:flex;flex-wrap:wrap;gap:.3rem 1.3rem}
 .foot a{color:var(--dim);text-decoration:none}
 .foot a:hover{color:var(--money)}
+
+.top{position:relative}
+.top nav{align-items:center}
+.pick{margin-left:auto;background:none;color:var(--dim);padding:.25rem;display:flex;line-height:0}
+.pick:hover,.pick[aria-expanded="true"]{color:var(--money);filter:none}
+.pick:focus-visible,.themes button:focus-visible{outline:1px solid var(--money);outline-offset:2px}
+.themes{position:absolute;right:0;top:100%;z-index:5;width:min(26rem,100%);background:var(--panel);
+  border:1px solid var(--edge);padding:.9rem}
+.themes .mode{display:flex;gap:1.1rem;margin-bottom:.7rem;padding-bottom:.6rem;border-bottom:1px solid var(--rule)}
+.themes .list{display:grid;grid-template-columns:repeat(auto-fill,minmax(7.4rem,1fr));gap:.15rem .6rem}
+.themes button{background:none;color:var(--dim);font:13px var(--sans);padding:.3rem 0;display:flex;
+  align-items:center;gap:.5rem;text-align:left}
+.themes button:hover{color:var(--fg);filter:none}
+.themes button[aria-pressed="true"]{color:var(--money)}
+.themes i{width:14px;height:14px;flex:none;border:2px solid;border-radius:50%}
 
 @media(max-width:760px){
   :root{--margin:0rem;--gap:0rem}
@@ -174,7 +222,12 @@ button:disabled{opacity:.6}
       <a href="/ledger/">Ledger</a>
       <a href="https://artel-sandbox.fly.dev/ui">Sandbox</a>
       <a href="https://github.com/NicolasPrimeau/artel">GitHub</a>
+      <button class="pick" id="pick" type="button" aria-label="Colour theme" aria-expanded="false" aria-controls="themes"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" stroke="none"/></svg></button>
     </nav>
+    <div class="themes" id="themes" hidden>
+      <div class="mode" id="theme-mode"></div>
+      <div class="list" id="theme-list"></div>
+    </div>
   </header>
 
   <div class="entry hero">
@@ -481,6 +534,38 @@ docker compose up -d</pre>
       }
     });
   }
+})();
+</script>
+<script>
+(function(){
+  const THEMES=/*themes-list:start*/[["gruvbox","Gruvbox","#1d2021","#d79921","#f9f5d7","#b57614"],["everforest","Everforest","#272e33","#a7c080","#fff9ef","#8da101"],["dracula","Dracula","#282a36","#bd93f9","#f8f8f2","#6d28d9"],["mellow","Mellow","#1e1e1e","#7c9b8a","#f5f5f0","#4a7060"],["rose-pine","Rosé Pine","#191724","#c4a7e7","#faf4ed","#d7827e"],["nord","Nord","#2e3440","#88c0d0","#eceff4","#5e81ac"],["tokyo-night","Tokyo Night","#1a1b26","#7aa2f7","#e1e2e7","#2e7de9"],["solarized","Solarized","#002b36","#268bd2","#fdf6e3","#268bd2"],["hacker","Hacker","#0d0d0d","#00ff41","#f0fff0","#007700"],["monokai","Monokai","#272822","#fd971f","#fafaf8","#e6821e"],["cobalt","Cobalt","#193549","#ffc600","#e8f4fd","#1565c0"],["volcano","Volcano","#1a1210","#e8541a","#fdf0e8","#c04010"],["kanagawa","Kanagawa","#1f1f28","#7e9cd8","#f2ecbc","#4d699b"],["ayu","Ayu","#0a0e14","#ffb454","#fafafa","#ff9940"],["flexoki","Flexoki","#100f0f","#d14d41","#fffcf0","#d14d41"],["oxocarbon","Oxocarbon","#161616","#08bdba","#ffffff","#0f62fe"]]/*themes-list:end*/;
+  const KEY="artel-site-theme",DEFAULT="monokai-dark";
+  const root=document.documentElement,pick=document.getElementById("pick"),
+    panel=document.getElementById("themes"),modes=document.getElementById("theme-mode"),
+    list=document.getElementById("theme-list");
+  let cur=root.getAttribute("data-theme")||DEFAULT;
+  const parts=()=>{const i=cur.lastIndexOf("-");return [cur.slice(0,i),cur.slice(i+1)]};
+  function set(id,mode){
+    cur=id+"-"+mode;
+    if(cur===DEFAULT)root.removeAttribute("data-theme");else root.setAttribute("data-theme",cur);
+    try{localStorage.setItem(KEY,cur)}catch(e){}
+    draw();
+  }
+  function btn(label,on,fn,sw){
+    const b=document.createElement("button");b.type="button";b.setAttribute("aria-pressed",on);
+    if(sw){const i=document.createElement("i");i.style.background=sw[0];i.style.borderColor=sw[1];b.appendChild(i)}
+    b.appendChild(document.createTextNode(label));b.onclick=fn;return b;
+  }
+  function draw(){
+    const [id,mode]=parts();
+    modes.replaceChildren(btn("Dark",mode==="dark",()=>set(id,"dark")),btn("Light",mode==="light",()=>set(id,"light")));
+    list.replaceChildren(...THEMES.map(t=>btn(t[1],t[0]===id,()=>set(t[0],mode),mode==="dark"?[t[2],t[3]]:[t[4],t[5]])));
+  }
+  function open(on){panel.hidden=!on;pick.setAttribute("aria-expanded",on)}
+  pick.onclick=()=>open(panel.hidden);
+  document.addEventListener("click",e=>{if(!panel.hidden&&!panel.contains(e.target)&&!pick.contains(e.target))open(false)});
+  document.addEventListener("keydown",e=>{if(e.key==="Escape")open(false)});
+  draw();
 })();
 </script>
 </body>
