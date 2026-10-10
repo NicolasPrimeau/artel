@@ -762,10 +762,11 @@ button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible{
 <div class="overlay" id="overlay" onclick="closeDrawer()"></div>
 
 <nav id="nav" aria-label="Main">
-  <a class="brand" href="#notepad">Artel</a>
+  <a class="brand" href="/ui" onclick="return goHome()">Artel</a>
   <div class="nav-scroll">
+    <a class="nav-link" href="/ui" data-v="pulse" onclick="return goHome()">Pulse</a>
     <a class="nav-link" href="#notepad" data-v="notepad">Notepad <span class="nav-count" id="nc-notepad"></span></a>
-    <a class="nav-link" href="#decisions" data-v="decisions">Decisions <span class="nav-count" id="nc-decisions"></span></a>
+        <a class="nav-link" href="#decisions" data-v="decisions">Decisions <span class="nav-count" id="nc-decisions"></span></a>
     <a class="nav-link" href="#procedures" data-v="procedures">Procedures <span class="nav-count" id="nc-procedures"></span></a>
     <a class="nav-link" href="#sessions" data-v="sessions">Sessions</a>
     <a class="nav-link" href="#fleet" data-v="fleet">Fleet <span class="nav-count" id="nc-fleet"></span></a>
@@ -799,7 +800,7 @@ button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible{
 
 <div class="main">
 <header class="bar">
-  <a class="brand" href="#notepad">Artel</a>
+  <a class="brand" href="/ui" onclick="return goHome()">Artel</a>
   <span class="spacer"></span>
   <button onclick="openDrawer(event)">menu</button>
 </header>
@@ -895,9 +896,18 @@ button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible{
     </div>
   </div>
   <div class="rows" id="alist"></div>
-  <div class="e sec">
-    <div class="m" id="pulse-counts"></div>
-    <div class="c"><h2>Pulse</h2><span class="note-line">solid linked · dashed learned · red contradicts</span></div>
+</section>
+
+<!-- PULSE -->
+<section id="panel-pulse" class="panel">
+  <div class="e head">
+    <div class="m"></div>
+    <div class="c">
+      <h1>Pulse</h1>
+      <div class="stat"><span id="pulse-now"></span></div>
+      <div class="stat" id="pulse-counts"></div>
+      <span class="note-line">solid linked · dashed learned · red contradicts</span>
+    </div>
   </div>
   <div class="e">
     <div class="m"></div>
@@ -913,6 +923,8 @@ button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible{
         </div>
       </div>
       <div class="cols">
+        <div><h3>Latest notes</h3><div id="pulse-latest"></div></div>
+        <div><h3>Latest decisions</h3><div id="pulse-decided"></div></div>
         <div><h3>Most recalled</h3><div id="pulse-trails"></div></div>
         <div><h3>Most central</h3><div id="pulse-central"></div></div>
         <div><h3>Specialities</h3><div id="pulse-affinity"></div></div>
@@ -1034,8 +1046,8 @@ const hdrs=()=>window._akey
   ?{'content-type':'application/json','x-agent-id':window._aid,'x-api-key':window._akey}
   :{'content-type':'application/json','x-ui-session':'1'};
 const ACTIVE_MS=300000;
-const VIEWS=['notepad','decisions','procedures','sessions','fleet','events','logs','mesh'];
-const ALIAS={dashboard:'notepad',memory:'notepad',notes:'notepad',projects:'notepad',tasks:'procedures',messages:'notepad',board:'notepad',agents:'fleet',pulse:'fleet'};
+const VIEWS=['notepad','pulse','decisions','procedures','sessions','fleet','events','logs','mesh'];
+const ALIAS={dashboard:'notepad',memory:'notepad',notes:'notepad',projects:'notepad',tasks:'procedures',messages:'notepad',board:'notepad',agents:'fleet'};
 const NOTE_TYPES=['memory','doc','skill','directive','scratch'];
 const STILL=window.matchMedia('(prefers-reduced-motion: reduce)');
 let _sseAbort=null,_agents=[],_projects=[],_myProjects=new Set(),_view='',_project='',_agent='',_loaded={};
@@ -1220,18 +1232,23 @@ function parseRoute(raw){
 }
 function route(){
   let r=parseRoute(location.hash);
-  if(!r){let s='';try{s=localStorage.getItem('artel-tab')||''}catch(e){}r=parseRoute(s)||{v:'notepad',sub:''};}
+  if(!r)r={v:'pulse',sub:''};
   show(r.v);
 }
 function syncUrl(){
   const qs=new URLSearchParams(location.search);
   if(_project)qs.set('project',_project);else qs.delete('project');
   if(_agent)qs.set('agent',_agent);else qs.delete('agent');
-  const q=qs.toString(),url=location.pathname+(q?'?'+q:'')+'#'+_view;
+  const q=qs.toString(),url=location.pathname+(q?'?'+q:'')+(_view==='pulse'?'':'#'+_view);
   if(location.pathname+location.search+location.hash!==url)history.replaceState(null,'',url);
 }
+function goHome(){
+  history.pushState(null,'',location.pathname+location.search);
+  route();
+  return false;
+}
 function show(v){
-  if(v!=='fleet')pulseExpand(false);
+  if(v!=='pulse')pulseExpand(false);
   if(_view==='events'&&v!=='events')stopSSE();
   _view=v;
   document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id==='panel-'+v));
@@ -1249,7 +1266,6 @@ function loadView(){
 }
 window.addEventListener('hashchange',route);
 
-if(window._home)document.querySelectorAll('a.brand').forEach(a=>a.href=window._home);
 function openDrawer(e){
   if(e)e.stopPropagation();
   $('nav').classList.add('open');$('overlay').classList.add('open');
@@ -1297,7 +1313,7 @@ function _resolveAndApply(store){
 if(_ls('artel-theme-css')===null&&_ls('artel-theme')===null)_resolveAndApply(false);
 function _themeChanged(){
   renderThemePickers();
-  if(_view==='fleet'&&_pulseGraph)drawPulseGraph(_pulseGraph);
+  if(_view==='pulse'&&_pulseGraph)drawPulseGraph(_pulseGraph);
 }
 function setTheme(id){_curTheme=id;_resolveAndApply(true);_themeChanged();}
 function setMode(m){_curMode=m;_resolveAndApply(true);_themeChanged();}
@@ -1752,7 +1768,7 @@ function _liveRefresh(){
     if(document.hidden)return;
     const el=document.activeElement;
     if(el&&/^(TEXTAREA|INPUT)$/.test(el.tagName)&&el.value)return;
-    if(['notepad','decisions','procedures','fleet'].includes(_view))LOADERS[_view](true);
+    if(['notepad','pulse','decisions','procedures','fleet'].includes(_view))LOADERS[_view](true);
   };
   clearTimeout(_liveTimer);
   const wait=Math.max(800,4000-(Date.now()-_liveLast));
@@ -2063,7 +2079,23 @@ async function detachPeer(id){
 
 let _pulseNodes=[],_pulseGraph=null,_focusNote='';
 const pulseNone=msg=>`<div class="li"><span class="empty">${msg}</span></div>`;
+async function loadPulseNow(){
+  const since=scopeQuery({since:'2000-01-01T00:00:00.000Z'});
+  const [notes,decided,steps]=await Promise.all([
+    req('GET','/memory/delta?'+since).catch(()=>[]),
+    req('GET','/decisions?'+scopeQuery({limit:'200'})).catch(()=>[]),
+    req('GET','/blueprints/steps?'+scopeQuery()).catch(()=>[]),
+  ]);
+  const now=Date.now(),active=_agents.filter(a=>a.last_seen&&now-Date.parse(a.last_seen)<ACTIVE_MS).length;
+  const runs=new Set(steps.map(x=>x.run_id)).size;
+  $('pulse-now').innerHTML=statLine([plural(notes.length,'note'),(decided.length>=200?'200+':decided.length)+' decisions',plural(_agents.length,'agent')+', '+active+' active',runs+' running']);
+  put('pulse-latest',notes.length?notes.slice(-6).reverse().map(e=>
+    `<div class="li go" tabindex="0" onclick="openInNotepad('${e.id}')" onkeydown="if(event.key==='Enter')openInNotepad('${e.id}')" onmouseenter="pulseFocus('${e.id}')" onmouseleave="pulseFocus('')"><span class="t" title="${esc(noteTitle(e))}">${esc(noteTitle(e))}</span><span class="n">${relTime(e.updated_at||e.created_at)}</span></div>`).join(''):pulseNone('none yet'));
+  put('pulse-decided',decided.length?decided.slice(0,6).map(d=>
+    `<div class="li go" tabindex="0" onclick="location.hash='#decisions'" onkeydown="if(event.key==='Enter')location.hash='#decisions'"><span class="t" title="${esc(clean(d.decision))}">${esc(clean(d.decision))}</span><span class="n">${relTime(d.created_at)}</span></div>`).join(''):pulseNone('none yet'));
+}
 async function loadPulse(quiet){
+  loadPulseNow().catch(()=>{});
   if(!quiet)['pulse-trails','pulse-central','pulse-affinity','pulse-conflicts'].forEach(busy);
   try{
     const d=await req('GET','/pulse?'+scopeQuery());
@@ -2381,7 +2413,7 @@ window.addEventListener('resize',()=>{
   if(window.innerWidth===_lastWidth){if(_pulseFull)paintPulse();return;}
   _lastWidth=window.innerWidth;
   clearTimeout(_resizeTimer);
-  _resizeTimer=setTimeout(()=>{if(_view!=='fleet'||!_pulseGraph)return;if(_pulseFull)pulseFit();else drawPulseGraph(_pulseGraph)},200);
+  _resizeTimer=setTimeout(()=>{if(_view!=='pulse'||!_pulseGraph)return;if(_pulseFull)pulseFit();else drawPulseGraph(_pulseGraph)},200);
 });
 
 function _connectCmd(){
@@ -2429,7 +2461,8 @@ const LOADERS={
   decisions:loadDecisions,
   procedures:loadProcedures,
   sessions:loadSession,
-  fleet:quiet=>{loadAgents(quiet);loadPulse(quiet);},
+  fleet:loadAgents,
+  pulse:loadPulse,
   events:()=>{if(!_sseAbort&&!_evPaused)startSSE();},
   logs:()=>loadLogs(),
   mesh:loadMesh,

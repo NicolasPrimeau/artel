@@ -14,7 +14,6 @@ class Settings(BaseSettings):
     ui_password: str = ""
     ui_agent_id: str = "artel-ui"
     ui_default_theme: str = "monokai"
-    ui_home_url: str = ""
     viewer_agent_id: str = "sandbox-free-user"
     demo_mode: bool = False
     archivist_agent_id: str = "archivist"
