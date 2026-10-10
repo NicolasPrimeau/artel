@@ -214,6 +214,10 @@ button{
   text-decoration-thickness:1px;text-underline-offset:3px;
 }
 button:hover{color:var(--accent);text-decoration-color:var(--accent)}
+button.lk{font:inherit;color:inherit;text-decoration:none}
+button.lk:hover{color:var(--accent);text-decoration:underline;text-decoration-color:var(--accent)}
+.li.go{cursor:pointer}
+.li.go:hover .t,.li.go:focus-visible .t{color:var(--t1)}
 button:disabled{opacity:.4;cursor:default;pointer-events:none}
 button.p{
   color:var(--bg);background:var(--accent);padding:.32rem .95rem;
@@ -322,6 +326,14 @@ button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible{
 .connect-row code{flex:1;min-width:0;overflow-wrap:anywhere;color:var(--t1);font-size:12.5px}
 #pulse-wrap{position:relative}
 #pulse-canvas{width:100%;height:340px;display:block;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+#pulse-canvas{touch-action:pan-y;cursor:grab;user-select:none;-webkit-user-select:none}
+#pulse-wrap.full{position:fixed;inset:0;z-index:400;background:var(--bg)}
+#pulse-wrap.full #pulse-canvas{height:100%!important;border:0}
+#pulse-ctl{position:absolute;top:.55rem;right:0;display:flex;gap:.25rem;z-index:6}
+#pulse-wrap.full #pulse-ctl{top:calc(.7rem + env(safe-area-inset-top,0px));right:.8rem}
+#pulse-ctl button{font:12px/1 var(--f-mono);color:var(--t2);background:var(--bg);border:1px solid var(--b1);padding:.38rem .55rem;min-width:2rem;cursor:pointer;text-decoration:none}
+#pulse-ctl button:hover{color:var(--t1);border-color:var(--b2)}
+#pulse-ctl button:disabled{opacity:.35;cursor:default}
 #pulse-tip{
   position:absolute;display:none;pointer-events:none;z-index:5;max-width:320px;
   background:var(--s1);border:1px solid var(--b2);padding:.25rem .55rem;font-size:12.5px;color:var(--t1);
@@ -893,6 +905,12 @@ button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible{
       <div id="pulse-wrap">
         <canvas id="pulse-canvas" role="img" aria-label="Graph of linked notes"></canvas>
         <div id="pulse-tip"></div>
+        <div id="pulse-ctl">
+          <button onclick="pulseZoom(1/1.5)" aria-label="zoom out">−</button>
+          <button onclick="pulseZoom(1.5)" aria-label="zoom in">+</button>
+          <button id="pulse-reset" onclick="pulseFit()" disabled>fit</button>
+          <button id="pulse-full" onclick="pulseExpand()">expand</button>
+        </div>
       </div>
       <div class="cols">
         <div><h3>Most recalled</h3><div id="pulse-trails"></div></div>
@@ -1213,6 +1231,7 @@ function syncUrl(){
   if(location.pathname+location.search+location.hash!==url)history.replaceState(null,'',url);
 }
 function show(v){
+  if(v!=='fleet')pulseExpand(false);
   if(_view==='events'&&v!=='events')stopSSE();
   _view=v;
   document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id==='panel-'+v));
@@ -1295,6 +1314,19 @@ function setProject(name){
   closeDrawer();
   loadView();
   refreshCounts();
+}
+function notesBy(id){
+  _agent=id||'';_noteLimit=NOTE_PAGE;
+  document.querySelectorAll('.agent-sel').forEach(s=>{s.value=_agent});
+  if(_view==='notepad'){syncUrl();loadView();}else location.hash='#notepad';
+}
+function notesIn(project){
+  if(_project!==project)setProject(project);
+  if(_view!=='notepad')location.hash='#notepad';
+}
+function pulseFocus(id){
+  const L=_pulseLayout;if(!L)return;
+  pulseShow(id?L.nodes.findIndex(n=>n.id===id):-1,false);
 }
 function setAgent(id){
   _agent=id||'';
@@ -1439,8 +1471,8 @@ function noteRow(e){
   const shy=pct<100?`<span class="pct${low?' low':''}">${pct}%</span>`:'';
   const bits=[];
   if(e.type!=='memory')bits.push(`<span class="ty">${esc(e.type)}</span>`);
-  bits.push(`<b>${esc(e.agent_id)}</b>`,_hits?when(e.updated_at):clock(e.updated_at));
-  if(e.project&&!_project)bits.push(esc(e.project));
+  bits.push(`<b><button class="lk" title="notes by ${esc(e.agent_id)}" onclick="notesBy(_agent===${jsa(e.agent_id)}?'':${jsa(e.agent_id)})">${esc(e.agent_id)}</button></b>`,_hits?when(e.updated_at):clock(e.updated_at));
+  if(e.project&&!_project)bits.push(`<button class="lk" onclick="notesIn(${jsa(e.project)})">${esc(e.project)}</button>`);
   if(e.scope==='agent')bits.push('private');
   if(e.stale)bits.push('<span class="warn">stale</span>');
   return `<div class="drow note" id="n-${e.id}">
@@ -1812,13 +1844,13 @@ async function loadAgents(quiet){
       const seenMs=p.last_seen?Date.parse(p.last_seen):null;
       const active=seenMs&&(now-seenMs)<ACTIVE_MS;
       const seen=active?'active now':p.last_seen?'seen '+relTime(p.last_seen):'never seen';
-      const projs=(agentProjects[p.agent_id]||[]).map(esc).join(', ');
+      const projs=(agentProjects[p.agent_id]||[]).map(x=>`<button class="lk" onclick="notesIn(${jsa(x)})">${esc(x)}</button>`).join(', ');
       const marks=[];
       if(p.role&&p.role!=='agent'&&p.role!==p.agent_id)marks.push(esc(p.role));
       if(p.agent_id===window._aid)marks.push('you');
       return row(`<span title="${esc(p.last_seen||'')}">${seen}</span>`,`
         ${tick(active?22:10,active?'':'idle',seen)}
-        <span class="id">${esc(p.agent_id)}</span>
+        <button class="lk id" title="notes by ${esc(p.agent_id)}" onclick="notesBy(${jsa(p.agent_id)})">${esc(p.agent_id)}</button>
         ${marks.length?`<span class="ty">${marks.join(', ')}</span>`:''}
         ${projs?`<span class="by">${projs}</span>`:''}
         ${window._agent_role==='owner'?`<span class="acts reveal">
@@ -2040,18 +2072,18 @@ async function loadPulse(quiet){
     const hottest=Math.max(1,...d.trails.map(t=>t.trail));
     put('pulse-trails',d.trails.length?d.trails.map(t=>{
       const heat=t.trail/hottest;
-      return `<div class="li"><span class="bar-h" style="width:${Math.max(6,Math.round(heat*46))}px"></span><span class="t" title="${esc(clean(t.label))}">${md(clean(t.label))}</span><span class="n">${Math.round(t.trail*10)/10}</span></div>`;
+      return `<div class="li go" tabindex="0" onclick="openInNotepad('${t.id}')" onkeydown="if(event.key==='Enter')openInNotepad('${t.id}')" onmouseenter="pulseFocus('${t.id}')" onmouseleave="pulseFocus('')"><span class="bar-h" style="width:${Math.max(6,Math.round(heat*46))}px"></span><span class="t" title="${esc(clean(t.label))}">${md(clean(t.label))}</span><span class="n">${Math.round(t.trail*10)/10}</span></div>`;
     }).join(''):pulseNone('none yet'));
     put('pulse-central',d.central.length?d.central.map((c,i)=>
-      `<div class="li"><span class="n">${i+1}</span><span class="t" title="${esc(clean(c.label))}">${md(clean(c.label))}</span></div>`).join('')
+      `<div class="li go" tabindex="0" onclick="openInNotepad('${c.id}')" onkeydown="if(event.key==='Enter')openInNotepad('${c.id}')" onmouseenter="pulseFocus('${c.id}')" onmouseleave="pulseFocus('')"><span class="n">${i+1}</span><span class="t" title="${esc(clean(c.label))}">${md(clean(c.label))}</span></div>`).join('')
       :pulseNone('none yet'));
     const byAgent={};
     d.affinities.forEach(a=>{(byAgent[a.agent_id]=byAgent[a.agent_id]||[]).push(a)});
     put('pulse-affinity',Object.keys(byAgent).length?Object.entries(byAgent).map(([ag,rows])=>
-      `<div class="li"><span class="id" style="font-size:12.5px">${esc(ag)}</span><span class="t tags" style="display:block">${rows.slice(0,5).map(r=>'#'+esc(r.tag)).join(' ')}</span></div>`).join('')
+      `<div class="li"><button class="lk id" style="font-size:12.5px" onclick="notesBy(${jsa(ag)})">${esc(ag)}</button><span class="t tags" style="display:block">${rows.slice(0,5).map(r=>_projects.some(x=>(x.name||x.id||x)===r.tag)?`<button class="lk" onclick="notesIn(${jsa(r.tag)})">#${esc(r.tag)}</button>`:'#'+esc(r.tag)).join(' ')}</span></div>`).join('')
       :pulseNone('none yet'));
     put('pulse-conflicts',d.conflicts.length?d.conflicts.map(c=>
-      `<div class="li"><span class="t bad" title="${esc(clean(c.label))}">${md(clean(c.label))}</span><span class="n">${esc((c.parents[0]||'').slice(0,8))} · ${relTime(c.created_at)}</span></div>`).join('')
+      `<div class="li go" tabindex="0" onclick="openInNotepad('${c.id}')" onkeydown="if(event.key==='Enter')openInNotepad('${c.id}')" onmouseenter="pulseFocus('${c.id}')" onmouseleave="pulseFocus('')"><span class="t bad" title="${esc(clean(c.label))}">${md(clean(c.label))}</span><span class="n">${esc((c.parents[0]||'').slice(0,8))} · ${relTime(c.created_at)}</span></div>`).join('')
       :pulseNone('none'));
   }catch(e){
     put('pulse-trails',`<div class="li"><span class="bad">${esc(e.message)}</span></div>`);
@@ -2142,8 +2174,12 @@ function layoutPulse(g,W,H){
   });
   return {nodes,edges,W,H,top};
 }
+let _pulseSig='';
 function drawPulseGraph(g){
   const cv=$('pulse-canvas');
+  const sig=Math.round(cv.getBoundingClientRect().width)+':'+g.nodes.length+':'+g.edges.length;
+  if(_pulseLayout&&(_pulseFull||sig===_pulseSig)){paintPulse();return;}
+  _pulseSig=sig;
   const count=g.nodes.length,narrow=cv.getBoundingClientRect().width<520;
   cv.style.height=Math.round(Math.max(narrow?260:320,Math.min(narrow?520:680,(narrow?220:260)+count*(narrow?1.6:2.1))))+'px';
   const rect=cv.getBoundingClientRect();
@@ -2152,11 +2188,44 @@ function drawPulseGraph(g){
   _pulseLayout=count?layoutPulse(g,rect.width,rect.height):{nodes:[],edges:[],W:rect.width,H:rect.height,top:[]};
   cv.style.height=_pulseLayout.H+'px';
   _pulseNodes=_pulseLayout.nodes;
-  paintPulse();
+  pulseFit();
+}
+const _pv={k:1,x:0,y:0};
+let _pulseFull=false,_pulseTouch=false;
+const pulseX=n=>n.x*_pv.k+_pv.x,pulseY=n=>n.y*_pv.k+_pv.y,pulseR=n=>n.r*Math.min(2.2,Math.max(.7,Math.sqrt(_pv.k)));
+function pulseFit(){
+  const cv=$('pulse-canvas'),L=_pulseLayout;
+  if(!L)return;
+  const k=_pulseFull?Math.min(cv.clientWidth/L.W,cv.clientHeight/L.H)*.96:1;
+  _pv.k=k;_pv.x=(cv.clientWidth-L.W*k)/2;_pv.y=(cv.clientHeight-L.H*k)/2;
+  pulseTouchMode();paintPulse();
+}
+function pulseTouchMode(){
+  const moved=_pulseFull||Math.abs(_pv.k-1)>.01||Math.abs(_pv.x)>1||Math.abs(_pv.y)>1;
+  $('pulse-canvas').style.touchAction=_pulseFull||_pv.k>1.01?'none':'pan-y';
+  $('pulse-reset').disabled=!moved;
+}
+function pulseZoom(f,px,py){
+  const cv=$('pulse-canvas');
+  if(px==null){px=cv.clientWidth/2;py=cv.clientHeight/2;}
+  const k=Math.max(.4,Math.min(10,_pv.k*f));
+  _pv.x=px-(px-_pv.x)*k/_pv.k;_pv.y=py-(py-_pv.y)*k/_pv.k;_pv.k=k;
+  $('pulse-tip').style.display='none';
+  pulseTouchMode();paintPulse();
+}
+function pulseExpand(on){
+  if(on===false&&!_pulseFull)return;
+  _pulseFull=on==null?!_pulseFull:on;
+  $('pulse-wrap').classList.toggle('full',_pulseFull);
+  document.body.style.overflow=_pulseFull?'hidden':'';
+  $('pulse-full').textContent=_pulseFull?'close':'expand';
+  _pulseHover=-1;$('pulse-tip').style.display='none';
+  if(_pulseFull)pulseFit();
+  else{_pulseSig='';if(_pulseGraph)drawPulseGraph(_pulseGraph);}
 }
 function paintPulse(){
   const L=_pulseLayout;if(!L)return;
-  const cv=$('pulse-canvas'),dpr=window.devicePixelRatio||1,W=L.W,H=L.H;
+  const cv=$('pulse-canvas'),dpr=window.devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;
   cv.width=W*dpr;cv.height=H*dpr;
   const ctx=cv.getContext('2d');ctx.scale(dpr,dpr);
   const css=getComputedStyle(document.documentElement);
@@ -2171,7 +2240,7 @@ function paintPulse(){
   const hover=_pulseHover,near=hover>=0?new Set([hover,...L.nodes[hover].links]):null;
   L.edges.forEach(e=>{
     const a=L.nodes[e.a],b=L.nodes[e.b],lit=near&&(e.a===hover||e.b===hover);
-    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
+    ctx.beginPath();ctx.moveTo(pulseX(a),pulseY(a));ctx.lineTo(pulseX(b),pulseY(b));
     ctx.setLineDash(e.kind==='hebbian'?[3,3]:[]);
     ctx.strokeStyle=e.rel==='contradicts'?col.red:lit?col.accent:e.kind==='hebbian'?col.accent:col.line;
     ctx.globalAlpha=near?(lit?0.95:0.1):e.rel==='contradicts'?0.75:e.kind==='hebbian'?0.4:0.5;
@@ -2180,58 +2249,125 @@ function paintPulse(){
   ctx.setLineDash([]);
   L.nodes.forEach((n,i)=>{
     ctx.globalAlpha=near&&!near.has(i)?0.22:1;
-    ctx.beginPath();ctx.arc(n.x,n.y,n.r+(i===hover?1.5:0),0,7);
+    ctx.beginPath();ctx.arc(pulseX(n),pulseY(n),pulseR(n)+(i===hover?1.5:0),0,7);
     ctx.fillStyle=i===hover?col.strong:n.type==='doc'?col.text:col.accent;
     ctx.fill();
   });
   ctx.globalAlpha=1;
+  const max=_pv.k>2.4?46:30;
   const short=t=>{
-    if(t.length<=30)return t;
-    const cutAt=t.lastIndexOf(' ',30);
-    return t.slice(0,cutAt>12?cutAt:30).replace(/[\s,;:.]+$/,'')+'…';
+    if(t.length<=max)return t;
+    const cutAt=t.lastIndexOf(' ',max);
+    return t.slice(0,cutAt>12?cutAt:max).replace(/[\s,;:.]+$/,'')+'…';
   };
   ctx.font='12px '+(v('--f-sans')||'sans-serif');ctx.textAlign='left';
   const placed=[];
-  const named=near?[hover,...L.nodes[hover].links.slice(0,6)]:L.top;
+  const all=_pv.k>1.5?L.nodes.map((_,i)=>i).sort((a,b)=>L.nodes[b].r-L.nodes[a].r):L.top;
+  const named=near?[hover,...L.nodes[hover].links.slice(0,_pv.k>1.5?14:6)]:all;
   named.forEach((i,order)=>{
-    const n=L.nodes[i],label=short(n.label),w=ctx.measureText(label).width;
-    const right=n.x+n.r+5+w>W-4;
-    const x=right?n.x-n.r-5-w:n.x+n.r+5;
-    const box={x0:x,x1:x+w,y0:n.y-9,y1:n.y+9};
+    const n=L.nodes[i],nx=pulseX(n),ny=pulseY(n),nr=pulseR(n);
+    if(nx<-40||nx>W+40||ny<-10||ny>H+10)return;
+    const label=short(n.label),w=ctx.measureText(label).width;
+    const right=nx+nr+5+w>W-4;
+    const x=right?nx-nr-5-w:nx+nr+5;
+    const box={x0:x,x1:x+w,y0:ny-9,y1:ny+9};
     if(x<2||placed.some(q=>box.x0<q.x1+6&&box.x1>q.x0-6&&box.y0<q.y1&&box.y1>q.y0))return;
     placed.push(box);
     ctx.fillStyle=near&&order===0?col.strong:col.text;
-    ctx.fillText(label,x,n.y+4);
+    ctx.fillText(label,x,ny+4);
   });
   cv.setAttribute('aria-label',`Graph of ${L.nodes.length} notes and ${L.edges.length} links. Most connected: ${L.top.slice(0,3).map(i=>L.nodes[i].label).join('; ')}`);
 }
-function pulseHit(e){
-  const cv=$('pulse-canvas'),L=_pulseLayout;
+function pulsePoint(e){
+  const r=$('pulse-canvas').getBoundingClientRect();
+  return {x:e.clientX-r.left,y:e.clientY-r.top};
+}
+function pulseHit(e,slack){
+  const L=_pulseLayout;
   if(!L||!L.nodes.length)return -1;
-  const r=cv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+  const {x,y}=pulsePoint(e);
   let best=-1,bestD=Infinity;
-  L.nodes.forEach((n,i)=>{const d=Math.hypot(n.x-x,n.y-y)-n.r;if(d<7&&d<bestD){best=i;bestD=d;}});
+  L.nodes.forEach((n,i)=>{const d=Math.hypot(pulseX(n)-x,pulseY(n)-y)-pulseR(n);if(d<(slack||7)&&d<bestD){best=i;bestD=d;}});
   return best;
 }
-$('pulse-canvas').addEventListener('mousemove',e=>{
-  const hit=pulseHit(e),tip=$('pulse-tip'),cv=$('pulse-canvas');
+function pulseShow(hit,touch){
+  const tip=$('pulse-tip'),cv=$('pulse-canvas');
   if(hit!==_pulseHover){_pulseHover=hit;paintPulse();}
-  cv.style.cursor=hit>=0?'pointer':'';
   if(hit<0){tip.style.display='none';return;}
-  const n=_pulseLayout.nodes[hit],r=cv.getBoundingClientRect();
-  tip.textContent=n.label+(n.trail?` · recalled ${Math.round(n.trail*10)/10}`:'')+(n.links.length?` · ${n.links.length} linked`:'');
+  const n=_pulseLayout.nodes[hit],x=pulseX(n),y=pulseY(n);
+  tip.textContent=n.label+(n.trail?` · recalled ${Math.round(n.trail*10)/10}`:'')+(n.links.length?` · ${n.links.length} linked`:'')+(touch?' · tap again to open':'');
   tip.style.display='block';
-  tip.style.left=Math.max(0,Math.min(n.x+12,r.width-tip.offsetWidth-4))+'px';
-  tip.style.top=(n.y+14+tip.offsetHeight>r.height?n.y-14-tip.offsetHeight:n.y+14)+'px';
-});
-$('pulse-canvas').addEventListener('mouseleave',()=>{
-  $('pulse-tip').style.display='none';
-  if(_pulseHover>=0){_pulseHover=-1;paintPulse();}
-});
-$('pulse-canvas').addEventListener('click',e=>{
-  const hit=pulseHit(e);
-  if(hit>=0)openInNotepad(_pulseLayout.nodes[hit].id);
-});
+  tip.style.left=Math.max(0,Math.min(x+12,cv.clientWidth-tip.offsetWidth-4))+'px';
+  tip.style.top=Math.max(0,y+14+tip.offsetHeight>cv.clientHeight?y-14-tip.offsetHeight:y+14)+'px';
+}
+(()=>{
+  const cv=$('pulse-canvas'),pts=new Map();
+  let moved=0,pinch=0,mid=null,lastTap=0;
+  const gesture=()=>{
+    const [a,b]=[...pts.values()];
+    return {d:Math.hypot(a.x-b.x,a.y-b.y),x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+  };
+  cv.addEventListener('pointerdown',e=>{
+    if(e.pointerType==='mouse'&&e.button!==0)return;
+    try{cv.setPointerCapture(e.pointerId)}catch(_){}
+    pts.set(e.pointerId,pulsePoint(e));
+    if(pts.size===1)moved=0;
+    if(pts.size===2){const g=gesture();pinch=g.d;mid=g;moved=99;}
+  });
+  cv.addEventListener('pointermove',e=>{
+    const p=pulsePoint(e),was=pts.get(e.pointerId);
+    if(!was){
+      if(e.pointerType==='mouse'){const hit=pulseHit(e);cv.style.cursor=hit>=0?'pointer':'grab';pulseShow(hit,false);}
+      return;
+    }
+    pts.set(e.pointerId,p);
+    if(pts.size>=2){
+      const g=gesture();
+      _pv.x+=g.x-mid.x;_pv.y+=g.y-mid.y;
+      if(pinch>0)pulseZoom(g.d/pinch,g.x,g.y);
+      pinch=g.d;mid=g;
+      return;
+    }
+    const dx=p.x-was.x,dy=p.y-was.y;
+    moved+=Math.abs(dx)+Math.abs(dy);
+    if(moved<6)return;
+    _pv.x+=dx;_pv.y+=dy;
+    cv.style.cursor='grabbing';
+    $('pulse-tip').style.display='none';
+    pulseTouchMode();paintPulse();
+  });
+  const end=e=>{
+    if(!pts.has(e.pointerId))return;
+    pts.delete(e.pointerId);
+    pinch=0;
+    if(pts.size||e.type==='pointercancel'){if(pts.size===1)moved=99;return;}
+    cv.style.cursor='grab';
+    if(moved>=6)return;
+    const touch=e.pointerType!=='mouse',hit=pulseHit(e,touch?16:7),now=Date.now();
+    if(hit>=0){
+      if(!touch||hit===_pulseHover){pulseExpand(false);openInNotepad(_pulseLayout.nodes[hit].id);}
+      else pulseShow(hit,true);
+      return;
+    }
+    if(touch){
+      pulseShow(-1);
+      const p=pulsePoint(e);
+      if(now-lastTap<320)pulseZoom(2,p.x,p.y);
+      lastTap=now;
+    }
+  };
+  cv.addEventListener('pointerup',end);
+  cv.addEventListener('pointercancel',end);
+  cv.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'&&!pts.size)pulseShow(-1);});
+  cv.addEventListener('dblclick',e=>{if(pulseHit(e)<0){const p=pulsePoint(e);pulseZoom(2,p.x,p.y);}});
+  cv.addEventListener('wheel',e=>{
+    if(!(e.ctrlKey||e.metaKey||_pulseFull))return;
+    e.preventDefault();
+    const p=pulsePoint(e);
+    const dy=Math.max(-50,Math.min(50,e.deltaY));
+    pulseZoom(Math.exp(-dy*(Math.abs(e.deltaY)<20?.012:.005)),p.x,p.y);
+  },{passive:false});
+})();
 function openInNotepad(id){
   _focusNote=id;
   _openNotes.add(id);
@@ -2241,10 +2377,10 @@ function openInNotepad(id){
 }
 let _resizeTimer=0,_lastWidth=window.innerWidth;
 window.addEventListener('resize',()=>{
-  if(window.innerWidth===_lastWidth)return;
+  if(window.innerWidth===_lastWidth){if(_pulseFull)paintPulse();return;}
   _lastWidth=window.innerWidth;
   clearTimeout(_resizeTimer);
-  _resizeTimer=setTimeout(()=>{if(_view==='fleet'&&_pulseGraph)drawPulseGraph(_pulseGraph)},200);
+  _resizeTimer=setTimeout(()=>{if(_view!=='fleet'||!_pulseGraph)return;if(_pulseFull)pulseFit();else drawPulseGraph(_pulseGraph)},200);
 });
 
 function _connectCmd(){
@@ -2272,6 +2408,7 @@ document.addEventListener('keydown',e=>{
     if(id==='mc'||id==='mtags'){fold($('np-write'),false);el.blur();return;}
     if(id.startsWith('mta-')){cancelEditMem(id.slice(4));return;}
     if(typing){el.blur();return;}
+    if(_pulseFull){pulseExpand(false);return;}
     closeDrawer();
     const cur=_cursor&&$(_cursor);
     if(cur&&cur.classList.contains('note')&&_openNotes.has(cur.id.slice(2))){toggleNote(cur.id.slice(2),true);return;}
