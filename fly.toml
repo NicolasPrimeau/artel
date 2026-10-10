@@ -7,7 +7,7 @@ primary_region = "yyz"
 [env]
   DB_PATH = "/data/artel.db"
   DEMO_MODE = "true"
-  UI_DEFAULT_THEME = "cobalt"
+  UI_DEFAULT_THEME = "monokai"
   FASTEMBED_CACHE_PATH = "/data/fastembed_cache"
   HF_HUB_DISABLE_XET_DOWNLOAD = "1"
   # artel.run now serves the docs site on GitHub Pages, so the demo answers on its

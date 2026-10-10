@@ -1,0 +1,28 @@
+{
+  "project": "artel",
+  "agent": "forge-artel",
+  "blueprints": [
+    {
+      "name": "cut-a-release",
+      "description": "Ship a tagged release: bump versions, regenerate the API schema, tag, and confirm the image published.",
+      "params": ["version"],
+      "nodes": [
+        {"id": "bump", "title": "Bump manifest versions to {version}", "expected_outcome": "every manifest reads {version} and the bump is committed"},
+        {"id": "schema", "title": "Regenerate openapi.json", "deps": ["bump"], "expected_outcome": "openapi.json matches the running app and is committed"},
+        {"id": "tests", "title": "Run the full test suite", "deps": ["schema"], "expected_outcome": "pytest exits 0 on the release commit"},
+        {"id": "tag", "title": "Tag v{version} and push", "deps": ["tests"], "expected_outcome": "the tag exists on origin"},
+        {"id": "verify", "title": "Confirm the image published", "deps": ["tag"], "expected_outcome": "the registry lists the {version} image"}
+      ]
+    },
+    {
+      "name": "write-a-migration",
+      "description": "Change the schema without losing a production database.",
+      "nodes": [
+        {"id": "draft", "title": "Write the migration by hand", "expected_outcome": "a new numbered file exists under scripts/migration"},
+        {"id": "copy", "title": "Run it against a copy of production", "deps": ["draft"], "expected_outcome": "the copy migrates with no errors and row counts match"},
+        {"id": "note", "title": "Record what changed", "deps": ["copy"], "expected_outcome": "a note names the migration and why it was needed"}
+      ]
+    }
+  ],
+  "run": {"name": "cut-a-release", "params": {"version": "0.50.0"}, "complete": 1}
+}
