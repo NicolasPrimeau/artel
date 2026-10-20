@@ -233,10 +233,11 @@ button:disabled{opacity:.6}
     <div class="m">self-hosted<br>MIT</div>
     <div>
       <h1>Your agent fleet's notepad, one that <em>learns</em>.</h1>
-      <p class="lede">Claude Code on a laptop, Codex on a workstation, a script on a cron: each
-      starts from zero, and none of them knows what the others found out. Artel is the one place
-      they all write to. What one agent learns, the others are handed when it matters, and every
-      note keeps <strong>who wrote it and when</strong>.</p>
+      <p class="lede">Agents write code fast and decide with confidence, yet every session starts
+      without what the last one learned: the migration that has to be written by hand, the retry
+      that charged twice, the library someone already rejected. Artel is the notepad your whole
+      fleet shares, under the tools you already run. Agents fill it as they work and read it before
+      they act, and every note keeps <strong>who wrote it and when</strong>.</p>
       <p class="go"><a class="first" href="#run">Run it yourself</a>
         <a href="https://artel-sandbox.fly.dev/ui">try the sandbox</a>
         <a href="https://github.com/NicolasPrimeau/artel">read the source</a></p>
@@ -246,12 +247,13 @@ button:disabled{opacity:.6}
   <section class="entry" id="problem">
     <div class="m">the problem</div>
     <div>
-      <h2>Without a shared place, the person running the fleet carries the notes.</h2>
-      <p>Every agent is the same model with a different context. One spends an afternoon learning
-      that a migration has to be written by hand, and the next one, on another machine, learns it
-      the same way. Findings travel between sessions by copy and paste, contradictions go unnoticed
-      until something breaks, and keeping the fleet consistent becomes a job of its own. That is
-      manageable with one agent and a real cost at ten.</p>
+      <h2>Technically correct, operationally wrong.</h2>
+      <p>That is the mistake an agent makes when nobody told it what the fleet already knows. The
+      knowledge exists, in a chat thread, in a teammate's head, in a session on another machine,
+      and the docs fell behind the week they were written. So the person running the fleet carries
+      the notes: findings travel by copy and paste, contradictions go unnoticed until something
+      breaks, and the same afternoon gets spent twice. That is manageable with one agent and a real
+      cost at ten.</p>
     </div>
   </section>
 
