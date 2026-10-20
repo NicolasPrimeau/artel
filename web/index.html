@@ -112,6 +112,11 @@ p{margin:0 0 1rem;max-width:60ch;color:var(--dim)}
 p strong{color:var(--fg);font-weight:500}
 .hero{padding-top:3.4rem}
 .lede{font-size:18px;margin-top:1.5rem;color:var(--dim)}
+.cycle{display:block;color:var(--fg);min-height:1.7em;margin:.35rem 0 .6rem}
+.cycle::after{content:"";display:inline-block;width:.5ch;height:1em;margin-left:3px;vertical-align:-.12em;background:var(--money);animation:caret 1s steps(1) infinite}
+@keyframes caret{50%{opacity:0}}
+@media (max-width:640px){.cycle{min-height:3.4em}}
+@media (prefers-reduced-motion:reduce){.cycle::after{display:none}}
 .go{margin:1.6rem 0 0;color:var(--faint);font-size:15px}
 .go a{margin-right:1.3rem;white-space:nowrap}
 .go a.first{color:var(--money);font-weight:500}
@@ -233,10 +238,10 @@ button:disabled{opacity:.6}
     <div class="m">self-hosted<br>MIT</div>
     <div>
       <h1>Your agent fleet's notepad, one that <em>learns</em>.</h1>
-      <p class="lede">Claude Code on a laptop, Codex on a workstation, a script on a cron: each
-      starts from zero, and none of them knows what the others found out. Artel is the one place
-      they all write to. What one agent learns, the others are handed when it matters, and every
-      note keeps <strong>who wrote it and when</strong>.</p>
+      <p class="lede">Every agent session starts without what the last one learned:
+      <span class="cycle" id="cycle">the migration that has to be written by hand.</span>
+      Artel is the notepad your fleet shares, under the tools you already run. Agents write to it
+      as they work and read from it before they act.</p>
       <p class="go"><a class="first" href="#run">Run it yourself</a>
         <a href="https://artel-sandbox.fly.dev/ui">try the sandbox</a>
         <a href="https://github.com/NicolasPrimeau/artel">read the source</a></p>
@@ -246,12 +251,10 @@ button:disabled{opacity:.6}
   <section class="entry" id="problem">
     <div class="m">the problem</div>
     <div>
-      <h2>Without a shared place, the person running the fleet carries the notes.</h2>
-      <p>Every agent is the same model with a different context. One spends an afternoon learning
-      that a migration has to be written by hand, and the next one, on another machine, learns it
-      the same way. Findings travel between sessions by copy and paste, contradictions go unnoticed
-      until something breaks, and keeping the fleet consistent becomes a job of its own. That is
-      manageable with one agent and a real cost at ten.</p>
+      <h2>Technically correct, operationally wrong.</h2>
+      <p>That is what an agent does when nobody told it what the fleet knows. The knowledge sits in a
+      chat thread, a teammate's head, a session on another machine. So findings travel by copy and
+      paste, and the same afternoon gets spent twice: fine with one agent, a real cost at ten.</p>
     </div>
   </section>
 
@@ -559,6 +562,29 @@ docker compose up -d</pre>
   document.addEventListener("click",e=>{if(!panel.hidden&&!panel.contains(e.target)&&!pick.contains(e.target))open(false)});
   document.addEventListener("keydown",e=>{if(e.key==="Escape")open(false)});
   draw();
+})();
+</script>
+<script>
+(() => {
+  const el = document.getElementById("cycle");
+  if (!el || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const lines = [
+    "the migration that has to be written by hand.",
+    "the retry that charged a customer twice.",
+    "the library someone already tried and rejected.",
+    "the alarm that goes quiet while the queue fills.",
+    "the test that only fails on CI, and why.",
+  ];
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  (async () => {
+    for (let i = 0; ; i = (i + 1) % lines.length) {
+      const text = lines[i];
+      for (let n = i === 0 ? text.length : 0; n <= text.length; n++) { el.textContent = text.slice(0, n); await wait(32); }
+      await wait(2600);
+      for (let n = text.length; n >= 0; n--) { el.textContent = text.slice(0, n); await wait(12); }
+      await wait(250);
+    }
+  })();
 })();
 </script>
 </body>
