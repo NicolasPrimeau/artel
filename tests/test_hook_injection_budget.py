@@ -51,8 +51,21 @@ def test_nudge_never_cuts_inside_a_word():
     assert out.endswith("word…")
 
 
-def test_entry_line_prefers_the_headline():
-    entry = {"content": _NOVEL, "headline": "Deploy pipeline stalls above 40 concurrent builds"}
+def test_entry_line_injects_the_fact_not_the_table_of_contents_label():
+    entry = {
+        "content": "Deploys stall above 40 concurrent builds. Cap the queue at 32.",
+        "headline": "Deploy pipeline concurrency limits and queue settings",
+    }
+    assert hooks.entry_line(entry, 120) == entry["content"]
+
+
+def test_entry_line_turns_a_leading_heading_into_a_sentence():
+    entry = {"content": "## Releases are manual\nTag, push, then publish by hand."}
+    assert hooks.entry_line(entry, 120) == "Releases are manual. Tag, push, then publish by hand."
+
+
+def test_entry_line_falls_back_to_the_headline():
+    entry = {"content": "", "headline": "Deploy pipeline stalls above 40 concurrent builds"}
     assert hooks.entry_line(entry, 120) == entry["headline"]
 
 

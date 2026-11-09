@@ -291,13 +291,16 @@ def _replicate_entry(db, feed: dict, meta: dict, content: str, tags: list, self_
             else:
                 db.execute(
                     """UPDATE memory SET type=?, content=?, confidence=?, parents=?, tags=?,
-                       updated_at=?, version=?, deleted_at=NULL, vclock=? WHERE id=?""",
+                       updated_at=?, content_at=CASE WHEN content=? THEN content_at ELSE ? END,
+                       version=?, deleted_at=NULL, vclock=? WHERE id=?""",
                     (
                         etype,
                         content,
                         conf,
                         parents,
                         tags_json,
+                        incoming_upd,
+                        content,
                         incoming_upd,
                         incoming_ver,
                         store_vc,

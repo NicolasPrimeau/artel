@@ -20,3 +20,5 @@ Measured 2026-10-09 against the 2026-10-06 18:00 backup:
 | `max_distance=0.95`, one note | 20 | 0.45 | 9/37 | 0/11 |
 
 The hook runs the third row. Silence is the typical right answer, so the policy is chosen for what it does not say: it injects 61% fewer lines than the cut it replaced and fires on three of the eleven prompts that deserve nothing instead of seven, at the cost of five positives. The fourth row shows where that trade stops paying: one step tighter and most real answers go too. `run.py` prints the whole frontier.
+
+Re-measured 2026-11-09 against that day's 15:00 backup, after recency moved from `updated_at` to the time a note's content last changed. Hourly decay and tag patches had been refreshing `updated_at` on dozens of notes, so every note looked new and the recency weight did nothing. With it working, a 90-day half-life serves 14/37 positives at 0.45 precision against 13/37 at 0.42 before, with noise unchanged at 3/11; the old 45-day half-life fell to 12/37. These labels predate every note written since October 6 and cannot credit one, so the gain understates what a recency fix is worth.

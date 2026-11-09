@@ -103,10 +103,21 @@ router = APIRouter(prefix="/memory", tags=["memory"])
 # Stigmergy: each retrieval deposits pheromone on the entry's trail; trails evaporate
 # with a short half-life so relevance must be continually re-earned, not just accumulated.
 _TRAIL_HALF_LIFE_DAYS = 7.0
+_RECENCY_HALF_LIFE_DAYS = 90.0
 _DIVERSITY_LAMBDA = 0.7
 # Two entries this close on the same query are answering the same question, so a
 # narrower-scope winner is overriding the broader one rather than merely outranking it.
 _SHADOW_SIMILARITY = 0.85
+
+
+def _content_recency(row: sqlite3.Row, now: datetime) -> float:
+    stamp = row["content_at"] or row["created_at"]
+    try:
+        written = datetime.fromisoformat(str(stamp).replace("Z", "+00:00"))
+        age_days = max(0.0, (now - written).total_seconds() / 86400.0)
+    except (ValueError, TypeError):
+        return 1.0
+    return 0.5 ** (age_days / _RECENCY_HALF_LIFE_DAYS)
 
 
 def _fetch_vectors(db, ids: list[str]) -> dict[str, list[float]]:
@@ -399,17 +410,7 @@ async def search_memory(
         r = rows[mid]
         conf = r["confidence"] if r["confidence"] is not None else 0.5
         trail = decay.decayed(r["trail"] or 0.0, r["trail_at"], _TRAIL_HALF_LIFE_DAYS, now_iso)
-        try:
-            age_days = max(
-                0.0,
-                (
-                    now - datetime.fromisoformat(str(r["updated_at"]).replace("Z", "+00:00"))
-                ).total_seconds()
-                / 86400.0,
-            )
-        except Exception:
-            age_days = 0.0
-        recency = 0.5 ** (age_days / 45.0)
+        recency = _content_recency(r, now)
         return (
             rrf[mid] * (0.4 + 0.6 * conf) * (1.0 + 0.2 * math.log1p(trail)) * (0.3 + 0.7 * recency)
         )
@@ -489,20 +490,7 @@ async def search_memory(
                     trail = decay.decayed(
                         r["trail"] or 0.0, r["trail_at"], _TRAIL_HALF_LIFE_DAYS, now_iso
                     )
-                    try:
-                        age_days = max(
-                            0.0,
-                            (
-                                now
-                                - datetime.fromisoformat(
-                                    str(r["updated_at"]).replace("Z", "+00:00")
-                                )
-                            ).total_seconds()
-                            / 86400.0,
-                        )
-                    except ValueError:
-                        age_days = 0.0
-                    recency = 0.5 ** (age_days / 45.0)
+                    recency = _content_recency(r, now)
                     feats = recall_bandit.build_features(
                         scores[hid] / max_score,
                         conf,
@@ -972,6 +960,8 @@ async def patch_memory(
         # that gap is the whole signal.
         if row["agent_id"] == agent_id:
             set_parts.append("author_updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')")
+        if body.content is not None and body.content != row["content"]:
+            set_parts.append("content_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')")
         bumped = vclock.dump(vclock.bump(vclock.parse(row["vclock"]), instance_id()))
         with db:
             if body.content is not None and vec is not None:
