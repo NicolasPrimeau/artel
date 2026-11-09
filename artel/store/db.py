@@ -348,6 +348,9 @@ def _migrate(conn: sqlite3.Connection) -> None:
     if "headline_version" not in mem_cols:
         conn.execute("ALTER TABLE memory ADD COLUMN headline_version INTEGER NOT NULL DEFAULT 0")
         conn.commit()
+    if "content_at" not in mem_cols:
+        conn.execute("ALTER TABLE memory ADD COLUMN content_at TEXT")
+        conn.commit()
 
     _clear_truncated_headlines(conn)
     _canonicalize_projects(conn)

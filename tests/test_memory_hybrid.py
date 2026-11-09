@@ -47,7 +47,10 @@ def _backdate(entry_id, days):
     db = db_mod.get_db()
     stamp = (datetime.now(UTC) - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
     with db:
-        db.execute("UPDATE memory SET updated_at=? WHERE id=?", (stamp, entry_id))
+        db.execute(
+            "UPDATE memory SET created_at=?, updated_at=?, content_at=NULL WHERE id=?",
+            (stamp, stamp, entry_id),
+        )
 
 
 async def test_search_degrades_to_keyword_when_embeddings_down(client, monkeypatch):
@@ -135,6 +138,41 @@ async def test_ranking_boosts_recency(client, monkeypatch):
 
     r = await client.get("/memory/search", params={"q": "patrol route"}, headers=HEADERS)
     assert r.json()[0]["content"] == "patrol route through valley"
+
+
+async def test_a_metadata_patch_does_not_make_a_stale_note_fresh(client, monkeypatch):
+    _patch_embed(monkeypatch, lambda text: None)
+
+    stale = await client.post("/memory", json=_payload("patrol route over pass"), headers=HEADERS)
+    await client.post("/memory", json=_payload("patrol route through valley"), headers=HEADERS)
+    _backdate(stale.json()["id"], days=180)
+    r = await client.patch(
+        f"/memory/{stale.json()['id']}", json={"confidence": 0.95}, headers=HEADERS
+    )
+    assert r.status_code == 200
+
+    r = await client.get("/memory/search", params={"q": "patrol route"}, headers=HEADERS)
+    assert r.json()[0]["content"] == "patrol route through valley"
+
+
+async def test_a_content_rewrite_makes_a_note_fresh(client, monkeypatch):
+    _patch_embed(monkeypatch, lambda text: None)
+
+    old = await client.post("/memory", json=_payload("patrol route over pass"), headers=HEADERS)
+    other = await client.post(
+        "/memory", json=_payload("patrol route through valley"), headers=HEADERS
+    )
+    _backdate(old.json()["id"], days=180)
+    _backdate(other.json()["id"], days=90)
+    r = await client.patch(
+        f"/memory/{old.json()['id']}",
+        json={"content": "patrol route over the pass, rerouted"},
+        headers=HEADERS,
+    )
+    assert r.status_code == 200
+
+    r = await client.get("/memory/search", params={"q": "patrol route"}, headers=HEADERS)
+    assert r.json()[0]["id"] == old.json()["id"]
 
 
 async def test_ancient_entries_still_surface(client, monkeypatch):

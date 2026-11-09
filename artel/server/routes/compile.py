@@ -115,8 +115,8 @@ async def compile_units(body: CompileRequest, agent_id: str = ActorDep):
                 mid = row["id"]
                 db.execute(
                     "UPDATE memory SET content=?, source_path=?, source_sha=?, source_commit=?, "
-                    "compiled_at=?, stale=0, version=version+1, updated_at=? WHERE id=?",
-                    (unit.description, unit.path, unit.sha, body.commit, now, now, mid),
+                    "compiled_at=?, stale=0, version=version+1, updated_at=?, content_at=? WHERE id=?",
+                    (unit.description, unit.path, unit.sha, body.commit, now, now, now, mid),
                 )
                 updated += 1
             else:

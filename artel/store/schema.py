@@ -40,7 +40,8 @@ CREATE TABLE IF NOT EXISTS memory (
     vclock           TEXT,
     trail            REAL NOT NULL DEFAULT 0,
     trail_at         TEXT,
-    author_updated_at TEXT
+    author_updated_at TEXT,
+    content_at   TEXT
 );
 
 CREATE TABLE IF NOT EXISTS hebbian_edge (

@@ -39,6 +39,7 @@ STEP_TITLE_CHARS = 80
 STEP_DONE_CHARS = 90
 STEP_IDLE_SECONDS = 300
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s")
+_HEADING = re.compile(r"\s*#+\s*([^\n]+)\n")
 
 ACKS = {
     "yes",
@@ -203,7 +204,11 @@ def nudge(text, n):
 
 
 def entry_line(entry, n):
-    return nudge(entry.get("headline") or entry.get("content"), n)
+    text = str(entry.get("content") or entry.get("headline") or "")
+    heading = _HEADING.match(text)
+    if heading:
+        text = heading.group(1).rstrip(" .:") + ". " + text[heading.end() :]
+    return nudge(text, n)
 
 
 def fit(lines, budget):

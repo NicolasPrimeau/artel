@@ -5,8 +5,8 @@
   "artel/server/auth.py::_memberships": "2ee1f9dc52968c873e16242fea7fd9bd714a0f480088a1c5a5d56dc36f584ad3",
   "artel/server/auth.py::role_of": "bff0e9b28efa8054ba396639b5255427bf47e82ebed8cfbb659ea1961ab24e67",
   "artel/server/models.py": "8b99228d63adaff0f2e149a6a70831213bec5b08f739f053fdcbe80e3e5b9d1b",
-  "artel/server/routes/memory.py": "0a853599ddc0d39b255dd7760022780872908eaaa41fe5a00d440848417ed7a2",
+  "artel/server/routes/memory.py": "9dbb09810c7150a3b96928cc68142c37b98ec1d6062b44e64c6f13d0b0f887e0",
   "artel/server/routes/tasks.py": "087f872c71089068c70b62776c86579d1d885276bff5efe05d031706067ef230",
   "artel/store/decay.py": "53d36fe8cf389b018ff65c1ef74d40f1736f40b513a76613834a316fa2a28bb9",
-  "scripts/_artel_hooks.py": "d7cc1284025d7097bd2c73778f3ae75000d5f6c5dbd5ce229530123ef85be61a"
+  "scripts/_artel_hooks.py": "b4b4792544323bb58a7482d7b51ef92ce72c2749fde1735b2e9ebc6c1af2a641"
 }
